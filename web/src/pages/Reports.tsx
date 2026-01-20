@@ -9,6 +9,7 @@ export default function Reports() {
       health_score?: string;
       education_score?: string;
       income_score?: string;
+      income_monthly?: string;
       housing_score?: string;
       security_score?: string;
     };
