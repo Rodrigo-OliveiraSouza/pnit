@@ -1,6 +1,15 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { getAuthToken, setAuthToken } from "../services/api";
 
 export default function Header() {
+  const navigate = useNavigate();
+  const isLoggedIn = Boolean(getAuthToken());
+
+  const handleLogout = () => {
+    setAuthToken(null);
+    navigate("/login");
+  };
+
   return (
     <header className="site-header">
       <div className="header-top">
@@ -31,9 +40,20 @@ export default function Header() {
           >
             Relatorios
           </NavLink>
-          <Link to="/login" className="btn btn-primary">
-            Entrar
-          </Link>
+          {isLoggedIn ? (
+            <>
+              <Link to="/painel" className="btn btn-ghost">
+                Painel
+              </Link>
+              <button className="btn btn-primary" type="button" onClick={handleLogout}>
+                Sair
+              </button>
+            </>
+          ) : (
+            <Link to="/login" className="btn btn-primary">
+              Entrar
+            </Link>
+          )}
         </nav>
       </div>
     </header>

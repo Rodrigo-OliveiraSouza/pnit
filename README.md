@@ -27,6 +27,21 @@ From `web/`:
 3. Optional map key: copy `web/.env.example` to `web/.env.local` and set `VITE_GOOGLE_MAPS_API_KEY` (and optional `VITE_GOOGLE_MAPS_MAP_ID`)
 4. API base URL: set `VITE_API_BASE_URL` when the backend is running
 
+## Backend (Cloudflare Worker)
+- Required env vars:
+  - `DATABASE_URL` (Postgres connection string)
+  - `AUTH_JWT_SECRET` (random secret for JWT)
+  - `GOOGLE_MAPS_API_KEY` (used for geocoding cache)
+- Optional:
+  - `GOOGLE_GEOCODING_API_KEY` (separate key for geocode)
+  - `PUBLIC_BASE_URL` (base URL for attachments)
+- R2 bucket:
+  - Create an R2 bucket (ex: `pnit-assets`) and bind to `R2_BUCKET`
+
+### Database migrations
+If the database is already created, apply:
+- `db/migrations/2026-01-20_profile.sql`
+
 ## Next steps
 - Create IaC (CDK or Terraform) to provision the baseline stack
 - Implement API Lambdas and DTOs

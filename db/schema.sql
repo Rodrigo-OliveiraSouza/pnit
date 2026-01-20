@@ -9,9 +9,14 @@ CREATE TABLE IF NOT EXISTS app_users (
   email text NOT NULL,
   role text NOT NULL CHECK (role IN ('admin', 'employee', 'user')),
   status text NOT NULL CHECK (status IN ('active', 'disabled')),
+  password_hash text NULL,
+  password_salt text NULL,
+  last_login_at timestamptz NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_app_users_email ON app_users (email);
 
 CREATE TABLE IF NOT EXISTS employees (
   user_id uuid PRIMARY KEY REFERENCES app_users(id),
@@ -27,6 +32,8 @@ CREATE TABLE IF NOT EXISTS residents (
   phone text NULL,
   email text NULL,
   address text NULL,
+  city text NULL,
+  state text NULL,
   notes text NULL,
   status text NOT NULL CHECK (status IN ('active', 'inactive')),
   public_code text NULL,
@@ -35,6 +42,48 @@ CREATE TABLE IF NOT EXISTS residents (
   updated_at timestamptz NOT NULL DEFAULT now(),
   deleted_at timestamptz NULL
 );
+
+CREATE TABLE IF NOT EXISTS resident_profiles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  resident_id uuid NOT NULL REFERENCES residents(id) ON DELETE CASCADE,
+  health_score integer NOT NULL CHECK (health_score BETWEEN 1 AND 10),
+  health_has_clinic boolean NULL,
+  health_has_emergency boolean NULL,
+  health_has_community_agent boolean NULL,
+  health_notes text NULL,
+  education_score integer NOT NULL CHECK (education_score BETWEEN 1 AND 10),
+  education_level text NULL,
+  education_has_school boolean NULL,
+  education_has_transport boolean NULL,
+  education_material_support boolean NULL,
+  education_notes text NULL,
+  income_score integer NOT NULL CHECK (income_score BETWEEN 1 AND 10),
+  income_monthly numeric(12,2) NULL,
+  income_source text NULL,
+  assets_has_car boolean NULL,
+  assets_has_fridge boolean NULL,
+  assets_has_furniture boolean NULL,
+  assets_has_land boolean NULL,
+  housing_score integer NOT NULL CHECK (housing_score BETWEEN 1 AND 10),
+  housing_rooms integer NULL,
+  housing_area_m2 numeric(10,2) NULL,
+  housing_land_m2 numeric(10,2) NULL,
+  housing_type text NULL,
+  security_score integer NOT NULL CHECK (security_score BETWEEN 1 AND 10),
+  security_has_police_station boolean NULL,
+  security_has_patrol boolean NULL,
+  security_notes text NULL,
+  race_identity text NULL,
+  territory_narrative text NULL,
+  territory_memories text NULL,
+  territory_conflicts text NULL,
+  territory_culture text NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_resident_profiles_resident
+  ON resident_profiles (resident_id);
 
 CREATE TABLE IF NOT EXISTS map_points (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -47,6 +96,9 @@ CREATE TABLE IF NOT EXISTS map_points (
   status text NOT NULL CHECK (status IN ('active', 'inactive')),
   category text NULL,
   public_note text NULL,
+  city text NULL,
+  state text NULL,
+  source_location text NULL,
   geog geography(Point, 4326) NOT NULL,
   created_by uuid NOT NULL REFERENCES app_users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -109,8 +161,11 @@ CREATE TABLE IF NOT EXISTS public_map_cache (
   status text NOT NULL CHECK (status IN ('active', 'inactive')),
   precision text NOT NULL CHECK (precision IN ('approx', 'exact')),
   region text NULL,
+  city text NULL,
+  state text NULL,
   residents integer NOT NULL DEFAULT 0,
   public_note text NULL,
+  photo_attachment_id uuid NULL REFERENCES attachments(id),
   snapshot_date date NOT NULL,
   geog geography(Point, 4326) NOT NULL,
   updated_at timestamptz NOT NULL DEFAULT now()

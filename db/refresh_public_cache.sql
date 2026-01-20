@@ -9,6 +9,14 @@ WITH active_assignments AS (
   FROM resident_point_assignments
   WHERE active = true
   GROUP BY point_id
+),
+latest_photo AS (
+  SELECT DISTINCT ON (point_id)
+    id,
+    point_id
+  FROM attachments
+  WHERE visibility = 'public' AND point_id IS NOT NULL
+  ORDER BY point_id, created_at DESC
 )
 INSERT INTO public_map_cache (
   point_id,
@@ -17,8 +25,11 @@ INSERT INTO public_map_cache (
   status,
   precision,
   region,
+  city,
+  state,
   residents,
   public_note,
+  photo_attachment_id,
   snapshot_date,
   geog,
   updated_at
@@ -30,13 +41,17 @@ SELECT
   mp.status,
   mp.precision,
   NULL,
+  mp.city,
+  mp.state,
   COALESCE(a.residents, 0),
   mp.public_note,
+  lp.id,
   CURRENT_DATE,
   ST_SetSRID(ST_MakePoint(mp.public_lng, mp.public_lat), 4326)::geography,
   now()
 FROM map_points mp
 LEFT JOIN active_assignments a ON a.point_id = mp.id
+LEFT JOIN latest_photo lp ON lp.point_id = mp.id
 WHERE mp.deleted_at IS NULL;
 
 COMMIT;

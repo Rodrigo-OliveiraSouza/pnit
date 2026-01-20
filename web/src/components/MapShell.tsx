@@ -80,10 +80,17 @@ export default function MapShell({
         }
 
         markersRef.current = points.map((point) => {
+          const hasPhoto = Boolean(point.photoUrl);
           const marker = new googleMaps.maps.Marker({
             position: { lat: point.publicLat, lng: point.publicLng },
             map: mapInstanceRef.current!,
             title: point.id,
+            icon: hasPhoto
+              ? {
+                  url: point.photoUrl!,
+                  scaledSize: new googleMaps.maps.Size(48, 48),
+                }
+              : undefined,
           });
 
           marker.addListener("click", () => {
@@ -91,6 +98,17 @@ export default function MapShell({
               return;
             }
             const container = document.createElement("div");
+            if (point.photoUrl) {
+              const img = document.createElement("img");
+              img.src = point.photoUrl;
+              img.alt = "Foto do ponto";
+              img.style.width = "120px";
+              img.style.height = "80px";
+              img.style.objectFit = "cover";
+              img.style.display = "block";
+              img.style.marginBottom = "0.5rem";
+              container.appendChild(img);
+            }
             const title = document.createElement("strong");
             title.textContent = point.publicNote
               ? point.publicNote

@@ -1,6 +1,30 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { loginUser, setAuthToken } from "../services/api";
 
 export default function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await loginUser({ email, password });
+      setAuthToken(response.token);
+      navigate("/painel");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao entrar.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="page auth-page">
       <div className="auth-visual">
@@ -24,17 +48,30 @@ export default function Login() {
       <div className="auth-card">
         <h2>Entrar</h2>
         <p>Use seu email institucional para continuar.</p>
-        <form className="form">
+        <form className="form" onSubmit={handleSubmit}>
           <label>
             Email
-            <input type="email" placeholder="Email institucional" />
+            <input
+              type="email"
+              placeholder="Email institucional"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
           </label>
           <label>
             Senha
-            <input type="password" placeholder="Senha" />
+            <input
+              type="password"
+              placeholder="Senha"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
           </label>
-          <button className="btn btn-primary" type="submit">
-            Entrar
+          {error && <div className="alert">{error}</div>}
+          <button className="btn btn-primary" type="submit" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
           </button>
         </form>
         <div className="auth-footer">

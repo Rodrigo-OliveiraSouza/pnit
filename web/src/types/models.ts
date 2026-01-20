@@ -6,8 +6,46 @@ export type MapPoint = {
   precision: "approx" | "exact";
   updatedAt: string;
   region: string;
+  city?: string | null;
+  state?: string | null;
   residents: number;
   publicNote?: string;
+  photoUrl?: string | null;
+};
+
+export type ResidentProfile = {
+  healthScore: number;
+  healthHasClinic?: boolean;
+  healthHasEmergency?: boolean;
+  healthHasCommunityAgent?: boolean;
+  healthNotes?: string;
+  educationScore: number;
+  educationLevel?: string;
+  educationHasSchool?: boolean;
+  educationHasTransport?: boolean;
+  educationMaterialSupport?: boolean;
+  educationNotes?: string;
+  incomeScore: number;
+  incomeMonthly?: number | null;
+  incomeSource?: string;
+  assetsHasCar?: boolean;
+  assetsHasFridge?: boolean;
+  assetsHasFurniture?: boolean;
+  assetsHasLand?: boolean;
+  housingScore: number;
+  housingRooms?: number | null;
+  housingAreaM2?: number | null;
+  housingLandM2?: number | null;
+  housingType?: string;
+  securityScore: number;
+  securityHasPoliceStation?: boolean;
+  securityHasPatrol?: boolean;
+  securityNotes?: string;
+  raceIdentity?: string;
+  territoryNarrative?: string;
+  territoryMemories?: string;
+  territoryConflicts?: string;
+  territoryCulture?: string;
 };
 
 export type Resident = {

@@ -1,5 +1,18 @@
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
+const AUTH_TOKEN_KEY = "pnit_auth_token";
+
+export function setAuthToken(token: string | null) {
+  if (token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  }
+}
+
+export function getAuthToken() {
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
 
 type ApiErrorBody = {
   error?: {
@@ -16,6 +29,10 @@ async function apiFetch<T>(
   const headers = new Headers(options.headers ?? {});
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
+  }
+  const token = getAuthToken();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -56,8 +73,11 @@ export type PublicPointDto = {
   precision: "approx" | "exact";
   updated_at: string;
   region?: string;
+  city?: string | null;
+  state?: string | null;
   residents?: number;
   public_note?: string;
+  photo_url?: string | null;
 };
 
 export type PublicPointsResponse = {
@@ -72,6 +92,12 @@ export type ReportPreviewResponse = {
     points?: number;
     residents?: number;
     last_updated?: string;
+  };
+  breakdown?: {
+    status?: Array<{ status: string; count: number }>;
+    precision?: Array<{ precision: string; count: number }>;
+    by_city?: Array<{ city: string; count: number }>;
+    by_state?: Array<{ state: string; count: number }>;
   };
 };
 
@@ -95,18 +121,23 @@ export type CreateResidentPayload = {
   phone?: string;
   email?: string;
   address?: string;
+  city?: string;
+  state?: string;
   status: "active" | "inactive";
   notes?: string;
 };
 
 export type CreatePointPayload = {
-  lat: number;
-  lng: number;
+  lat?: number;
+  lng?: number;
   accuracy_m?: number | null;
   status: "active" | "inactive";
   precision: "approx" | "exact";
   category?: string;
   public_note?: string;
+  city?: string;
+  state?: string;
+  location_text?: string;
 };
 
 export type CreateResidentResponse = {
@@ -118,6 +149,39 @@ export type CreatePointResponse = {
   public_lat: number;
   public_lng: number;
   precision: "approx" | "exact";
+};
+
+export type RegisterResponse = {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    role: "admin" | "employee" | "user";
+  };
+};
+
+export type LoginResponse = RegisterResponse;
+
+export type UserSummaryResponse = {
+  summary?: { total_residents?: number };
+    averages?: {
+      health_score?: string;
+      education_score?: string;
+      income_score?: string;
+      income_monthly?: string;
+      housing_score?: string;
+      security_score?: string;
+    };
+  monthly?: Array<{ month: string; total: number }>;
+  residents?: Array<{
+    id: string;
+    full_name: string;
+    city?: string | null;
+    state?: string | null;
+    status: string;
+    created_at: string;
+  }>;
+  active_users?: number | null;
 };
 
 export async function fetchPublicPoints(params: {
@@ -153,6 +217,23 @@ export async function createResident(
   });
 }
 
+export async function listResidents(createdBy?: "me") {
+  const query = createdBy ? "?created_by=me" : "";
+  return apiFetch<{ items: Array<{ id: string; full_name: string; city?: string | null; state?: string | null; status: string; created_at: string }> }>(
+    `/residents${query}`
+  );
+}
+
+export async function createResidentProfile(
+  residentId: string,
+  payload: Record<string, unknown>
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/residents/${residentId}/profile`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function createPoint(
   payload: CreatePointPayload
 ): Promise<CreatePointResponse> {
@@ -160,6 +241,23 @@ export async function createPoint(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function uploadAttachment(payload: FormData): Promise<{ id: string }> {
+  const token = getAuthToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const response = await fetch(`${API_BASE_URL}/attachments`, {
+    method: "POST",
+    headers,
+    body: payload,
+  });
+  if (!response.ok) {
+    throw new Error(`Erro ${response.status}`);
+  }
+  return (await response.json()) as { id: string };
 }
 
 export async function assignResidentPoint(payload: {
@@ -214,4 +312,29 @@ export async function exportReport(payload: {
 export async function geocodeAddress(query: string): Promise<GeocodeResponse> {
   const params = new URLSearchParams({ address: query });
   return apiFetch<GeocodeResponse>(`/geocode?${params.toString()}`);
+}
+
+export async function registerUser(payload: {
+  email: string;
+  password: string;
+}): Promise<RegisterResponse> {
+  return apiFetch<RegisterResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loginUser(payload: {
+  email: string;
+  password: string;
+}): Promise<LoginResponse> {
+  return apiFetch<LoginResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchUserSummary(userId?: string): Promise<UserSummaryResponse> {
+  const query = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
+  return apiFetch<UserSummaryResponse>(`/reports/user-summary${query}`);
 }

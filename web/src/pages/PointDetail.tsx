@@ -45,8 +45,11 @@ export default function PointDetail() {
       precision: point.precision,
       updatedAt: point.updated_at,
       region: point.region ?? "-",
+      city: point.city ?? null,
+      state: point.state ?? null,
       residents: point.residents ?? 0,
       publicNote: point.public_note,
+      photoUrl: point.photo_url ?? null,
     };
   }, [point]);
 
@@ -103,6 +106,14 @@ export default function PointDetail() {
               <span>Regiao</span>
               <strong>{mapPoint.region}</strong>
             </div>
+            {(mapPoint.city || mapPoint.state) && (
+              <div>
+                <span>Cidade/UF</span>
+                <strong>
+                  {[mapPoint.city, mapPoint.state].filter(Boolean).join(" / ")}
+                </strong>
+              </div>
+            )}
             {mapPoint.publicNote && (
               <div>
                 <span>Descricao publica</span>

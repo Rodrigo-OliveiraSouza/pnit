@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  Tooltip,
+} from "chart.js";
+import { Bar, Pie } from "react-chartjs-2";
 import MapShell from "./MapShell";
 import MapFilters from "./MapFilters";
 import type { MapPoint } from "../types/models";
@@ -27,6 +37,13 @@ type ReportSummary = {
   last_updated?: string;
 };
 
+type ReportBreakdown = {
+  status?: Array<{ status: string; count: number }>;
+  precision?: Array<{ precision: string; count: number }>;
+  by_city?: Array<{ city: string; count: number }>;
+  by_state?: Array<{ state: string; count: number }>;
+};
+
 type PointFilters = {
   status: "all" | "active" | "inactive";
   precision: "all" | "approx" | "exact";
@@ -49,8 +66,11 @@ function mapPointFromApi(point: PublicPointDto): MapPoint {
     precision: point.precision,
     updatedAt: point.updated_at,
     region: point.region ?? "-",
+    city: point.city ?? null,
+    state: point.state ?? null,
     residents: point.residents ?? 0,
     publicNote: point.public_note,
+    photoUrl: point.photo_url ?? null,
   };
 }
 
@@ -62,6 +82,8 @@ export default function PublicMapSection() {
   const [reportName, setReportName] = useState("");
   const [reportFeedback, setReportFeedback] = useState<string | null>(null);
   const [reportSummary, setReportSummary] = useState<ReportSummary | null>(null);
+  const [reportBreakdown, setReportBreakdown] =
+    useState<ReportBreakdown | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportInclude, setReportInclude] = useState({
@@ -158,6 +180,7 @@ export default function PublicMapSection() {
     setReportStatus("idle");
     setReportFeedback(null);
     setReportSummary(null);
+    setReportBreakdown(null);
     setReportError(null);
   }, []);
 
@@ -181,6 +204,7 @@ export default function PublicMapSection() {
     setSelectionActive(false);
     setReportFeedback(null);
     setReportSummary(null);
+    setReportBreakdown(null);
     setReportError(null);
   }, []);
 
@@ -197,6 +221,7 @@ export default function PublicMapSection() {
     })
       .then((response) => {
         setReportSummary(response.summary ?? null);
+        setReportBreakdown(response.breakdown ?? null);
         setReportStatus("ready");
       })
       .catch((error) => {
@@ -276,6 +301,7 @@ export default function PublicMapSection() {
     setReportStatus("idle");
     setReportFeedback(null);
     setReportSummary(null);
+    setReportBreakdown(null);
     setReportError(null);
   }, []);
 
@@ -284,6 +310,7 @@ export default function PublicMapSection() {
       setReportInclude((current) => ({ ...current, [field]: value }));
       setReportStatus("idle");
       setReportSummary(null);
+      setReportBreakdown(null);
       setReportFeedback(null);
     },
     []
@@ -436,6 +463,45 @@ export default function PublicMapSection() {
     });
   }, [selectionActive]);
 
+  useEffect(() => {
+    ChartJS.register(
+      ArcElement,
+      BarElement,
+      CategoryScale,
+      LinearScale,
+      Tooltip,
+      Legend
+    );
+  }, []);
+
+  const statusChart = useMemo(() => {
+    const items = reportBreakdown?.status ?? [];
+    return {
+      labels: items.map((item) => item.status),
+      datasets: [
+        {
+          label: "Pontos",
+          data: items.map((item) => item.count),
+          backgroundColor: ["#4a2d1b", "#b35a2d", "#d7a344"],
+        },
+      ],
+    };
+  }, [reportBreakdown]);
+
+  const precisionChart = useMemo(() => {
+    const items = reportBreakdown?.precision ?? [];
+    return {
+      labels: items.map((item) => item.precision),
+      datasets: [
+        {
+          label: "Pontos",
+          data: items.map((item) => item.count),
+          backgroundColor: "#4a2d1b",
+        },
+      ],
+    };
+  }, [reportBreakdown]);
+
   return (
     <section className="map-section" id="relatorios">
       <div className="map-grid">
@@ -553,6 +619,61 @@ export default function PublicMapSection() {
                 <div className="report-ready">{reportFeedback}</div>
               )}
             </div>
+            <div className="info-card">
+              <span className="eyebrow">Grafico</span>
+              <h3>Status dos pontos</h3>
+              {reportBreakdown?.status && reportBreakdown.status.length > 0 ? (
+                <Pie data={statusChart} />
+              ) : (
+                <p className="muted">Gere o relatorio para visualizar.</p>
+              )}
+            </div>
+            <div className="info-card">
+              <span className="eyebrow">Grafico</span>
+              <h3>Precisao dos pontos</h3>
+              {reportBreakdown?.precision &&
+              reportBreakdown.precision.length > 0 ? (
+                <Bar data={precisionChart} />
+              ) : (
+                <p className="muted">Gere o relatorio para visualizar.</p>
+              )}
+            </div>
+          </div>
+          <div className="info-card" style={{ marginTop: "1.5rem" }}>
+            <span className="eyebrow">Tabela</span>
+            <h3>Resumo por cidade e estado</h3>
+            {reportBreakdown?.by_city?.length ||
+            reportBreakdown?.by_state?.length ? (
+              <div className="table-card">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>Local</th>
+                      <th>Quantidade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(reportBreakdown?.by_city ?? []).map((item) => (
+                      <tr key={`city-${item.city}`}>
+                        <td>Cidade</td>
+                        <td>{item.city}</td>
+                        <td>{item.count}</td>
+                      </tr>
+                    ))}
+                    {(reportBreakdown?.by_state ?? []).map((item) => (
+                      <tr key={`state-${item.state}`}>
+                        <td>Estado</td>
+                        <td>{item.state}</td>
+                        <td>{item.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="muted">Gere o relatorio para ver a tabela.</p>
+            )}
           </div>
         </div>
       </div>
