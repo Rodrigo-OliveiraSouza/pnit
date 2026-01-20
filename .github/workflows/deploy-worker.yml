@@ -10,6 +10,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -20,3 +24,4 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: api
           wranglerVersion: "4.59.2"
+          command: deploy --config wrangler.toml
