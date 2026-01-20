@@ -41,6 +41,9 @@ From `web/`:
 ### Database migrations
 If the database is already created, apply:
 - `db/migrations/2026-01-20_profile.sql`
+- Optional test admin:
+  - `db/migrations/2026-01-20_seed_admin.sql`
+  - Credentials: `admin@infinity` / `741852` (testing only)
 
 ## Next steps
 - Create IaC (CDK or Terraform) to provision the baseline stack
