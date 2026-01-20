@@ -1,7 +1,20 @@
 ALTER TABLE app_users
   ADD COLUMN IF NOT EXISTS password_hash text,
   ADD COLUMN IF NOT EXISTS password_salt text,
-  ADD COLUMN IF NOT EXISTS last_login_at timestamptz;
+  ADD COLUMN IF NOT EXISTS last_login_at timestamptz,
+  ADD COLUMN IF NOT EXISTS full_name text,
+  ADD COLUMN IF NOT EXISTS phone text,
+  ADD COLUMN IF NOT EXISTS organization text,
+  ADD COLUMN IF NOT EXISTS city text,
+  ADD COLUMN IF NOT EXISTS state text,
+  ADD COLUMN IF NOT EXISTS territory text,
+  ADD COLUMN IF NOT EXISTS access_reason text;
+
+ALTER TABLE app_users
+  DROP CONSTRAINT IF EXISTS app_users_status_check;
+ALTER TABLE app_users
+  ADD CONSTRAINT app_users_status_check
+  CHECK (status IN ('active', 'disabled', 'pending'));
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_app_users_email ON app_users (email);
 

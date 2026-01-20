@@ -657,6 +657,35 @@ textarea {
   color: var(--color-clay);
 }
 
+.status.disabled {
+  background: rgba(var(--color-clay-rgb), 0.15);
+  color: var(--color-clay);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.tab {
+  border: 1px solid rgba(var(--color-forest-rgb), 0.2);
+  background: transparent;
+  color: var(--color-forest);
+  border-radius: 999px;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.tab.active {
+  background: var(--color-forest);
+  color: var(--color-white);
+  border-color: var(--color-forest);
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

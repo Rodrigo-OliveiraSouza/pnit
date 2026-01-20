@@ -1,22 +1,39 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { registerUser, setAuthToken } from "../services/api";
 
 export default function Register() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [territory, setTerritory] = useState("");
+  const [accessReason, setAccessReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      const response = await registerUser({ email, password });
-      setAuthToken(response.token);
-      navigate("/painel");
+      await registerUser({
+        email,
+        password,
+        full_name: fullName,
+        phone,
+        organization,
+        city,
+        state,
+        territory,
+        access_reason: accessReason,
+      });
+      setAuthToken(null);
+      setSubmitted(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao cadastrar.";
       setError(message);
@@ -47,37 +64,123 @@ export default function Register() {
       </div>
       <div className="auth-card">
         <h2>Criar conta</h2>
-        <p>Informe seu email e uma senha segura.</p>
-        <form className="form" onSubmit={handleSubmit}>
-          <label>
-            Email institucional
-            <input
-              type="email"
-              placeholder="Email institucional"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Senha
-            <input
-              type="password"
-              placeholder="Crie uma senha"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </label>
-          {error && <div className="alert">{error}</div>}
-          <button className="btn btn-primary" type="submit" disabled={loading}>
-            {loading ? "Criando..." : "Criar conta"}
-          </button>
-        </form>
-        <div className="auth-footer">
-          <span>Ja tem acesso?</span>
-          <Link to="/login">Entrar</Link>
-        </div>
+        {submitted ? (
+          <>
+            <p>
+              Solicitação enviada com sucesso. Aguarde a aprovação para acessar
+              o painel.
+            </p>
+            <Link className="btn btn-primary" to="/login">
+              Voltar ao login
+            </Link>
+          </>
+        ) : (
+          <>
+            <p>Informe seus dados para solicitar acesso.</p>
+            <form className="form" onSubmit={handleSubmit}>
+              <label>
+                Nome completo
+                <input
+                  type="text"
+                  placeholder="Nome completo"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Email institucional
+                <input
+                  type="email"
+                  placeholder="Email institucional"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Telefone
+                <input
+                  type="tel"
+                  placeholder="(11) 99999-0000"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Organizacao
+                <input
+                  type="text"
+                  placeholder="Orgao, ONG, coletivo"
+                  value={organization}
+                  onChange={(event) => setOrganization(event.target.value)}
+                  required
+                />
+              </label>
+              <div className="form-row">
+                <label>
+                  Cidade
+                  <input
+                    type="text"
+                    placeholder="Cidade"
+                    value={city}
+                    onChange={(event) => setCity(event.target.value)}
+                    required
+                  />
+                </label>
+                <label>
+                  Estado
+                  <input
+                    type="text"
+                    placeholder="UF"
+                    value={state}
+                    onChange={(event) => setState(event.target.value)}
+                    required
+                  />
+                </label>
+              </div>
+              <label>
+                Territorio de atuacao
+                <input
+                  type="text"
+                  placeholder="Territorio ou comunidade"
+                  value={territory}
+                  onChange={(event) => setTerritory(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Motivo do acesso
+                <textarea
+                  rows={3}
+                  placeholder="Explique a finalidade do acesso"
+                  value={accessReason}
+                  onChange={(event) => setAccessReason(event.target.value)}
+                  required
+                />
+              </label>
+              <label>
+                Senha
+                <input
+                  type="password"
+                  placeholder="Crie uma senha"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  required
+                />
+              </label>
+              {error && <div className="alert">{error}</div>}
+              <button className="btn btn-primary" type="submit" disabled={loading}>
+                {loading ? "Enviando..." : "Enviar solicitacao"}
+              </button>
+            </form>
+            <div className="auth-footer">
+              <span>Ja tem acesso?</span>
+              <Link to="/login">Entrar</Link>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

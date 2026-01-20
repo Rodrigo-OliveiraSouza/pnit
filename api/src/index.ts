@@ -183,11 +183,23 @@ async function requireAuth(c: Context, env: Env) {
   return verifyJwt(token, env.AUTH_JWT_SECRET);
 }
 
+function requireStaff(claims: UserClaims | null) {
+  if (!claims) return false;
+  return claims.role === "admin" || claims.role === "employee";
+}
+
 function getPublicBaseUrl(c: Context, env: Env) {
   if (env.PUBLIC_BASE_URL) {
     return env.PUBLIC_BASE_URL.replace(/\/+$/g, "");
   }
   const host = c.req.header("Host");
+  const forwardedProto = c.req.header("X-Forwarded-Proto");
+  if (host && forwardedProto) {
+    return `${forwardedProto}://${host}`;
+  }
+  if (host && (host.includes("localhost") || host.includes("127.0.0.1"))) {
+    return `http://${host}`;
+  }
   return host ? `https://${host}` : "";
 }
 
@@ -305,10 +317,30 @@ async function refreshPublicCache(env: Env) {
 app.post("/auth/register", async (c) => {
   const sql = getSql(c.env);
   const body = (await c.req.json().catch(() => null)) as
-    | { email?: string; password?: string; role?: "admin" | "employee" | "user" }
+    | {
+        email?: string;
+        password?: string;
+        full_name?: string;
+        phone?: string;
+        organization?: string;
+        city?: string;
+        state?: string;
+        territory?: string;
+        access_reason?: string;
+      }
     | null;
-  if (!body?.email || !body.password) {
-    return jsonError(c, 400, "email and password are required");
+  if (!body?.email || !body.password || !body.full_name || !body.phone) {
+    return jsonError(c, 400, "email, password, full_name and phone are required");
+  }
+  if (!body.organization || !body.city || !body.state || !body.territory) {
+    return jsonError(
+      c,
+      400,
+      "organization, city, state and territory are required"
+    );
+  }
+  if (!body.access_reason) {
+    return jsonError(c, 400, "access_reason is required");
   }
   if (!c.env.AUTH_JWT_SECRET) {
     return jsonError(c, 500, "AUTH_JWT_SECRET is not configured", "CONFIG");
@@ -319,29 +351,36 @@ app.post("/auth/register", async (c) => {
   if (existing.length > 0) {
     return jsonError(c, 409, "Email already registered", "CONFLICT");
   }
-  const password = await hashPassword(body.password);
   const userId = crypto.randomUUID();
-  const rows = await sql(
+  const password = await hashPassword(body.password);
+  await sql(
     `
-    INSERT INTO app_users (id, cognito_sub, email, role, status, password_hash, password_salt)
-    VALUES ($1, $2, $3, $4, 'active', $5, $6)
-    RETURNING id, email, role
+    INSERT INTO app_users (
+      id, cognito_sub, email, role, status,
+      full_name, phone, organization, city, state, territory, access_reason,
+      password_hash, password_salt
+    )
+    VALUES ($1, $2, $3, 'user', 'pending', $4, $5, $6, $7, $8, $9, $10, $11, $12)
     `,
     [
       userId,
       userId,
       body.email.toLowerCase(),
-      body.role ?? "employee",
+      body.full_name,
+      body.phone,
+      body.organization,
+      body.city,
+      body.state,
+      body.territory,
+      body.access_reason,
       password.hash,
       password.salt,
     ]
   );
-  const user = rows[0] as { id: string; email: string; role: UserClaims["role"] };
-  const token = await signJwt(
-    { sub: user.id, email: user.email, role: user.role },
-    c.env.AUTH_JWT_SECRET
-  );
-  return c.json({ token, user });
+  return c.json({
+    status: "pending",
+    message: "Cadastro recebido. Aguarde aprovacao do administrador.",
+  });
 });
 
 app.post("/auth/login", async (c) => {
@@ -356,7 +395,7 @@ app.post("/auth/login", async (c) => {
     return jsonError(c, 500, "AUTH_JWT_SECRET is not configured", "CONFIG");
   }
   const rows = await sql(
-    "SELECT id, email, role, password_hash, password_salt FROM app_users WHERE email = $1 AND status = 'active'",
+    "SELECT id, email, role, status, password_hash, password_salt FROM app_users WHERE email = $1",
     [body.email.toLowerCase()]
   );
   if (rows.length === 0) {
@@ -366,9 +405,16 @@ app.post("/auth/login", async (c) => {
     id: string;
     email: string;
     role: UserClaims["role"];
+    status: "active" | "pending" | "disabled";
     password_hash: string;
     password_salt: string;
   };
+  if (user.status === "pending") {
+    return jsonError(c, 403, "Usuario pendente de aprovacao", "FORBIDDEN");
+  }
+  if (user.status === "disabled") {
+    return jsonError(c, 403, "Usuario desativado", "FORBIDDEN");
+  }
   const password = await hashPassword(body.password, user.password_salt);
   if (password.hash !== user.password_hash) {
     return jsonError(c, 401, "Invalid credentials", "UNAUTHORIZED");
@@ -828,11 +874,159 @@ app.get("/reports/user-summary", async (c) => {
   });
 });
 
+app.get("/admin/users", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const status = c.req.query("status");
+  const role = c.req.query("role");
+  const search = c.req.query("q");
+  const filters: string[] = ["1=1"];
+  const params: (string | number)[] = [];
+  if (status) {
+    params.push(status);
+    filters.push(`status = $${params.length}`);
+  }
+  if (role) {
+    params.push(role);
+    filters.push(`role = $${params.length}`);
+  }
+  if (search) {
+    params.push(`%${search.toLowerCase()}%`);
+    filters.push(`LOWER(email) LIKE $${params.length}`);
+  }
+  const rows = await sql(
+    `
+    SELECT id, email, role, status, full_name, phone, organization, city, state, territory,
+           access_reason, created_at, last_login_at
+    FROM app_users
+    WHERE ${filters.join(" AND ")}
+    ORDER BY created_at DESC
+    LIMIT 500
+    `,
+    params
+  );
+  return c.json({ items: rows });
+});
+
+app.post("/admin/users", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const body = (await c.req.json().catch(() => null)) as
+    | {
+        email?: string;
+        password?: string;
+        role?: "admin" | "employee" | "user";
+        status?: "active" | "pending" | "disabled";
+        full_name?: string;
+        phone?: string;
+        organization?: string;
+        city?: string;
+        state?: string;
+        territory?: string;
+        access_reason?: string;
+      }
+    | null;
+  if (!body?.email || !body.password || !body.full_name) {
+    return jsonError(c, 400, "email, password and full_name are required");
+  }
+  const existing = await sql("SELECT id FROM app_users WHERE email = $1", [
+    body.email.toLowerCase(),
+  ]);
+  if (existing.length > 0) {
+    return jsonError(c, 409, "Email already registered", "CONFLICT");
+  }
+  const password = await hashPassword(body.password);
+  const userId = crypto.randomUUID();
+  const rows = await sql(
+    `
+    INSERT INTO app_users (
+      id, cognito_sub, email, role, status, full_name, phone, organization,
+      city, state, territory, access_reason, password_hash, password_salt
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    RETURNING id, email, role, status
+    `,
+    [
+      userId,
+      userId,
+      body.email.toLowerCase(),
+      body.role ?? "employee",
+      body.status ?? "active",
+      body.full_name,
+      body.phone ?? null,
+      body.organization ?? null,
+      body.city ?? null,
+      body.state ?? null,
+      body.territory ?? null,
+      body.access_reason ?? null,
+      password.hash,
+      password.salt,
+    ]
+  );
+  return c.json({ user: rows[0] });
+});
+
+app.put("/admin/users/:id", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const body = (await c.req.json().catch(() => null)) as Record<string, unknown>;
+  const allowed = [
+    "role",
+    "status",
+    "full_name",
+    "phone",
+    "organization",
+    "city",
+    "state",
+    "territory",
+    "access_reason",
+  ];
+  const updates = Object.entries(body ?? {}).filter(([key]) =>
+    allowed.includes(key)
+  );
+  if (updates.length === 0) {
+    return jsonError(c, 400, "No valid fields to update");
+  }
+  const sets = updates.map(([key], index) => `${key} = $${index + 2}`);
+  const values = updates.map(([, value]) => value ?? null);
+  const id = c.req.param("id");
+  await sql(
+    `
+    UPDATE app_users
+    SET ${sets.join(", ")}, updated_at = now()
+    WHERE id = $1
+    `,
+    [id, ...values]
+  );
+  return c.json({ ok: true });
+});
+
 app.post("/residents", async (c) => {
   const sql = getSql(c.env);
   const claims = await requireAuth(c, c.env);
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as
     | {
@@ -881,6 +1075,9 @@ app.put("/residents/:id", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown>;
   const allowed = [
     "full_name",
@@ -921,6 +1118,9 @@ app.get("/residents", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
   const createdBy =
     c.req.query("created_by") === "me" ? claims.sub : c.req.query("created_by");
   const params: (string | number)[] = [];
@@ -950,6 +1150,9 @@ app.post("/residents/:id/profile", async (c) => {
   const claims = await requireAuth(c, c.env);
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const residentId = c.req.param("id");
   if (claims.role !== "admin") {
@@ -1022,6 +1225,9 @@ app.post("/points", async (c) => {
   const claims = await requireAuth(c, c.env);
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as
     | {
@@ -1096,6 +1302,9 @@ app.put("/points/:id", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
   const body = (await c.req.json().catch(() => null)) as
     | {
         lat?: number;
@@ -1155,6 +1364,9 @@ app.post("/attachments", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
   if (!c.env.R2_BUCKET) {
     return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
   }
@@ -1212,6 +1424,9 @@ app.post("/assignments", async (c) => {
   const claims = await requireAuth(c, c.env);
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as
     | { resident_id?: string; point_id?: string }

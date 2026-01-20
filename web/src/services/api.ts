@@ -152,6 +152,11 @@ export type CreatePointResponse = {
 };
 
 export type RegisterResponse = {
+  status: "pending";
+  message?: string;
+};
+
+export type LoginResponse = {
   token: string;
   user: {
     id: string;
@@ -160,7 +165,21 @@ export type RegisterResponse = {
   };
 };
 
-export type LoginResponse = RegisterResponse;
+export type AdminUser = {
+  id: string;
+  email: string;
+  role: "admin" | "employee" | "user";
+  status: "active" | "pending" | "disabled";
+  full_name?: string | null;
+  phone?: string | null;
+  organization?: string | null;
+  city?: string | null;
+  state?: string | null;
+  territory?: string | null;
+  access_reason?: string | null;
+  created_at?: string;
+  last_login_at?: string | null;
+};
 
 export type UserSummaryResponse = {
   summary?: { total_residents?: number };
@@ -317,6 +336,13 @@ export async function geocodeAddress(query: string): Promise<GeocodeResponse> {
 export async function registerUser(payload: {
   email: string;
   password: string;
+  full_name: string;
+  phone: string;
+  organization: string;
+  city: string;
+  state: string;
+  territory: string;
+  access_reason: string;
 }): Promise<RegisterResponse> {
   return apiFetch<RegisterResponse>("/auth/register", {
     method: "POST",
@@ -337,4 +363,29 @@ export async function loginUser(payload: {
 export async function fetchUserSummary(userId?: string): Promise<UserSummaryResponse> {
   const query = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
   return apiFetch<UserSummaryResponse>(`/reports/user-summary${query}`);
+}
+
+export async function listAdminUsers(params?: {
+  status?: string;
+  role?: string;
+  q?: string;
+}): Promise<{ items: AdminUser[] }> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.role) query.set("role", params.role);
+  if (params?.q) query.set("q", params.q);
+  const suffix = query.toString();
+  return apiFetch<{ items: AdminUser[] }>(
+    `/admin/users${suffix ? `?${suffix}` : ""}`
+  );
+}
+
+export async function updateAdminUser(
+  id: string,
+  payload: Partial<AdminUser>
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/admin/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }
