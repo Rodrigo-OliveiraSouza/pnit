@@ -1,0 +1,6 @@
+name = "pnit-api"
+main = "src/index.ts"
+compatibility_date = "2026-01-20"
+
+[triggers]
+crons = ["0 2 * * *"]

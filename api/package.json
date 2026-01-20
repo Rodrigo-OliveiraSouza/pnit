@@ -1,0 +1,19 @@
+{
+  "name": "pnit-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.0",
+    "hono": "^4.6.2",
+    "pdf-lib": "^1.17.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250129.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^3.78.9"
+  }
+}
