@@ -439,9 +439,6 @@ export default function EmployeeDashboard() {
           </p>
         </div>
         <div className="dashboard-actions">
-          <Link className="btn btn-outline" to="/modulos">
-            Acessar modulos
-          </Link>
           <button className="btn btn-primary" type="button">
             Novo cadastro
           </button>

@@ -161,6 +161,9 @@ CREATE TABLE IF NOT EXISTS complaint_sensitive (
   complaint_id uuid PRIMARY KEY REFERENCES complaints(id) ON DELETE CASCADE,
   ip_address text NULL,
   user_agent text NULL,
+  payload_ciphertext text NULL,
+  payload_iv text NULL,
+  payload_salt text NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 

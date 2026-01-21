@@ -47,7 +47,7 @@ app.use("*", async (c, next) => {
   c.header("Access-Control-Allow-Origin", origin === "null" ? "*" : origin);
   c.header(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, X-Actor-User-Id"
+    "Content-Type, Authorization, X-Actor-User-Id, X-Complaints-Secret"
   );
   c.header("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
   c.header("Access-Control-Max-Age", "86400");
@@ -120,6 +120,92 @@ function base64UrlDecode(input: string) {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes.buffer;
+}
+
+function base64Encode(bytes: Uint8Array) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function base64Decode(input: string) {
+  const binary = atob(input);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function deriveAesKey(secret: string, salt: Uint8Array) {
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    "PBKDF2",
+    false,
+    ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: "PBKDF2",
+      salt,
+      iterations: 100000,
+      hash: "SHA-256",
+    },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+
+async function encryptSensitivePayload(secret: string, payload: Record<string, unknown>) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveAesKey(secret, salt);
+  const plaintext = new TextEncoder().encode(JSON.stringify(payload));
+  const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+  return {
+    payload_ciphertext: base64Encode(new Uint8Array(ciphertext)),
+    payload_iv: base64Encode(iv),
+    payload_salt: base64Encode(salt),
+  };
+}
+
+async function decryptSensitivePayload(
+  secret: string,
+  record: {
+    payload_ciphertext?: string | null;
+    payload_iv?: string | null;
+    payload_salt?: string | null;
+    ip_address?: string | null;
+    user_agent?: string | null;
+  }
+) {
+  if (record.payload_ciphertext && record.payload_iv && record.payload_salt) {
+    const salt = base64Decode(record.payload_salt);
+    const iv = base64Decode(record.payload_iv);
+    const key = await deriveAesKey(secret, salt);
+    const ciphertext = base64Decode(record.payload_ciphertext);
+    const plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      key,
+      ciphertext
+    );
+    const decoded = JSON.parse(
+      new TextDecoder().decode(new Uint8Array(plaintext))
+    ) as { ip_address?: string | null; user_agent?: string | null };
+    return {
+      ip_address: decoded.ip_address ?? null,
+      user_agent: decoded.user_agent ?? null,
+    };
+  }
+  return {
+    ip_address: record.ip_address ?? null,
+    user_agent: record.user_agent ?? null,
+  };
 }
 
 async function signJwt(payload: Omit<UserClaims, "exp">, secret: string) {
@@ -353,8 +439,33 @@ function jitterPoint(lat: number, lng: number, accuracy?: number | null) {
   return { lat: lat + deltaLat, lng: lng + deltaLng };
 }
 
-async function refreshPublicCache(env: Env) {
+type PublicCacheRefreshResult = {
+  skipped: boolean;
+  last_refresh?: string;
+  refreshed_at?: string;
+};
+
+async function refreshPublicCache(
+  env: Env,
+  options: { force?: boolean } = {}
+): Promise<PublicCacheRefreshResult> {
   const sql = getSql(env);
+  const lastRefreshRows = await sql(
+    "SELECT MAX(updated_at) AS last_refresh FROM public_map_cache"
+  );
+  const lastRefreshValue = lastRefreshRows[0]?.last_refresh as
+    | string
+    | Date
+    | null
+    | undefined;
+  if (!options.force && lastRefreshValue) {
+    const lastRefreshDate = new Date(lastRefreshValue);
+    const elapsedMs = Date.now() - lastRefreshDate.getTime();
+    if (elapsedMs < 24 * 60 * 60 * 1000) {
+      return { skipped: true, last_refresh: lastRefreshDate.toISOString() };
+    }
+  }
+
   await sql("BEGIN");
   try {
     await sql("DELETE FROM public_map_cache WHERE snapshot_date = CURRENT_DATE");
@@ -401,6 +512,8 @@ async function refreshPublicCache(env: Env) {
     await sql("ROLLBACK");
     throw error;
   }
+
+  return { skipped: false, refreshed_at: new Date().toISOString() };
 }
 
 app.post("/auth/register", async (c) => {
@@ -1909,15 +2022,28 @@ app.post("/public/complaints", async (c) => {
     );
   }
 
+  if (!c.env.COMPLAINTS_SECRET) {
+    return jsonError(c, 500, "COMPLAINTS_SECRET is not configured", "CONFIG");
+  }
+  const sensitivePayload = await encryptSensitivePayload(c.env.COMPLAINTS_SECRET, {
+    ip_address: getClientIp(c),
+    user_agent: c.req.header("User-Agent") ?? null,
+  });
   await sql(
     `
-    INSERT INTO complaint_sensitive (complaint_id, ip_address, user_agent)
-    VALUES ($1, $2, $3)
+    INSERT INTO complaint_sensitive (
+      complaint_id,
+      payload_ciphertext,
+      payload_iv,
+      payload_salt
+    )
+    VALUES ($1, $2, $3, $4)
     `,
     [
       complaintId,
-      getClientIp(c),
-      c.req.header("User-Agent") ?? null,
+      sensitivePayload.payload_ciphertext,
+      sensitivePayload.payload_iv,
+      sensitivePayload.payload_salt,
     ]
   );
 
@@ -2020,6 +2146,9 @@ app.get("/secure/complaints", async (c) => {
   const rows = await sql(
     `
     SELECT c.*,
+           s.payload_ciphertext,
+           s.payload_iv,
+           s.payload_salt,
            s.ip_address,
            s.user_agent
     FROM complaints c
@@ -2030,12 +2159,34 @@ app.get("/secure/complaints", async (c) => {
     [limit]
   );
   const baseUrl = getPublicBaseUrl(c, c.env);
-  const items = rows.map((row) => ({
-    ...row,
-    photo_url: row.photo_attachment_id
-      ? `${baseUrl}/attachments/${row.photo_attachment_id}`
-      : null,
-  }));
+  if (!c.env.COMPLAINTS_SECRET) {
+    return jsonError(c, 500, "COMPLAINTS_SECRET is not configured", "CONFIG");
+  }
+  const items = await Promise.all(
+    rows.map(async (row) => {
+      const record = row as Record<string, unknown>;
+      const decrypted = await decryptSensitivePayload(c.env.COMPLAINTS_SECRET!, {
+        payload_ciphertext: record.payload_ciphertext as string | null | undefined,
+        payload_iv: record.payload_iv as string | null | undefined,
+        payload_salt: record.payload_salt as string | null | undefined,
+        ip_address: record.ip_address as string | null | undefined,
+        user_agent: record.user_agent as string | null | undefined,
+      });
+      const {
+        payload_ciphertext,
+        payload_iv,
+        payload_salt,
+        ...base
+      } = record;
+      return {
+        ...base,
+        ...decrypted,
+        photo_url: record.photo_attachment_id
+          ? `${baseUrl}/attachments/${record.photo_attachment_id}`
+          : null,
+      };
+    })
+  );
   return c.json({ items });
 });
 
@@ -2154,9 +2305,19 @@ app.post("/admin/sync/public-map", async (c) => {
   if (claims.role !== "admin") {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
-  await refreshPublicCache(c.env);
-  await logAudit(sql, claims.sub, "public_cache_refresh", "public_map_cache", "daily");
-  return c.json({ ok: true });
+  const forceRaw = (c.req.query("force") ?? "").toLowerCase();
+  const force = forceRaw === "1" || forceRaw === "true";
+  const refreshResult = await refreshPublicCache(c.env, { force });
+  if (!refreshResult.skipped) {
+    await logAudit(
+      sql,
+      claims.sub,
+      "public_cache_refresh",
+      "public_map_cache",
+      "daily"
+    );
+  }
+  return c.json({ ok: true, forced: force, ...refreshResult });
 });
 
 app.get("/", (c) => c.json({ ok: true, name: "pnit-api" }));

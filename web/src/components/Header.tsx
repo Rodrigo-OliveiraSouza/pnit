@@ -1,12 +1,16 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { getAuthToken, setAuthToken } from "../services/api";
+import { getAuthRole, getAuthToken, setAuthRole, setAuthToken } from "../services/api";
 
 export default function Header() {
   const navigate = useNavigate();
   const isLoggedIn = Boolean(getAuthToken());
+  const role = getAuthRole();
+  const panelLink = role === "admin" ? "/admin" : "/painel";
+  const panelLabel = role === "admin" ? "Admin" : "Painel";
 
   const handleLogout = () => {
     setAuthToken(null);
+    setAuthRole(null);
     navigate("/login");
   };
 
@@ -50,8 +54,8 @@ export default function Header() {
           </NavLink>
           {isLoggedIn ? (
             <>
-              <Link to="/painel" className="btn btn-ghost">
-                Painel
+              <Link to={panelLink} className="btn btn-ghost">
+                {panelLabel}
               </Link>
               <button className="btn btn-primary" type="button" onClick={handleLogout}>
                 Sair

@@ -6,6 +6,7 @@ import {
   fetchProductivity,
   listAdminUsers,
   listComplaints,
+  refreshPublicMapCache,
   updateAdminUser,
   updateComplaintStatus,
   type AdminUser,
@@ -28,6 +29,8 @@ export default function Admin() {
   const [complaintLoading, setComplaintLoading] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
   const [productivityLoading, setProductivityLoading] = useState(false);
+  const [refreshLoading, setRefreshLoading] = useState(false);
+  const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadUsers = async () => {
@@ -118,6 +121,35 @@ export default function Admin() {
     }
   };
 
+  const handleForceRefresh = async () => {
+    setRefreshLoading(true);
+    setRefreshFeedback(null);
+    try {
+      const response = await refreshPublicMapCache(true);
+      if (response.skipped) {
+        const when = response.last_refresh
+          ? new Date(response.last_refresh).toLocaleString()
+          : "agora";
+        setRefreshFeedback(
+          `Atualizacao ja executada nas ultimas 24h (ultima: ${when}).`
+        );
+      } else {
+        const when = response.refreshed_at
+          ? new Date(response.refreshed_at).toLocaleString()
+          : "agora";
+        setRefreshFeedback(`Atualizacao executada em ${when}.`);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Falha ao atualizar o mapa publico.";
+      setRefreshFeedback(message);
+    } finally {
+      setRefreshLoading(false);
+    }
+  };
+
   return (
     <div className="page">
       <section className="dashboard-hero">
@@ -128,10 +160,16 @@ export default function Admin() {
             Acompanhe acessos, aprove solicitacoes e garanta a integridade dos
             dados.
           </p>
+          {refreshFeedback && <div className="alert">{refreshFeedback}</div>}
         </div>
         <div className="dashboard-actions">
-          <button className="btn btn-primary" type="button">
-            Novo funcionario
+          <button
+            className="btn btn-primary"
+            type="button"
+            onClick={() => void handleForceRefresh()}
+            disabled={refreshLoading}
+          >
+            {refreshLoading ? "Atualizando..." : "Forcar atualizacao diaria"}
           </button>
           <button className="btn btn-outline" type="button">
             Exportar auditoria
@@ -146,7 +184,7 @@ export default function Admin() {
             type="button"
             onClick={() => setActiveTab("requests")}
           >
-            Solicitacoes
+            Cadastros pendentes
           </button>
           <button
             className={`tab ${activeTab === "users" ? "active" : ""}`}

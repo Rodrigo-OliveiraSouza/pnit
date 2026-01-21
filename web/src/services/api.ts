@@ -1,6 +1,9 @@
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
 const AUTH_TOKEN_KEY = "pnit_auth_token";
+const AUTH_ROLE_KEY = "pnit_auth_role";
+
+export type UserRole = "admin" | "employee" | "user";
 
 export function setAuthToken(token: string | null) {
   if (token) {
@@ -12,6 +15,22 @@ export function setAuthToken(token: string | null) {
 
 export function getAuthToken() {
   return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+export function setAuthRole(role: UserRole | null) {
+  if (role) {
+    localStorage.setItem(AUTH_ROLE_KEY, role);
+  } else {
+    localStorage.removeItem(AUTH_ROLE_KEY);
+  }
+}
+
+export function getAuthRole(): UserRole | null {
+  const value = localStorage.getItem(AUTH_ROLE_KEY);
+  if (value === "admin" || value === "employee" || value === "user") {
+    return value;
+  }
+  return null;
 }
 
 type ApiErrorBody = {
@@ -208,14 +227,22 @@ export type LoginResponse = {
   user: {
     id: string;
     email: string;
-    role: "admin" | "employee" | "user";
+    role: UserRole;
   };
+};
+
+export type PublicCacheRefreshResponse = {
+  ok: boolean;
+  forced?: boolean;
+  skipped?: boolean;
+  last_refresh?: string;
+  refreshed_at?: string;
 };
 
 export type AdminUser = {
   id: string;
   email: string;
-  role: "admin" | "employee" | "user";
+  role: UserRole;
   status: "active" | "pending" | "disabled";
   full_name?: string | null;
   phone?: string | null;
@@ -511,6 +538,15 @@ export async function loginUser(payload: {
 export async function fetchUserSummary(userId?: string): Promise<UserSummaryResponse> {
   const query = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
   return apiFetch<UserSummaryResponse>(`/reports/user-summary${query}`);
+}
+
+export async function refreshPublicMapCache(
+  force?: boolean
+): Promise<PublicCacheRefreshResponse> {
+  const suffix = force ? "?force=1" : "";
+  return apiFetch<PublicCacheRefreshResponse>(`/admin/sync/public-map${suffix}`, {
+    method: "POST",
+  });
 }
 
 export async function listAdminUsers(params?: {
