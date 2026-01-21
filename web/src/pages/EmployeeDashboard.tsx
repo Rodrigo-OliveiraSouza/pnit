@@ -2,13 +2,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import MapEditor, { type SelectedLocation } from "../components/MapEditor";
-import type { AuditEntry } from "../types/models";
+import { AdminPanel } from "./Admin";
 import {
   assignResidentPoint,
   createPoint,
   createResident,
   createResidentProfile,
-  fetchAuditEntries,
+  getAuthRole,
   listResidents,
   uploadAttachment,
   type CreatePointPayload,
@@ -235,10 +235,9 @@ export default function EmployeeDashboard() {
   const [resetKey, setResetKey] = useState(0);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [residents, setResidents] = useState<DashboardResident[]>([]);
-  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
-  const [auditLoading, setAuditLoading] = useState(false);
-  const [auditView, setAuditView] = useState<"recent" | "history">("recent");
-  const [auditPage, setAuditPage] = useState(0);
+  const role = getAuthRole();
+  const isAdmin = role === "admin";
+  const [activeTab, setActiveTab] = useState<"general" | "admin">("general");
   const [formState, setFormState] = useState(initialFormState);
   const [saving, setSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{
@@ -255,39 +254,8 @@ export default function EmployeeDashboard() {
     }
   };
 
-  const loadAudit = async () => {
-    setAuditLoading(true);
-    try {
-      const response = await fetchAuditEntries({ limit: 100 });
-      const mapped = response.items.map((entry) => ({
-        id: String(entry.id ?? ""),
-        actor_user_id: String(entry.actor_user_id ?? ""),
-        action: String(entry.action ?? ""),
-        entity_type: String(entry.entity_type ?? ""),
-        entity_id: String(entry.entity_id ?? ""),
-        created_at: String(entry.created_at ?? ""),
-      }));
-      setAuditEntries(mapped);
-      setAuditPage(0);
-      setAuditView("recent");
-    } catch {
-      setAuditEntries([]);
-    } finally {
-      setAuditLoading(false);
-    }
-  };
-
-  const auditPageSize = 10;
-  const auditTotalPages = Math.max(1, Math.ceil(auditEntries.length / auditPageSize));
-  const recentAuditEntries = auditEntries.slice(0, auditPageSize);
-  const pagedAuditEntries = auditEntries.slice(
-    auditPage * auditPageSize,
-    auditPage * auditPageSize + auditPageSize
-  );
-
   useEffect(() => {
     void loadResidents();
-    void loadAudit();
   }, []);
 
   const handleFieldChange = (
@@ -439,11 +407,46 @@ export default function EmployeeDashboard() {
     }
   };
 
+  useEffect(() => {
+    if (!isAdmin && activeTab === "admin") {
+      setActiveTab("general");
+    }
+  }, [activeTab, isAdmin]);
+
+  const panelTabs = isAdmin ? (
+    <div className="tabs" style={{ marginBottom: "1.5rem" }}>
+      <button
+        className={`tab ${activeTab === "general" ? "active" : ""}`}
+        type="button"
+        onClick={() => setActiveTab("general")}
+      >
+        Painel geral
+      </button>
+      <button
+        className={`tab ${activeTab === "admin" ? "active" : ""}`}
+        type="button"
+        onClick={() => setActiveTab("admin")}
+      >
+        Painel ADM
+      </button>
+    </div>
+  ) : null;
+
+  if (isAdmin && activeTab === "admin") {
+    return (
+      <div className="page">
+        {panelTabs}
+        <AdminPanel />
+      </div>
+    );
+  }
+
   return (
     <div className="page">
+      {panelTabs}
       <section className="dashboard-hero">
         <div>
-          <span className="eyebrow">Painel do funcionario</span>
+          <span className="eyebrow">Painel geral</span>
           <h1>Cadastro de pessoas no mapa</h1>
           <p>
             Registre pessoas e indicadores sociais. Cada pessoa vira um ponto
@@ -1125,158 +1128,76 @@ export default function EmployeeDashboard() {
         </div>
       </section>
 
-      <section className="table-section">
-        <div className="table-header">
-          <div>
-            <span className="eyebrow">Pessoas</span>
-            <h2>Pessoas cadastradas (pontos)</h2>
-          </div>
-          <Link className="btn btn-primary" to="/relatorios">
-            Gerar relatorio publico
-          </Link>
-        </div>
-        <div className="table-card">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Cidade</th>
-                <th>Estado</th>
-                <th>Status</th>
-                <th>Criado em</th>
-              </tr>
-            </thead>
-            <tbody>
-              {residents.length === 0 ? (
-                <tr>
-                  <td colSpan={6}>
-                    <div className="table-empty">
-                      Nenhum cadastro registrado ainda.
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                residents.map((resident) => (
-                  <tr key={resident.id}>
-                    <td>{resident.id}</td>
-                    <td>{resident.full_name}</td>
-                    <td>{resident.city ?? "-"}</td>
-                    <td>{resident.state ?? "-"}</td>
-                    <td>
-                      <span className={`status ${resident.status}`}>
-                        {formatStatus(resident.status as "active" | "inactive")}
-                      </span>
-                    </td>
-                    <td>{new Date(resident.created_at).toLocaleDateString()}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="table-section">
-        <div className="table-header">
-          <div>
-            <span className="eyebrow">Registro</span>
-            <h2>
-              {auditView === "recent"
-                ? "Minhas acoes recentes (ultimas 10)"
-                : "Historico completo de acoes"}
-            </h2>
-          </div>
-          {auditView === "recent" && auditEntries.length > auditPageSize && (
-            <button
-              className="btn btn-outline"
-              type="button"
-              onClick={() => setAuditView("history")}
-            >
-              Ver todas as acoes
-            </button>
-          )}
-          {auditView === "history" && (
-            <button
-              className="btn btn-outline"
-              type="button"
-              onClick={() => setAuditView("recent")}
-            >
-              Voltar para recentes
-            </button>
-          )}
-        </div>
-        <div className="table-card">
-          <table>
-            <thead>
-              <tr>
-                <th>Acao</th>
-                <th>Entidade</th>
-                <th>Registro</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {auditLoading ? (
-                <tr>
-                  <td colSpan={4}>
-                    <div className="table-empty">Carregando...</div>
-                  </td>
-                </tr>
-              ) : auditEntries.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>
-                    <div className="table-empty">
-                      Nenhuma acao registrada ainda.
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                (auditView === "recent"
-                  ? recentAuditEntries
-                  : pagedAuditEntries
-                ).map((entry) => (
-                  <tr key={entry.id}>
-                    <td>{entry.action}</td>
-                    <td>{entry.entity_type}</td>
-                    <td>{entry.entity_id}</td>
-                    <td>{new Date(entry.created_at).toLocaleString()}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          {auditView === "history" && auditEntries.length > auditPageSize && (
-            <div className="table-footer">
-              <span className="muted">
-                Pagina {auditPage + 1} de {auditTotalPages}
-              </span>
-              <div className="pager">
-                <button
-                  className="btn btn-ghost"
-                  type="button"
-                  onClick={() => setAuditPage((current) => Math.max(0, current - 1))}
-                  disabled={auditPage === 0}
-                >
-                  Anterior
-                </button>
-                <button
-                  className="btn btn-ghost"
-                  type="button"
-                  onClick={() =>
-                    setAuditPage((current) =>
-                      Math.min(auditTotalPages - 1, current + 1)
-                    )
-                  }
-                  disabled={auditPage >= auditTotalPages - 1}
-                >
-                  Proxima
-                </button>
-              </div>
+      {isAdmin ? (
+        <section className="table-section">
+          <div className="table-header">
+            <div>
+              <span className="eyebrow">Pessoas</span>
+              <h2>Pessoas cadastradas (pontos)</h2>
             </div>
-          )}
-        </div>
-      </section>
+            <Link className="btn btn-primary" to="/relatorios">
+              Gerar relatorio publico
+            </Link>
+          </div>
+          <div className="table-card">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Nome</th>
+                  <th>Cidade</th>
+                  <th>Estado</th>
+                  <th>Status</th>
+                  <th>Criado em</th>
+                </tr>
+              </thead>
+              <tbody>
+                {residents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="table-empty">
+                        Nenhum cadastro registrado ainda.
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  residents.map((resident) => (
+                    <tr key={resident.id}>
+                      <td>{resident.id}</td>
+                      <td>{resident.full_name}</td>
+                      <td>{resident.city ?? "-"}</td>
+                      <td>{resident.state ?? "-"}</td>
+                      <td>
+                        <span className={`status ${resident.status}`}>
+                          {formatStatus(resident.status as "active" | "inactive")}
+                        </span>
+                      </td>
+                      <td>{new Date(resident.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : (
+        <section className="table-section">
+          <div className="table-header">
+            <div>
+              <span className="eyebrow">Relatorios</span>
+              <h2>Relatorio geral</h2>
+            </div>
+            <Link className="btn btn-primary" to="/relatorios">
+              Gerar relatorio publico
+            </Link>
+          </div>
+          <div className="table-card">
+            <p className="muted">
+              Consulte indicadores agregados e pontos cadastrados no mapa.
+            </p>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

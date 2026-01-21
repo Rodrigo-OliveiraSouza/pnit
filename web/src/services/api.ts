@@ -2,6 +2,7 @@ const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
 const AUTH_TOKEN_KEY = "pnit_auth_token";
 const AUTH_ROLE_KEY = "pnit_auth_role";
+const AUTH_USER_ID_KEY = "pnit_auth_user_id";
 
 export type UserRole = "admin" | "employee" | "user";
 
@@ -31,6 +32,18 @@ export function getAuthRole(): UserRole | null {
     return value;
   }
   return null;
+}
+
+export function setAuthUserId(userId: string | null) {
+  if (userId) {
+    localStorage.setItem(AUTH_USER_ID_KEY, userId);
+  } else {
+    localStorage.removeItem(AUTH_USER_ID_KEY);
+  }
+}
+
+export function getAuthUserId(): string | null {
+  return localStorage.getItem(AUTH_USER_ID_KEY);
 }
 
 type ApiErrorBody = {

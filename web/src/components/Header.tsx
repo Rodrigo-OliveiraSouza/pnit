@@ -1,16 +1,23 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { getAuthRole, getAuthToken, setAuthRole, setAuthToken } from "../services/api";
+import {
+  getAuthRole,
+  getAuthToken,
+  setAuthRole,
+  setAuthToken,
+  setAuthUserId,
+} from "../services/api";
 
 export default function Header() {
   const navigate = useNavigate();
   const isLoggedIn = Boolean(getAuthToken());
   const role = getAuthRole();
-  const panelLink = role === "admin" ? "/admin" : "/painel";
-  const panelLabel = role === "admin" ? "Admin" : "Painel";
+  const panelLink = "/painel";
+  const panelLabel = role === "admin" ? "Painel" : "Painel";
 
   const handleLogout = () => {
     setAuthToken(null);
     setAuthRole(null);
+    setAuthUserId(null);
     navigate("/login");
   };
 

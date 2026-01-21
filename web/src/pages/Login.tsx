@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { loginUser, setAuthRole, setAuthToken } from "../services/api";
+import { loginUser, setAuthRole, setAuthToken, setAuthUserId } from "../services/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -17,7 +17,8 @@ export default function Login() {
       const response = await loginUser({ email, password });
       setAuthToken(response.token);
       setAuthRole(response.user.role);
-      navigate(response.user.role === "admin" ? "/admin" : "/painel");
+      setAuthUserId(response.user.id);
+      navigate("/painel");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao entrar.";
       setError(message);

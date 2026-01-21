@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
 import {
   fetchAuditEntries,
   fetchProductivity,
+  getAuthRole,
+  getAuthUserId,
   listAdminUsers,
   listComplaints,
   refreshPublicMapCache,
@@ -14,7 +16,7 @@ import {
   type ProductivityResponse,
 } from "../services/api";
 
-export default function Admin() {
+export function AdminPanel() {
   const [activeTab, setActiveTab] = useState<
     "requests" | "users" | "complaints" | "productivity" | "settings" | "audit"
   >("requests");
@@ -31,6 +33,8 @@ export default function Admin() {
   const [productivityLoading, setProductivityLoading] = useState(false);
   const [refreshLoading, setRefreshLoading] = useState(false);
   const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
+  const [auditView, setAuditView] = useState<"recent" | "history">("recent");
+  const [auditPage, setAuditPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const loadUsers = async () => {
@@ -92,7 +96,11 @@ export default function Admin() {
   const loadAudit = async () => {
     setAuditLoading(true);
     try {
-      const response = await fetchAuditEntries({ limit: 200 });
+      const actorUserId = getAuthUserId();
+      const response = await fetchAuditEntries({
+        limit: 100,
+        actor_user_id: actorUserId ?? undefined,
+      });
       const mapped = response.items.map((entry) => ({
         id: String(entry.id ?? ""),
         actor_user_id: String(entry.actor_user_id ?? ""),
@@ -102,6 +110,8 @@ export default function Admin() {
         created_at: String(entry.created_at ?? ""),
       }));
       setAuditEntries(mapped);
+      setAuditPage(0);
+      setAuditView("recent");
     } catch {
       setAuditEntries([]);
     } finally {
@@ -120,6 +130,21 @@ export default function Admin() {
       setProductivityLoading(false);
     }
   };
+
+  const auditPageSize = 10;
+  const auditTotalPages = Math.max(1, Math.ceil(auditEntries.length / auditPageSize));
+  const recentAuditEntries = useMemo(
+    () => auditEntries.slice(0, auditPageSize),
+    [auditEntries]
+  );
+  const pagedAuditEntries = useMemo(
+    () =>
+      auditEntries.slice(
+        auditPage * auditPageSize,
+        auditPage * auditPageSize + auditPageSize
+      ),
+    [auditEntries, auditPage]
+  );
 
   const handleForceRefresh = async () => {
     setRefreshLoading(true);
@@ -151,7 +176,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="page">
+    <>
       <section className="dashboard-hero">
         <div>
           <span className="eyebrow">Admin</span>
@@ -192,7 +217,7 @@ export default function Admin() {
             type="button"
             onClick={() => setActiveTab("users")}
           >
-            Usuarios
+            Cadastros registrados
           </button>
           <button
             className={`tab ${activeTab === "complaints" ? "active" : ""}`}
@@ -206,7 +231,7 @@ export default function Admin() {
             type="button"
             onClick={() => setActiveTab("productivity")}
           >
-            Produtividade
+            Relatorio de usuario
           </button>
           <button
             className={`tab ${activeTab === "settings" ? "active" : ""}`}
@@ -220,7 +245,7 @@ export default function Admin() {
             type="button"
             onClick={() => setActiveTab("audit")}
           >
-            Auditoria
+            Minhas acoes
           </button>
         </div>
         {error && <div className="alert">{error}</div>}
@@ -405,7 +430,7 @@ export default function Admin() {
         )}
         {activeTab === "productivity" && (
           <div className="dashboard-card">
-            <h3>Resumo de produtividade</h3>
+            <h3>Relatorio de usuarios</h3>
             {productivityLoading && <p className="muted">Carregando...</p>}
             {!productivityLoading && !productivity && (
               <p className="muted">Sem dados disponiveis.</p>
@@ -483,11 +508,37 @@ export default function Admin() {
         )}
         {activeTab === "audit" && (
           <div className="table-card">
+            <div className="table-header" style={{ marginBottom: "0.8rem" }}>
+              <div>
+                <span className="eyebrow">Registro</span>
+                <h3>
+                  {auditView === "recent"
+                    ? "Minhas acoes recentes (ultimas 10)"
+                    : "Historico completo de acoes"}
+                </h3>
+              </div>
+              {auditView === "recent" && auditEntries.length > auditPageSize && (
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={() => setAuditView("history")}
+                >
+                  Ver todas as acoes
+                </button>
+              )}
+              {auditView === "history" && (
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={() => setAuditView("recent")}
+                >
+                  Voltar para recentes
+                </button>
+              )}
+            </div>
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Ator</th>
                   <th>Acao</th>
                   <th>Entidade</th>
                   <th>Registro</th>
@@ -497,23 +548,24 @@ export default function Admin() {
               <tbody>
                 {auditLoading ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={4}>
                       <div className="table-empty">Carregando...</div>
                     </td>
                   </tr>
                 ) : auditEntries.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={4}>
                       <div className="table-empty">
-                        Nenhum evento de auditoria registrado ainda.
+                        Nenhuma acao registrada ainda.
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  auditEntries.map((entry) => (
+                  (auditView === "recent"
+                    ? recentAuditEntries
+                    : pagedAuditEntries
+                  ).map((entry) => (
                     <tr key={entry.id}>
-                      <td>{entry.id}</td>
-                      <td>{entry.actor_user_id}</td>
                       <td>{entry.action}</td>
                       <td>{entry.entity_type}</td>
                       <td>{entry.entity_id}</td>
@@ -523,9 +575,54 @@ export default function Admin() {
                 )}
               </tbody>
             </table>
+            {auditView === "history" && auditEntries.length > auditPageSize && (
+              <div className="table-footer">
+                <span className="muted">
+                  Pagina {auditPage + 1} de {auditTotalPages}
+                </span>
+                <div className="pager">
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    onClick={() => setAuditPage((current) => Math.max(0, current - 1))}
+                    disabled={auditPage === 0}
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    onClick={() =>
+                      setAuditPage((current) =>
+                        Math.min(auditTotalPages - 1, current + 1)
+                      )
+                    }
+                    disabled={auditPage >= auditTotalPages - 1}
+                  >
+                    Proxima
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
+    </>
+  );
+}
+
+export default function Admin() {
+  const role = getAuthRole();
+  if (role !== "admin") {
+    return (
+      <div className="page">
+        <div className="alert">Acesso restrito ao painel admin.</div>
+      </div>
+    );
+  }
+  return (
+    <div className="page">
+      <AdminPanel />
     </div>
   );
 }
