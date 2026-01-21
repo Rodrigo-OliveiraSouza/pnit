@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { registerUser, setAuthToken } from "../services/api";
+import citiesData from "../data/brazil-cities.json";
+import { BRAZIL_STATES } from "../data/brazil-states";
+
+type BrazilCity = { name: string; state: string };
+const BRAZIL_CITIES = citiesData as BrazilCity[];
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -15,6 +20,26 @@ export default function Register() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const availableCities = useMemo(() => {
+    if (!state) return BRAZIL_CITIES;
+    return BRAZIL_CITIES.filter((city) => city.state === state);
+  }, [state]);
+  const selectedCityValue = city && state ? `${city}__${state}` : "";
+
+  const handleStateChange = (value: string) => {
+    setState(value);
+    setCity("");
+  };
+
+  const handleCityChange = (value: string) => {
+    if (!value) {
+      setCity("");
+      return;
+    }
+    const [cityName, stateCode] = value.split("__");
+    setCity(cityName);
+    setState(stateCode);
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -121,23 +146,38 @@ export default function Register() {
               <div className="form-row">
                 <label>
                   Cidade
-                  <input
-                    type="text"
-                    placeholder="Cidade"
-                    value={city}
-                    onChange={(event) => setCity(event.target.value)}
+                  <select
+                    className="select"
+                    value={selectedCityValue}
+                    onChange={(event) => handleCityChange(event.target.value)}
                     required
-                  />
+                  >
+                    <option value="">Selecione uma cidade</option>
+                    {availableCities.map((cityOption) => (
+                      <option
+                        key={`${cityOption.name}-${cityOption.state}`}
+                        value={`${cityOption.name}__${cityOption.state}`}
+                      >
+                        {cityOption.name} ({cityOption.state})
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Estado
-                  <input
-                    type="text"
-                    placeholder="UF"
+                  <select
+                    className="select"
                     value={state}
-                    onChange={(event) => setState(event.target.value)}
+                    onChange={(event) => handleStateChange(event.target.value)}
                     required
-                  />
+                  >
+                    <option value="">Selecione um estado</option>
+                    {BRAZIL_STATES.map((stateOption) => (
+                      <option key={stateOption.code} value={stateOption.code}>
+                        {stateOption.code} - {stateOption.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
               <label>

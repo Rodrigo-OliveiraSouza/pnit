@@ -976,9 +976,24 @@ app.post("/reports/export", async (c) => {
     `,
     params
   );
+  const boundaryRows = await sql(
+    `
+    SELECT ST_AsGeoJSON(
+      ST_ConvexHull(ST_Collect(geog::geometry))
+    ) AS boundary_geojson
+    FROM public_map_cache
+    WHERE ${where}
+    `,
+    params
+  );
+  const boundaryGeojson = boundaryRows[0]?.boundary_geojson ?? null;
 
   if (body.format === "JSON") {
-    const content = JSON.stringify({ items: rows }, null, 2);
+    const content = JSON.stringify(
+      { items: rows, boundary: boundaryGeojson },
+      null,
+      2
+    );
     return c.json({
       content,
       content_type: "application/json",
@@ -999,13 +1014,19 @@ app.post("/reports/export", async (c) => {
       "residents",
       "public_note",
       "updated_at",
+      "boundary_geojson",
     ];
     const lines = [
       header.join(","),
-      ...rows.map((row) =>
+      ...rows.map((row, index) =>
         header
           .map((key) => {
-            const value = row[key];
+            const value =
+              key === "boundary_geojson"
+                ? index === 0
+                  ? boundaryGeojson
+                  : ""
+                : row[key];
             if (value === null || value === undefined) return "";
             const text = String(value).replace(/"/g, '""');
             return `"${text}"`;
@@ -1036,6 +1057,18 @@ app.post("/reports/export", async (c) => {
     x: 50,
     y: height - 100,
     size: 12,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  const boundaryText = boundaryGeojson
+    ? `Malha (GeoJSON): ${boundaryGeojson.slice(0, 160)}${
+        boundaryGeojson.length > 160 ? "..." : ""
+      }`
+    : "Malha (GeoJSON): nao disponivel";
+  page.drawText(boundaryText, {
+    x: 50,
+    y: height - 120,
+    size: 9,
     font,
     color: rgb(0.1, 0.1, 0.1),
   });

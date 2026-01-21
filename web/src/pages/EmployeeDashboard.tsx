@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import MapEditor, { type SelectedLocation } from "../components/MapEditor";
 import { AdminPanel } from "./Admin";
+import citiesData from "../data/brazil-cities.json";
+import { BRAZIL_STATES } from "../data/brazil-states";
 import {
   assignResidentPoint,
   createPoint,
@@ -24,6 +26,9 @@ type DashboardResident = {
   status: string;
   created_at: string;
 };
+
+type BrazilCity = { name: string; state: string };
+const BRAZIL_CITIES = citiesData as BrazilCity[];
 
 function parseLatLng(input: string) {
   const matches = input.match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/i);
@@ -244,6 +249,12 @@ export default function EmployeeDashboard() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const availableCities = useMemo(() => {
+    if (!formState.state) return BRAZIL_CITIES;
+    return BRAZIL_CITIES.filter((city) => city.state === formState.state);
+  }, [formState.state]);
+  const selectedCityValue =
+    formState.city && formState.state ? `${formState.city}__${formState.state}` : "";
 
   const loadResidents = async () => {
     try {
@@ -265,6 +276,27 @@ export default function EmployeeDashboard() {
     setFormState((current) => ({
       ...current,
       [field]: value,
+    }));
+  };
+
+  const handleStateSelect = (value: string) => {
+    setFormState((current) => ({
+      ...current,
+      state: value,
+      city: "",
+    }));
+  };
+
+  const handleCitySelect = (value: string) => {
+    if (!value) {
+      setFormState((current) => ({ ...current, city: "" }));
+      return;
+    }
+    const [cityName, stateCode] = value.split("__");
+    setFormState((current) => ({
+      ...current,
+      city: cityName,
+      state: stateCode,
     }));
   };
 
@@ -534,25 +566,38 @@ export default function EmployeeDashboard() {
               <div className="form-row">
                 <label>
                   Cidade
-                  <input
-                    type="text"
-                    placeholder="Cidade"
-                    value={formState.city}
-                    onChange={(event) =>
-                      handleFieldChange("city", event.target.value)
-                    }
-                  />
+                  <select
+                    className="select"
+                    value={selectedCityValue}
+                    onChange={(event) => handleCitySelect(event.target.value)}
+                    required
+                  >
+                    <option value="">Selecione uma cidade</option>
+                    {availableCities.map((city) => (
+                      <option
+                        key={`${city.name}-${city.state}`}
+                        value={`${city.name}__${city.state}`}
+                      >
+                        {city.name} ({city.state})
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Estado
-                  <input
-                    type="text"
-                    placeholder="UF"
+                  <select
+                    className="select"
                     value={formState.state}
-                    onChange={(event) =>
-                      handleFieldChange("state", event.target.value)
-                    }
-                  />
+                    onChange={(event) => handleStateSelect(event.target.value)}
+                    required
+                  >
+                    <option value="">Selecione um estado</option>
+                    {BRAZIL_STATES.map((state) => (
+                      <option key={state.code} value={state.code}>
+                        {state.code} - {state.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
               </div>
               <label>

@@ -1,9 +1,15 @@
+import citiesData from "../data/brazil-cities.json";
+import { BRAZIL_STATES } from "../data/brazil-states";
+
 type Bounds = {
   north: number;
   south: number;
   east: number;
   west: number;
 };
+
+type BrazilCity = { name: string; state: string };
+const BRAZIL_CITIES = citiesData as BrazilCity[];
 
 type MapFiltersProps = {
   selectionActive: boolean;
@@ -86,6 +92,26 @@ export default function MapFilters({
   onApplyFilters,
 }: MapFiltersProps) {
   const updatedValue = updatedWithinDays ? String(updatedWithinDays) : "all";
+  const availableCities = stateFilter
+    ? BRAZIL_CITIES.filter((city) => city.state === stateFilter)
+    : BRAZIL_CITIES;
+  const selectedCityValue =
+    cityFilter && stateFilter ? `${cityFilter}__${stateFilter}` : "";
+
+  const handleStateChange = (value: string) => {
+    onStateFilterChange(value);
+    onCityFilterChange("");
+  };
+
+  const handleCityChange = (value: string) => {
+    if (!value) {
+      onCityFilterChange("");
+      return;
+    }
+    const [name, state] = value.split("__");
+    onStateFilterChange(state);
+    onCityFilterChange(name);
+  };
 
   return (
     <aside className="map-filters">
@@ -294,19 +320,31 @@ export default function MapFilters({
           <option value="90">Ultimos 90 dias</option>
         </select>
         <label className="filter-label">Cidade</label>
-        <input
-          type="text"
-          placeholder="Ex.: Cruz das Almas"
-          value={cityFilter}
-          onChange={(event) => onCityFilterChange(event.target.value)}
-        />
+        <select
+          className="select"
+          value={selectedCityValue}
+          onChange={(event) => handleCityChange(event.target.value)}
+        >
+          <option value="">Selecione uma cidade</option>
+          {availableCities.map((city) => (
+            <option key={`${city.name}-${city.state}`} value={`${city.name}__${city.state}`}>
+              {city.name} ({city.state})
+            </option>
+          ))}
+        </select>
         <label className="filter-label">Estado</label>
-        <input
-          type="text"
-          placeholder="UF"
+        <select
+          className="select"
           value={stateFilter}
-          onChange={(event) => onStateFilterChange(event.target.value)}
-        />
+          onChange={(event) => handleStateChange(event.target.value)}
+        >
+          <option value="">Todos os estados</option>
+          {BRAZIL_STATES.map((state) => (
+            <option key={state.code} value={state.code}>
+              {state.code} - {state.name}
+            </option>
+          ))}
+        </select>
         <label className="filter-label">Regiao</label>
         <input
           type="text"
