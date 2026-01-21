@@ -4,6 +4,7 @@ import type { AuditEntry } from "../types/models";
 import {
   fetchAuditEntries,
   fetchProductivity,
+  fetchUserSummary,
   getAuthRole,
   getAuthUserId,
   listAdminUsers,
@@ -32,6 +33,21 @@ export function AdminPanel() {
   const [complaintLoading, setComplaintLoading] = useState(false);
   const [auditLoading, setAuditLoading] = useState(false);
   const [productivityLoading, setProductivityLoading] = useState(false);
+  const [productivityDetailsId, setProductivityDetailsId] = useState<string | null>(
+    null
+  );
+  const [productivityDetails, setProductivityDetails] = useState<
+    Record<string, Awaited<ReturnType<typeof fetchUserSummary>>>
+  >({});
+  const [productivityDetailsLoadingId, setProductivityDetailsLoadingId] = useState<
+    string | null
+  >(null);
+  const [productivityDetailsError, setProductivityDetailsError] = useState<
+    string | null
+  >(null);
+  const [productivityDownloadId, setProductivityDownloadId] = useState<string | null>(
+    null
+  );
   const [refreshLoading, setRefreshLoading] = useState(false);
   const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
   const [auditView, setAuditView] = useState<"recent" | "history">("recent");
@@ -96,6 +112,68 @@ export function AdminPanel() {
 
   const handleToggleComplaint = (id: string) => {
     setOpenComplaintId((current) => (current === id ? null : id));
+  };
+
+  const safeFileName = (value: string) =>
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9-_]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+  const handleToggleProductivity = async (userId: string) => {
+    if (productivityDetailsId === userId) {
+      setProductivityDetailsId(null);
+      return;
+    }
+    setProductivityDetailsId(userId);
+    if (productivityDetails[userId]) {
+      return;
+    }
+    setProductivityDetailsLoadingId(userId);
+    setProductivityDetailsError(null);
+    try {
+      const summary = await fetchUserSummary(userId);
+      setProductivityDetails((current) => ({ ...current, [userId]: summary }));
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Falha ao carregar relatorio individual.";
+      setProductivityDetailsError(message);
+    } finally {
+      setProductivityDetailsLoadingId(null);
+    }
+  };
+
+  const handleDownloadUserReport = async (userId: string, label?: string | null) => {
+    setProductivityDownloadId(userId);
+    setProductivityDetailsError(null);
+    try {
+      const summary =
+        productivityDetails[userId] ?? (await fetchUserSummary(userId));
+      if (!productivityDetails[userId]) {
+        setProductivityDetails((current) => ({ ...current, [userId]: summary }));
+      }
+      const content = JSON.stringify(summary, null, 2);
+      const blob = new Blob([content], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const fallback = `usuario-${userId}`;
+      const baseName = safeFileName(label ?? "") || fallback;
+      link.href = url;
+      link.download = `${baseName}-relatorio.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Falha ao baixar relatorio individual.";
+      setProductivityDetailsError(message);
+    } finally {
+      setProductivityDownloadId(null);
+    }
   };
 
   const loadAudit = async () => {
@@ -497,31 +575,135 @@ export function AdminPanel() {
                         <th>Media Renda</th>
                         <th>Media Moradia</th>
                         <th>Media Seguranca</th>
+                        <th>Acoes</th>
                       </tr>
                     </thead>
                     <tbody>
                       {productivity.by_user.length === 0 ? (
                         <tr>
-                          <td colSpan={9}>
+                          <td colSpan={10}>
                             <div className="table-empty">
                               Nenhuma atividade registrada.
                             </div>
                           </td>
                         </tr>
                       ) : (
-                        productivity.by_user.map((item) => (
-                          <tr key={item.user_id}>
-                            <td>{item.full_name ?? "-"}</td>
-                            <td>{item.email ?? "-"}</td>
-                            <td>{item.residents}</td>
-                            <td>{item.points}</td>
-                            <td>{item.health_avg ?? "-"}</td>
-                            <td>{item.education_avg ?? "-"}</td>
-                            <td>{item.income_avg ?? "-"}</td>
-                            <td>{item.housing_avg ?? "-"}</td>
-                            <td>{item.security_avg ?? "-"}</td>
-                          </tr>
-                        ))
+                        productivity.by_user.map((item) => {
+                          const isOpen = productivityDetailsId === item.user_id;
+                          const details = productivityDetails[item.user_id];
+                          const detailsLoading =
+                            productivityDetailsLoadingId === item.user_id;
+                          return (
+                            <Fragment key={item.user_id}>
+                              <tr>
+                                <td>{item.full_name ?? "-"}</td>
+                                <td>{item.email ?? "-"}</td>
+                                <td>{item.residents}</td>
+                                <td>{item.points}</td>
+                                <td>{item.health_avg ?? "-"}</td>
+                                <td>{item.education_avg ?? "-"}</td>
+                                <td>{item.income_avg ?? "-"}</td>
+                                <td>{item.housing_avg ?? "-"}</td>
+                                <td>{item.security_avg ?? "-"}</td>
+                                <td>
+                                  <button
+                                    className="btn btn-ghost"
+                                    type="button"
+                                    onClick={() => void handleToggleProductivity(item.user_id)}
+                                  >
+                                    {isOpen ? "Fechar detalhes" : "Ver detalhes"}
+                                  </button>
+                                  <button
+                                    className="btn btn-outline"
+                                    type="button"
+                                    onClick={() =>
+                                      void handleDownloadUserReport(
+                                        item.user_id,
+                                        item.full_name ?? item.email ?? undefined
+                                      )
+                                    }
+                                    disabled={productivityDownloadId === item.user_id}
+                                  >
+                                    {productivityDownloadId === item.user_id
+                                      ? "Baixando..."
+                                      : "Baixar relatorio"}
+                                  </button>
+                                </td>
+                              </tr>
+                              {isOpen && (
+                                <tr>
+                                  <td colSpan={10}>
+                                    <div className="table-empty" style={{ textAlign: "left" }}>
+                                      <strong>Relatorio individual</strong>
+                                      {detailsLoading && (
+                                        <p className="muted">Carregando detalhes...</p>
+                                      )}
+                                      {!detailsLoading && productivityDetailsError && (
+                                        <div className="alert">
+                                          {productivityDetailsError}
+                                        </div>
+                                      )}
+                                      {!detailsLoading && details && (
+                                        <>
+                                          <div className="summary-grid" style={{ marginTop: "0.8rem" }}>
+                                            <div>
+                                              <span>Total de cadastros</span>
+                                              <strong>
+                                                {details.summary?.total_residents ?? 0}
+                                              </strong>
+                                            </div>
+                                            <div>
+                                              <span>Renda media (R$)</span>
+                                              <strong>
+                                                {details.averages?.income_monthly ?? "-"}
+                                              </strong>
+                                            </div>
+                                            <div>
+                                              <span>Saude</span>
+                                              <strong>
+                                                {details.averages?.health_score ?? "-"}
+                                              </strong>
+                                            </div>
+                                            <div>
+                                              <span>Educacao</span>
+                                              <strong>
+                                                {details.averages?.education_score ?? "-"}
+                                              </strong>
+                                            </div>
+                                            <div>
+                                              <span>Moradia</span>
+                                              <strong>
+                                                {details.averages?.housing_score ?? "-"}
+                                              </strong>
+                                            </div>
+                                            <div>
+                                              <span>Seguranca</span>
+                                              <strong>
+                                                {details.averages?.security_score ?? "-"}
+                                              </strong>
+                                            </div>
+                                          </div>
+                                          {details.monthly && details.monthly.length > 0 && (
+                                            <div style={{ marginTop: "0.8rem" }}>
+                                              <strong>Cadastros por mes</strong>
+                                              <ul className="activity-list">
+                                                {details.monthly.slice(0, 6).map((entry) => (
+                                                  <li key={`${item.user_id}-${entry.month}`}>
+                                                    {entry.month}: {entry.total}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
