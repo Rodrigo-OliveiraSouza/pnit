@@ -220,7 +220,44 @@ export default function PublicMapSection() {
     setReportError(null);
   }, []);
 
+  const runReportPreview = useCallback(async () => {
+    const filters = {
+      city: appliedFilters.city.trim() || undefined,
+      state: appliedFilters.state.trim() || undefined,
+      region: appliedFilters.region.trim() || undefined,
+    };
+    if (!selectedBounds && !filters.city && !filters.state && !filters.region) {
+      return false;
+    }
+    setReportLoading(true);
+    setReportError(null);
+    setReportFeedback(null);
+    try {
+      const response = await generateReportPreview({
+        bounds: selectedBounds ?? undefined,
+        filters,
+        include: reportInclude,
+      });
+      setReportSummary(response.summary ?? null);
+      setReportBreakdown(response.breakdown ?? null);
+      setReportStatus("ready");
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao gerar relatorio.";
+      setReportError(message);
+      setReportStatus("idle");
+      return false;
+    } finally {
+      setReportLoading(false);
+    }
+  }, [appliedFilters, reportInclude, selectedBounds]);
+
   const handleGenerateReport = useCallback(() => {
+    void runReportPreview();
+  }, [runReportPreview]);
+
+  const handleExportReport = useCallback(async () => {
     const filters = {
       city: appliedFilters.city.trim() || undefined,
       state: appliedFilters.state.trim() || undefined,
@@ -229,38 +266,11 @@ export default function PublicMapSection() {
     if (!selectedBounds && !filters.city && !filters.state && !filters.region) {
       return;
     }
-    setReportLoading(true);
-    setReportError(null);
-    setReportFeedback(null);
-    generateReportPreview({
-      bounds: selectedBounds ?? undefined,
-      filters,
-      include: reportInclude,
-    })
-      .then((response) => {
-        setReportSummary(response.summary ?? null);
-        setReportBreakdown(response.breakdown ?? null);
-        setReportStatus("ready");
-      })
-      .catch((error) => {
-        const message =
-          error instanceof Error ? error.message : "Falha ao gerar relatorio.";
-        setReportError(message);
-        setReportStatus("idle");
-      })
-      .finally(() => {
-        setReportLoading(false);
-      });
-  }, [appliedFilters, reportInclude, selectedBounds]);
-
-  const handleExportReport = useCallback(() => {
-    const filters = {
-      city: appliedFilters.city.trim() || undefined,
-      state: appliedFilters.state.trim() || undefined,
-      region: appliedFilters.region.trim() || undefined,
-    };
-    if ((!selectedBounds && !filters.city && !filters.state && !filters.region) || reportStatus !== "ready") {
-      return;
+    if (reportStatus !== "ready") {
+      const ok = await runReportPreview();
+      if (!ok) {
+        return;
+      }
     }
     setReportFeedback(null);
     exportReport({
@@ -318,7 +328,15 @@ export default function PublicMapSection() {
           error instanceof Error ? error.message : "Falha ao exportar relatorio.";
         setReportFeedback(message);
       });
-  }, [appliedFilters, reportFormat, reportInclude, reportName, reportStatus, selectedBounds]);
+  }, [
+    appliedFilters,
+    reportFormat,
+    reportInclude,
+    reportName,
+    reportStatus,
+    runReportPreview,
+    selectedBounds,
+  ]);
 
   const toggleSelection = useCallback(() => {
     setSelectionActive((current) => !current);
@@ -596,7 +614,7 @@ export default function PublicMapSection() {
               <button
                 className="btn btn-primary"
                 type="button"
-                disabled={reportStatus !== "ready" || reportLoading}
+                disabled={!canGenerateReport || reportLoading}
                 onClick={handleExportReport}
               >
                 Exportar relatorio
