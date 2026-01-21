@@ -4,6 +4,31 @@ import type { MapPoint } from "../types/models";
 
 const defaultCenter = { lat: -14.235, lng: -51.925 };
 const DEFAULT_LIBRARIES: Libraries = ["drawing"];
+const PHOTO_PIN_COLOR = "#d9482b";
+
+function buildPhotoPinIcon(
+  googleMaps: typeof google,
+  photoUrl: string
+): google.maps.Icon {
+  const width = 56;
+  const height = 70;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 56 70">
+      <path fill="${PHOTO_PIN_COLOR}" d="M28 0C17.2 0 8.4 8.8 8.4 19.6 8.4 35.6 28 70 28 70s19.6-34.4 19.6-50.4C47.6 8.8 38.8 0 28 0z"/>
+      <circle cx="28" cy="19" r="17" fill="#ffffff"/>
+      <clipPath id="clip">
+        <circle cx="28" cy="19" r="14"/>
+      </clipPath>
+      <image href="${photoUrl}" x="14" y="5" width="28" height="28" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip)" />
+    </svg>
+  `;
+  const url = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  return {
+    url,
+    scaledSize: new googleMaps.maps.Size(width, height),
+    anchor: new googleMaps.maps.Point(width / 2, height),
+  };
+}
 
 type MapShellProps = {
   points: MapPoint[];
@@ -131,10 +156,7 @@ export default function MapShell({
         map: mapInstance,
         title: point.id,
         icon: hasPhoto
-          ? {
-              url: point.photoUrl!,
-              scaledSize: new googleMaps.maps.Size(48, 48),
-            }
+          ? buildPhotoPinIcon(googleMaps, point.photoUrl!)
           : undefined,
       });
 
@@ -147,8 +169,8 @@ export default function MapShell({
           const img = document.createElement("img");
           img.src = point.photoUrl;
           img.alt = "Foto do ponto";
-          img.style.width = "120px";
-          img.style.height = "80px";
+          img.style.width = "140px";
+          img.style.height = "92px";
           img.style.objectFit = "cover";
           img.style.display = "block";
           img.style.marginBottom = "0.5rem";

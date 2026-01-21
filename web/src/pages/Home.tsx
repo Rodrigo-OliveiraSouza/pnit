@@ -78,11 +78,11 @@ export default function Home() {
           </p>
         </div>
         <div className="info-card landing-card">
-          <span className="eyebrow">Governanca</span>
-          <h2>Auditoria e aprovacoes centralizadas</h2>
+          <span className="eyebrow">Analise territorial</span>
+          <h2>Analise sua regiao diretamente no mapa</h2>
           <p className="muted">
-            O painel do ADM valida cadastros, acompanha produtividade e garante
-            a qualidade das informacoes divulgadas.
+            Filtre por cidade e selecione areas para entender necessidades e
+            prioridades locais.
           </p>
         </div>
       </section>
