@@ -3,6 +3,7 @@ import { Loader, type Libraries } from "@googlemaps/js-api-loader";
 import type { MapPoint } from "../types/models";
 
 const defaultCenter = { lat: -14.235, lng: -51.925 };
+const DEFAULT_LIBRARIES: Libraries = ["drawing"];
 
 type MapShellProps = {
   points: MapPoint[];
@@ -29,7 +30,10 @@ export default function MapShell({
   const [loadError, setLoadError] = useState<string | null>(null);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined;
-  const librariesKey = libraries ? libraries.join(",") : "";
+  const resolvedLibraries = libraries
+    ? Array.from(new Set([...DEFAULT_LIBRARIES, ...libraries]))
+    : DEFAULT_LIBRARIES;
+  const librariesKey = resolvedLibraries.join(",");
 
   useEffect(() => {
     if (!apiKey || !mapRef.current) {
@@ -37,7 +41,11 @@ export default function MapShell({
     }
 
     let isCancelled = false;
-    const loader = new Loader({ apiKey, version: "weekly", libraries });
+    const loader = new Loader({
+      apiKey,
+      version: "weekly",
+      libraries: resolvedLibraries,
+    });
 
     loader
       .load()

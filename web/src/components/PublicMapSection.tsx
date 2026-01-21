@@ -48,6 +48,9 @@ type PointFilters = {
   status: "all" | "active" | "inactive";
   precision: "all" | "approx" | "exact";
   updatedWithinDays: number | null;
+  city: string;
+  state: string;
+  region: string;
 };
 
 const emptyPoints: MapPoint[] = [];
@@ -55,6 +58,9 @@ const defaultFilters: PointFilters = {
   status: "all",
   precision: "all",
   updatedWithinDays: null,
+  city: "",
+  state: "",
+  region: "",
 };
 
 function mapPointFromApi(point: PublicPointDto): MapPoint {
@@ -127,6 +133,9 @@ export default function PublicMapSection() {
           Date.now() - filters.updatedWithinDays * 24 * 60 * 60 * 1000
         ).toISOString()
       : undefined;
+    const city = filters.city.trim() ? filters.city.trim() : undefined;
+    const state = filters.state.trim() ? filters.state.trim() : undefined;
+    const region = filters.region.trim() ? filters.region.trim() : undefined;
     setPointsLoading(true);
     setPointsError(null);
     try {
@@ -136,6 +145,9 @@ export default function PublicMapSection() {
         status,
         precision,
         updated_since: updatedSince,
+        city,
+        state,
+        region,
       });
       setMapPoints(response.items.map(mapPointFromApi));
       setLastSyncAt(response.last_sync_at ?? null);
@@ -209,14 +221,20 @@ export default function PublicMapSection() {
   }, []);
 
   const handleGenerateReport = useCallback(() => {
-    if (!selectedBounds) {
+    const filters = {
+      city: appliedFilters.city.trim() || undefined,
+      state: appliedFilters.state.trim() || undefined,
+      region: appliedFilters.region.trim() || undefined,
+    };
+    if (!selectedBounds && !filters.city && !filters.state && !filters.region) {
       return;
     }
     setReportLoading(true);
     setReportError(null);
     setReportFeedback(null);
     generateReportPreview({
-      bounds: selectedBounds,
+      bounds: selectedBounds ?? undefined,
+      filters,
       include: reportInclude,
     })
       .then((response) => {
@@ -233,15 +251,21 @@ export default function PublicMapSection() {
       .finally(() => {
         setReportLoading(false);
       });
-  }, [reportInclude, selectedBounds]);
+  }, [appliedFilters, reportInclude, selectedBounds]);
 
   const handleExportReport = useCallback(() => {
-    if (!selectedBounds || reportStatus !== "ready") {
+    const filters = {
+      city: appliedFilters.city.trim() || undefined,
+      state: appliedFilters.state.trim() || undefined,
+      region: appliedFilters.region.trim() || undefined,
+    };
+    if ((!selectedBounds && !filters.city && !filters.state && !filters.region) || reportStatus !== "ready") {
       return;
     }
     setReportFeedback(null);
     exportReport({
-      bounds: selectedBounds,
+      bounds: selectedBounds ?? undefined,
+      filters,
       format: reportFormat,
       include: reportInclude,
     })
@@ -294,7 +318,7 @@ export default function PublicMapSection() {
           error instanceof Error ? error.message : "Falha ao exportar relatorio.";
         setReportFeedback(message);
       });
-  }, [reportFormat, reportInclude, reportName, reportStatus, selectedBounds]);
+  }, [appliedFilters, reportFormat, reportInclude, reportName, reportStatus, selectedBounds]);
 
   const toggleSelection = useCallback(() => {
     setSelectionActive((current) => !current);
@@ -502,6 +526,13 @@ export default function PublicMapSection() {
     };
   }, [reportBreakdown]);
 
+  const canGenerateReport = Boolean(
+    selectedBounds ||
+      appliedFilters.city.trim() ||
+      appliedFilters.state.trim() ||
+      appliedFilters.region.trim()
+  );
+
   return (
     <section className="map-section" id="relatorios">
       <div className="map-grid">
@@ -510,6 +541,7 @@ export default function PublicMapSection() {
           selectedBounds={selectedBounds}
           reportReady={reportStatus === "ready"}
           reportLoading={reportLoading}
+          canGenerateReport={canGenerateReport}
           reportFormat={reportFormat}
           reportName={reportName}
           includeIndicators={reportInclude.indicators}
@@ -520,6 +552,9 @@ export default function PublicMapSection() {
           statusFilter={filterDraft.status}
           precisionFilter={filterDraft.precision}
           updatedWithinDays={filterDraft.updatedWithinDays}
+          cityFilter={filterDraft.city}
+          stateFilter={filterDraft.state}
+          regionFilter={filterDraft.region}
           onSearchChange={setSearchValue}
           onSearchSubmit={handleSearchSubmit}
           onReportFormatChange={setReportFormat}
@@ -532,6 +567,15 @@ export default function PublicMapSection() {
           onStatusFilterChange={handleStatusFilterChange}
           onPrecisionFilterChange={handlePrecisionFilterChange}
           onUpdatedFilterChange={handleUpdatedFilterChange}
+          onCityFilterChange={(value) =>
+            setFilterDraft((current) => ({ ...current, city: value }))
+          }
+          onStateFilterChange={(value) =>
+            setFilterDraft((current) => ({ ...current, state: value }))
+          }
+          onRegionFilterChange={(value) =>
+            setFilterDraft((current) => ({ ...current, region: value }))
+          }
           onApplyFilters={handleApplyFilters}
         />
         <div className="map-area">

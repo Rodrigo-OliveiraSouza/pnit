@@ -8,6 +8,7 @@ import EmployeeDashboard from "./pages/EmployeeDashboard";
 import Admin from "./pages/Admin";
 import Modules from "./pages/Modules";
 import PointDetail from "./pages/PointDetail";
+import Complaints from "./pages/Complaints";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
         <Route path="/painel" element={<EmployeeDashboard />} />
         <Route path="/modulos" element={<Modules />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/denuncias" element={<Complaints />} />
         <Route path="/map/points/:id" element={<PointDetail />} />
         <Route path="*" element={<NotFound />} />
       </Route>

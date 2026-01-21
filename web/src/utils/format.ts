@@ -1,10 +1,20 @@
-export type StatusLabel = "active" | "inactive" | "pending" | "disabled";
+export type StatusLabel =
+  | "active"
+  | "inactive"
+  | "pending"
+  | "disabled"
+  | "new"
+  | "reviewing"
+  | "closed";
 export type PrecisionLabel = "approx" | "exact";
 
 export function formatStatus(value: StatusLabel) {
   if (value === "active") return "Ativo";
   if (value === "inactive") return "Inativo";
   if (value === "disabled") return "Desativado";
+  if (value === "reviewing") return "Em analise";
+  if (value === "closed") return "Encerrado";
+  if (value === "new") return "Novo";
   return "Pendente";
 }
 

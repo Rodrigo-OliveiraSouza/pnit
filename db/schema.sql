@@ -143,6 +143,30 @@ CREATE TABLE IF NOT EXISTS attachments (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS complaints (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  type text NOT NULL,
+  description text NOT NULL,
+  location_text text NULL,
+  lat double precision NULL,
+  lng double precision NULL,
+  city text NULL,
+  state text NULL,
+  status text NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'reviewing', 'closed')),
+  photo_attachment_id uuid NULL REFERENCES attachments(id),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS complaint_sensitive (
+  complaint_id uuid PRIMARY KEY REFERENCES complaints(id) ON DELETE CASCADE,
+  ip_address text NULL,
+  user_agent text NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE attachments
+  ADD COLUMN IF NOT EXISTS complaint_id uuid REFERENCES complaints(id);
+
 CREATE INDEX IF NOT EXISTS idx_map_points_geog ON map_points USING GIST (geog);
 CREATE INDEX IF NOT EXISTS idx_map_points_status ON map_points (status);
 CREATE INDEX IF NOT EXISTS idx_map_points_updated_at ON map_points (updated_at);
@@ -182,6 +206,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_public_map_cache_point_snapshot
   ON public_map_cache (point_id, snapshot_date);
 CREATE INDEX IF NOT EXISTS idx_public_map_cache_geog ON public_map_cache USING GIST (geog);
 CREATE INDEX IF NOT EXISTS idx_public_map_cache_snapshot ON public_map_cache (snapshot_date);
+
+CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints (status);
+CREATE INDEX IF NOT EXISTS idx_complaints_city ON complaints (city);
+CREATE INDEX IF NOT EXISTS idx_complaints_state ON complaints (state);
 
 CREATE TABLE IF NOT EXISTS geocode_cache (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

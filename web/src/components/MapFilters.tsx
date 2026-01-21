@@ -10,6 +10,7 @@ type MapFiltersProps = {
   selectedBounds: Bounds | null;
   reportReady: boolean;
   reportLoading: boolean;
+  canGenerateReport: boolean;
   reportFormat: "PDF" | "CSV" | "JSON";
   reportName: string;
   includeIndicators: boolean;
@@ -20,6 +21,9 @@ type MapFiltersProps = {
   statusFilter: "all" | "active" | "inactive";
   precisionFilter: "all" | "approx" | "exact";
   updatedWithinDays: number | null;
+  cityFilter: string;
+  stateFilter: string;
+  regionFilter: string;
   onSearchChange: (value: string) => void;
   onSearchSubmit: () => void;
   onReportFormatChange: (value: "PDF" | "CSV" | "JSON") => void;
@@ -35,6 +39,9 @@ type MapFiltersProps = {
   onStatusFilterChange: (value: "all" | "active" | "inactive") => void;
   onPrecisionFilterChange: (value: "all" | "approx" | "exact") => void;
   onUpdatedFilterChange: (value: number | null) => void;
+  onCityFilterChange: (value: string) => void;
+  onStateFilterChange: (value: string) => void;
+  onRegionFilterChange: (value: string) => void;
   onApplyFilters: () => void;
 };
 
@@ -47,6 +54,7 @@ export default function MapFilters({
   selectedBounds,
   reportReady,
   reportLoading,
+  canGenerateReport,
   reportFormat,
   reportName,
   includeIndicators,
@@ -57,6 +65,9 @@ export default function MapFilters({
   statusFilter,
   precisionFilter,
   updatedWithinDays,
+  cityFilter,
+  stateFilter,
+  regionFilter,
   onSearchChange,
   onSearchSubmit,
   onReportFormatChange,
@@ -69,6 +80,9 @@ export default function MapFilters({
   onStatusFilterChange,
   onPrecisionFilterChange,
   onUpdatedFilterChange,
+  onCityFilterChange,
+  onStateFilterChange,
+  onRegionFilterChange,
   onApplyFilters,
 }: MapFiltersProps) {
   const updatedValue = updatedWithinDays ? String(updatedWithinDays) : "all";
@@ -204,7 +218,7 @@ export default function MapFilters({
           className="btn btn-primary"
           type="button"
           onClick={onGenerateReport}
-          disabled={!selectedBounds || reportLoading}
+          disabled={!canGenerateReport || reportLoading}
         >
           {reportLoading ? "Gerando..." : "Gerar relatorio"}
         </button>
@@ -279,6 +293,27 @@ export default function MapFilters({
           <option value="30">Ultimos 30 dias</option>
           <option value="90">Ultimos 90 dias</option>
         </select>
+        <label className="filter-label">Cidade</label>
+        <input
+          type="text"
+          placeholder="Ex.: Cruz das Almas"
+          value={cityFilter}
+          onChange={(event) => onCityFilterChange(event.target.value)}
+        />
+        <label className="filter-label">Estado</label>
+        <input
+          type="text"
+          placeholder="UF"
+          value={stateFilter}
+          onChange={(event) => onStateFilterChange(event.target.value)}
+        />
+        <label className="filter-label">Regiao</label>
+        <input
+          type="text"
+          placeholder="Norte, Centro, etc."
+          value={regionFilter}
+          onChange={(event) => onRegionFilterChange(event.target.value)}
+        />
         <button className="btn btn-outline" type="button" onClick={onApplyFilters}>
           Aplicar filtros
         </button>

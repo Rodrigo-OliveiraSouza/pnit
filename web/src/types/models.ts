@@ -58,8 +58,9 @@ export type Resident = {
 
 export type AuditEntry = {
   id: string;
-  actor: string;
+  actor_user_id: string;
   action: string;
-  entity: string;
-  createdAt: string;
+  entity_type: string;
+  entity_id: string;
+  created_at: string;
 };

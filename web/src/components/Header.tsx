@@ -40,6 +40,14 @@ export default function Header() {
           >
             Relatorios
           </NavLink>
+          <NavLink
+            to="/denuncias"
+            className={({ isActive }) =>
+              `nav-link${isActive ? " active" : ""}`
+            }
+          >
+            Denuncias
+          </NavLink>
           {isLoggedIn ? (
             <>
               <Link to="/painel" className="btn btn-ghost">

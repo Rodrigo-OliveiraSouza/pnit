@@ -27,8 +27,8 @@ SELECT
   NULL,
   NULL,
   'seeded admin',
-  'z1Yd38w2yx2FFMTlKkrqGEE8H/Wiw4EWKL4FkKbr3xg=',
-  'epEU2WMvB4yENy7ZFbszIw=='
+  'ipIYrIMVUqNQr2N3j2Z5uj9NfP7tOU7qUalUG/LUlrk=',
+  'tkS00ISDt8wXCcpT8MxEEQ=='
 WHERE NOT EXISTS (
   SELECT 1 FROM app_users WHERE email = 'admin@infinity'
 );

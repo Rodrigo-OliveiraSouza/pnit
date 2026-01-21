@@ -9,6 +9,7 @@ type Env = {
   AUTH_JWT_SECRET?: string;
   PUBLIC_BASE_URL?: string;
   R2_BUCKET?: R2Bucket;
+  COMPLAINTS_SECRET?: string;
 };
 
 type Bounds = {
@@ -22,6 +23,14 @@ type ReportInclude = {
   indicators?: boolean;
   points?: boolean;
   narratives?: boolean;
+};
+
+type ReportFilters = {
+  city?: string;
+  state?: string;
+  region?: string;
+  from?: string;
+  to?: string;
 };
 
 type UserClaims = {
@@ -53,6 +62,27 @@ function getSql(env: Env) {
     throw new Error("DATABASE_URL is required.");
   }
   return neon(env.DATABASE_URL);
+}
+
+async function logAudit(
+  sql: ReturnType<typeof neon>,
+  actorUserId: string,
+  action: string,
+  entityType: string,
+  entityId: string,
+  metadata?: Record<string, unknown>
+) {
+  try {
+    await sql(
+      `
+      INSERT INTO audit_log (actor_user_id, action, entity_type, entity_id, metadata)
+      VALUES ($1, $2, $3, $4, $5)
+      `,
+      [actorUserId, action, entityType, entityId, metadata ?? null]
+    );
+  } catch (error) {
+    console.warn("audit_log_failed", error);
+  }
 }
 
 function jsonError(
@@ -231,6 +261,23 @@ function extractLatLng(source: string) {
   return { lat, lng };
 }
 
+function getClientIp(c: Context) {
+  const direct = c.req.header("CF-Connecting-IP");
+  if (direct) return direct;
+  const forwarded = c.req.header("X-Forwarded-For");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return null;
+}
+
+function hasComplaintSecret(c: Context, env: Env) {
+  if (!env.COMPLAINTS_SECRET) {
+    return false;
+  }
+  const headerSecret = c.req.header("X-Complaints-Secret");
+  const querySecret = c.req.query("secret");
+  return headerSecret === env.COMPLAINTS_SECRET || querySecret === env.COMPLAINTS_SECRET;
+}
+
 function normalizeQuery(query: string) {
   return query.trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -248,6 +295,48 @@ function decodeCursor(cursor?: string | null) {
   } catch {
     return 0;
   }
+}
+
+function buildPublicCacheFilters(
+  bounds?: Bounds | null,
+  filters?: ReportFilters | null
+) {
+  const clauses: string[] = ["snapshot_date = CURRENT_DATE"];
+  const params: (string | number)[] = [];
+  let index = 0;
+  if (bounds) {
+    params.push(bounds.west, bounds.south, bounds.east, bounds.north);
+    clauses.push(
+      `ST_Intersects(geog::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))`
+    );
+    index = 4;
+  }
+  if (filters?.city) {
+    index += 1;
+    clauses.push(`city ILIKE $${index}`);
+    params.push(`%${filters.city}%`);
+  }
+  if (filters?.state) {
+    index += 1;
+    clauses.push(`state ILIKE $${index}`);
+    params.push(`%${filters.state}%`);
+  }
+  if (filters?.region) {
+    index += 1;
+    clauses.push(`region ILIKE $${index}`);
+    params.push(`%${filters.region}%`);
+  }
+  if (filters?.from) {
+    index += 1;
+    clauses.push(`updated_at >= $${index}`);
+    params.push(filters.from);
+  }
+  if (filters?.to) {
+    index += 1;
+    clauses.push(`updated_at <= $${index}`);
+    params.push(filters.to);
+  }
+  return { where: clauses.join(" AND "), params };
 }
 
 function jitterPoint(lat: number, lng: number, accuracy?: number | null) {
@@ -377,6 +466,9 @@ app.post("/auth/register", async (c) => {
       password.salt,
     ]
   );
+  await logAudit(sql, userId, "register", "app_users", userId, {
+    status: "pending",
+  });
   return c.json({
     status: "pending",
     message: "Cadastro recebido. Aguarde aprovacao do administrador.",
@@ -422,6 +514,7 @@ app.post("/auth/login", async (c) => {
   await sql("UPDATE app_users SET last_login_at = now() WHERE id = $1", [
     user.id,
   ]);
+  await logAudit(sql, user.id, "login", "app_users", user.id);
   const token = await signJwt(
     { sub: user.id, email: user.email, role: user.role },
     c.env.AUTH_JWT_SECRET
@@ -449,6 +542,9 @@ app.get("/map/points", async (c) => {
   const status = c.req.query("status");
   const precision = c.req.query("precision");
   const updatedSince = c.req.query("updated_since");
+  const city = c.req.query("city");
+  const state = c.req.query("state");
+  const region = c.req.query("region");
 
   const filters: string[] = [
     "snapshot_date = CURRENT_DATE",
@@ -475,6 +571,21 @@ app.get("/map/points", async (c) => {
     index += 1;
     filters.push(`updated_at >= $${index}`);
     params.push(updatedSince);
+  }
+  if (city) {
+    index += 1;
+    filters.push(`city ILIKE $${index}`);
+    params.push(`%${city}%`);
+  }
+  if (state) {
+    index += 1;
+    filters.push(`state ILIKE $${index}`);
+    params.push(`%${state}%`);
+  }
+  if (region) {
+    index += 1;
+    filters.push(`region ILIKE $${index}`);
+    params.push(`%${region}%`);
   }
   index += 1;
   const offsetParam = index;
@@ -630,67 +741,72 @@ app.get("/geocode", async (c) => {
 app.post("/reports/preview", async (c) => {
   const sql = getSql(c.env);
   const body = (await c.req.json().catch(() => null)) as
-    | { bounds?: Bounds; include?: ReportInclude }
+    | { bounds?: Bounds; include?: ReportInclude; filters?: ReportFilters }
     | null;
-  if (!body?.bounds) {
-    return jsonError(c, 400, "bounds is required");
+  const hasFilters =
+    Boolean(body?.bounds) ||
+    Boolean(body?.filters?.city) ||
+    Boolean(body?.filters?.state) ||
+    Boolean(body?.filters?.region) ||
+    Boolean(body?.filters?.from) ||
+    Boolean(body?.filters?.to);
+  if (!hasFilters) {
+    return jsonError(c, 400, "bounds or filters are required");
   }
-  const { west, south, east, north } = body.bounds;
+  const { where, params } = buildPublicCacheFilters(
+    body?.bounds ?? null,
+    body?.filters ?? null
+  );
   const summaryRows = await sql(
     `
     SELECT COUNT(*)::int AS points,
            COALESCE(SUM(residents), 0)::int AS residents,
            MAX(updated_at) AS last_updated
     FROM public_map_cache
-    WHERE snapshot_date = CURRENT_DATE
-      AND ST_Intersects(geog::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))
+    WHERE ${where}
     `,
-    [west, south, east, north]
+    params
   );
   const statusRows = await sql(
     `
     SELECT status, COUNT(*)::int AS count
     FROM public_map_cache
-    WHERE snapshot_date = CURRENT_DATE
-      AND ST_Intersects(geog::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))
+    WHERE ${where}
     GROUP BY status
     `,
-    [west, south, east, north]
+    params
   );
   const precisionRows = await sql(
     `
     SELECT precision, COUNT(*)::int AS count
     FROM public_map_cache
-    WHERE snapshot_date = CURRENT_DATE
-      AND ST_Intersects(geog::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))
+    WHERE ${where}
     GROUP BY precision
     `,
-    [west, south, east, north]
+    params
   );
   const cityRows = await sql(
     `
     SELECT city, COUNT(*)::int AS count
     FROM public_map_cache
-    WHERE snapshot_date = CURRENT_DATE
+    WHERE ${where}
       AND city IS NOT NULL
-      AND ST_Intersects(geog::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))
     GROUP BY city
     ORDER BY count DESC
     LIMIT 20
     `,
-    [west, south, east, north]
+    params
   );
   const stateRows = await sql(
     `
     SELECT state, COUNT(*)::int AS count
     FROM public_map_cache
-    WHERE snapshot_date = CURRENT_DATE
+    WHERE ${where}
       AND state IS NOT NULL
-      AND ST_Intersects(geog::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))
     GROUP BY state
     ORDER BY count DESC
     `,
-    [west, south, east, north]
+    params
   );
   return c.json({
     report_id: `rep_${crypto.randomUUID()}`,
@@ -707,12 +823,27 @@ app.post("/reports/preview", async (c) => {
 app.post("/reports/export", async (c) => {
   const sql = getSql(c.env);
   const body = (await c.req.json().catch(() => null)) as
-    | { bounds?: Bounds; format?: "PDF" | "CSV" | "JSON"; include?: ReportInclude }
+    | {
+        bounds?: Bounds;
+        format?: "PDF" | "CSV" | "JSON";
+        include?: ReportInclude;
+        filters?: ReportFilters;
+      }
     | null;
-  if (!body?.bounds || !body.format) {
-    return jsonError(c, 400, "bounds and format are required");
+  const hasFilters =
+    Boolean(body?.bounds) ||
+    Boolean(body?.filters?.city) ||
+    Boolean(body?.filters?.state) ||
+    Boolean(body?.filters?.region) ||
+    Boolean(body?.filters?.from) ||
+    Boolean(body?.filters?.to);
+  if (!hasFilters || !body?.format) {
+    return jsonError(c, 400, "bounds or filters and format are required");
   }
-  const { west, south, east, north } = body.bounds;
+  const { where, params } = buildPublicCacheFilters(
+    body?.bounds ?? null,
+    body?.filters ?? null
+  );
   const rows = await sql(
     `
     SELECT point_id as id,
@@ -727,11 +858,10 @@ app.post("/reports/export", async (c) => {
            public_note,
            updated_at
     FROM public_map_cache
-    WHERE snapshot_date = CURRENT_DATE
-      AND ST_Intersects(geog::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))
+    WHERE ${where}
     ORDER BY updated_at DESC
     `,
-    [west, south, east, north]
+    params
   );
 
   if (body.format === "JSON") {
@@ -975,6 +1105,9 @@ app.post("/admin/users", async (c) => {
       password.salt,
     ]
   );
+  await logAudit(sql, claims.sub, "admin_user_create", "app_users", userId, {
+    email: body.email.toLowerCase(),
+  });
   return c.json({ user: rows[0] });
 });
 
@@ -1016,7 +1149,209 @@ app.put("/admin/users/:id", async (c) => {
     `,
     [id, ...values]
   );
+  await logAudit(sql, claims.sub, "admin_user_update", "app_users", id, {
+    fields: updates.map(([key]) => key),
+  });
   return c.json({ ok: true });
+});
+
+app.get("/admin/productivity", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const periodRaw = c.req.query("period") ?? "month";
+  const period =
+    periodRaw === "day" || periodRaw === "week" || periodRaw === "month"
+      ? periodRaw
+      : "month";
+  const from = c.req.query("from");
+  const to = c.req.query("to");
+  const city = c.req.query("city");
+  const state = c.req.query("state");
+  const userId = c.req.query("user_id");
+
+  const residentFilters: string[] = ["r.deleted_at IS NULL"];
+  const residentParams: (string | number)[] = [];
+  if (from) {
+    residentParams.push(from);
+    residentFilters.push(`r.created_at >= $${residentParams.length}`);
+  }
+  if (to) {
+    residentParams.push(to);
+    residentFilters.push(`r.created_at <= $${residentParams.length}`);
+  }
+  if (city) {
+    residentParams.push(`%${city}%`);
+    residentFilters.push(`r.city ILIKE $${residentParams.length}`);
+  }
+  if (state) {
+    residentParams.push(`%${state}%`);
+    residentFilters.push(`r.state ILIKE $${residentParams.length}`);
+  }
+  if (userId) {
+    residentParams.push(userId);
+    residentFilters.push(`r.created_by = $${residentParams.length}`);
+  }
+
+  const pointFilters: string[] = ["p.deleted_at IS NULL"];
+  const pointParams: (string | number)[] = [];
+  if (from) {
+    pointParams.push(from);
+    pointFilters.push(`p.created_at >= $${pointParams.length}`);
+  }
+  if (to) {
+    pointParams.push(to);
+    pointFilters.push(`p.created_at <= $${pointParams.length}`);
+  }
+  if (city) {
+    pointParams.push(`%${city}%`);
+    pointFilters.push(`p.city ILIKE $${pointParams.length}`);
+  }
+  if (state) {
+    pointParams.push(`%${state}%`);
+    pointFilters.push(`p.state ILIKE $${pointParams.length}`);
+  }
+  if (userId) {
+    pointParams.push(userId);
+    pointFilters.push(`p.created_by = $${pointParams.length}`);
+  }
+
+  const residentRows = await sql(
+    `
+    SELECT r.created_by AS user_id,
+           COUNT(*)::int AS residents,
+           ROUND(AVG(rp.health_score)::numeric, 2) AS health_avg,
+           ROUND(AVG(rp.education_score)::numeric, 2) AS education_avg,
+           ROUND(AVG(rp.income_score)::numeric, 2) AS income_avg,
+           ROUND(AVG(rp.housing_score)::numeric, 2) AS housing_avg,
+           ROUND(AVG(rp.security_score)::numeric, 2) AS security_avg
+    FROM residents r
+    LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+    WHERE ${residentFilters.join(" AND ")}
+    GROUP BY r.created_by
+    `,
+    residentParams
+  );
+
+  const pointRows = await sql(
+    `
+    SELECT p.created_by AS user_id,
+           COUNT(*)::int AS points
+    FROM map_points p
+    WHERE ${pointFilters.join(" AND ")}
+    GROUP BY p.created_by
+    `,
+    pointParams
+  );
+
+  const residentTotals = await sql(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM residents r
+    WHERE ${residentFilters.join(" AND ")}
+    `,
+    residentParams
+  );
+  const pointTotals = await sql(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM map_points p
+    WHERE ${pointFilters.join(" AND ")}
+    `,
+    pointParams
+  );
+
+  const residentSeries = await sql(
+    `
+    SELECT date_trunc('${period}', r.created_at) AS bucket,
+           COUNT(*)::int AS total
+    FROM residents r
+    WHERE ${residentFilters.join(" AND ")}
+    GROUP BY bucket
+    ORDER BY bucket
+    `,
+    residentParams
+  );
+  const pointSeries = await sql(
+    `
+    SELECT date_trunc('${period}', p.created_at) AS bucket,
+           COUNT(*)::int AS total
+    FROM map_points p
+    WHERE ${pointFilters.join(" AND ")}
+    GROUP BY bucket
+    ORDER BY bucket
+    `,
+    pointParams
+  );
+
+  const userIds = Array.from(
+    new Set([
+      ...residentRows.map((row) => row.user_id as string),
+      ...pointRows.map((row) => row.user_id as string),
+    ])
+  );
+
+  const users =
+    userIds.length > 0
+      ? await sql(
+          `
+          SELECT id, full_name, email
+          FROM app_users
+          WHERE id = ANY($1)
+          `,
+          [userIds]
+        )
+      : [];
+
+  const usersById = new Map(
+    users.map((user) => [
+      user.id as string,
+      { full_name: user.full_name as string | null, email: user.email as string },
+    ])
+  );
+
+  const residentsByUser = new Map(
+    residentRows.map((row) => [row.user_id as string, row])
+  );
+  const pointsByUser = new Map(
+    pointRows.map((row) => [row.user_id as string, row])
+  );
+
+  const byUser = userIds.map((id) => {
+    const resident = residentsByUser.get(id);
+    const points = pointsByUser.get(id);
+    const user = usersById.get(id);
+    return {
+      user_id: id,
+      full_name: user?.full_name ?? null,
+      email: user?.email ?? null,
+      residents: resident?.residents ?? 0,
+      points: points?.points ?? 0,
+      health_avg: resident?.health_avg ?? null,
+      education_avg: resident?.education_avg ?? null,
+      income_avg: resident?.income_avg ?? null,
+      housing_avg: resident?.housing_avg ?? null,
+      security_avg: resident?.security_avg ?? null,
+    };
+  });
+
+  return c.json({
+    summary: {
+      total_residents: residentTotals[0]?.total ?? 0,
+      total_points: pointTotals[0]?.total ?? 0,
+      period,
+    },
+    by_user: byUser.sort((a, b) => b.points - a.points),
+    series: {
+      residents: residentSeries,
+      points: pointSeries,
+    },
+  });
 });
 
 app.post("/residents", async (c) => {
@@ -1027,6 +1362,16 @@ app.post("/residents", async (c) => {
   }
   if (!requireStaff(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  if (claims.role !== "admin") {
+    const owner = await sql(
+      "SELECT id FROM map_points WHERE id = $1 AND created_by = $2",
+      [id, claims.sub]
+    );
+    if (owner.length === 0) {
+      return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
   }
   const body = (await c.req.json().catch(() => null)) as
     | {
@@ -1066,6 +1411,7 @@ app.post("/residents", async (c) => {
       actorId,
     ]
   );
+  await logAudit(sql, actorId, "resident_create", "residents", rows[0].id);
   return c.json({ id: rows[0].id });
 });
 
@@ -1077,6 +1423,16 @@ app.put("/residents/:id", async (c) => {
   }
   if (!requireStaff(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  if (claims.role !== "admin") {
+    const owner = await sql(
+      "SELECT id FROM residents WHERE id = $1 AND created_by = $2",
+      [id, claims.sub]
+    );
+    if (owner.length === 0) {
+      return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
   }
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown>;
   const allowed = [
@@ -1100,7 +1456,6 @@ app.put("/residents/:id", async (c) => {
     ([key], index) => `${key} = $${index + 2}`
   );
   const values = updates.map(([, value]) => value ?? null);
-  const id = c.req.param("id");
   await sql(
     `
     UPDATE residents
@@ -1109,6 +1464,9 @@ app.put("/residents/:id", async (c) => {
     `,
     [id, ...values]
   );
+  await logAudit(sql, claims.sub, "resident_update", "residents", id, {
+    fields: updates.map(([key]) => key),
+  });
   return c.json({ ok: true });
 });
 
@@ -1217,6 +1575,7 @@ app.post("/residents/:id/profile", async (c) => {
     `,
     [residentId, ...values]
   );
+  await logAudit(sql, claims.sub, "resident_profile_update", "residents", residentId);
   return c.json({ ok: true });
 });
 
@@ -1293,6 +1652,10 @@ app.post("/points", async (c) => {
       actorId,
     ]
   );
+  await logAudit(sql, actorId, "point_create", "map_points", rows[0].id, {
+    precision: body.precision,
+    status: body.status,
+  });
   return c.json(rows[0]);
 });
 
@@ -1304,6 +1667,16 @@ app.put("/points/:id", async (c) => {
   }
   if (!requireStaff(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  if (claims.role !== "admin") {
+    const owner = await sql(
+      "SELECT id FROM map_points WHERE id = $1 AND created_by = $2",
+      [id, claims.sub]
+    );
+    if (owner.length === 0) {
+      return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
   }
   const body = (await c.req.json().catch(() => null)) as
     | {
@@ -1339,7 +1712,6 @@ app.put("/points/:id", async (c) => {
   if (fields.length === 0) {
     return jsonError(c, 400, "No valid fields to update");
   }
-  const id = c.req.param("id");
   const sets = fields.map(([key], index) => `${key} = $${index + 2}`);
   const values = fields.map(([, value]) => value ?? null);
   let updateQuery = `
@@ -1355,6 +1727,9 @@ app.put("/points/:id", async (c) => {
   }
   updateQuery += " WHERE id = $1";
   await sql(updateQuery, [id, ...values]);
+  await logAudit(sql, claims.sub, "point_update", "map_points", id, {
+    fields: fields.map(([key]) => key),
+  });
   return c.json({ ok: true });
 });
 
@@ -1380,6 +1755,26 @@ app.post("/attachments", async (c) => {
     typeof body.resident_id === "string" ? body.resident_id : null;
   const visibility =
     typeof body.visibility === "string" ? body.visibility : "public";
+  if (claims.role !== "admin") {
+    if (pointId) {
+      const owner = await sql(
+        "SELECT id FROM map_points WHERE id = $1 AND created_by = $2",
+        [pointId, claims.sub]
+      );
+      if (owner.length === 0) {
+        return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+      }
+    }
+    if (residentId) {
+      const owner = await sql(
+        "SELECT id FROM residents WHERE id = $1 AND created_by = $2",
+        [residentId, claims.sub]
+      );
+      if (owner.length === 0) {
+        return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+      }
+    }
+  }
   const key = `${crypto.randomUUID()}-${file.name}`;
   await c.env.R2_BUCKET.put(key, await file.arrayBuffer(), {
     httpMetadata: { contentType: file.type || "application/octet-stream" },
@@ -1392,6 +1787,10 @@ app.post("/attachments", async (c) => {
     `,
     [residentId, pointId, key, file.type || "application/octet-stream", file.size, visibility]
   );
+  await logAudit(sql, claims.sub, "attachment_create", "attachments", rows[0].id, {
+    point_id: pointId,
+    resident_id: residentId,
+  });
   return c.json({ id: rows[0].id });
 });
 
@@ -1417,6 +1816,227 @@ app.get("/attachments/:id", async (c) => {
   c.header("Content-Type", mime);
   c.header("Cache-Control", "public, max-age=86400");
   return c.body(object.body);
+});
+
+app.post("/public/complaints", async (c) => {
+  const sql = getSql(c.env);
+  const contentType = c.req.header("Content-Type") ?? "";
+  let body: Record<string, unknown> = {};
+  let file: File | null = null;
+  if (contentType.includes("multipart/form-data")) {
+    const parsed = await c.req.parseBody();
+    body = parsed as Record<string, unknown>;
+    file = parsed.file instanceof File ? parsed.file : null;
+  } else {
+    body = ((await c.req.json().catch(() => null)) ??
+      {}) as Record<string, unknown>;
+  }
+
+  const type =
+    typeof body.type === "string" ? body.type.trim() : "";
+  const description =
+    typeof body.description === "string" ? body.description.trim() : "";
+  const locationText =
+    typeof body.location_text === "string" ? body.location_text.trim() : null;
+  const city = typeof body.city === "string" ? body.city.trim() : null;
+  const state = typeof body.state === "string" ? body.state.trim() : null;
+  const lat =
+    typeof body.lat === "number"
+      ? body.lat
+      : typeof body.lat === "string"
+        ? Number(body.lat)
+        : null;
+  const lng =
+    typeof body.lng === "number"
+      ? body.lng
+      : typeof body.lng === "string"
+        ? Number(body.lng)
+        : null;
+
+  if (!type || !description) {
+    return jsonError(c, 400, "type and description are required");
+  }
+
+  let resolvedLat = Number.isFinite(lat ?? NaN) ? lat : null;
+  let resolvedLng = Number.isFinite(lng ?? NaN) ? lng : null;
+  if ((resolvedLat === null || resolvedLng === null) && locationText) {
+    const parsed = extractLatLng(locationText);
+    if (parsed) {
+      resolvedLat = parsed.lat;
+      resolvedLng = parsed.lng;
+    }
+  }
+
+  const complaintRows = await sql(
+    `
+    INSERT INTO complaints (type, description, location_text, lat, lng, city, state)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING id
+    `,
+    [
+      type,
+      description,
+      locationText,
+      resolvedLat ?? null,
+      resolvedLng ?? null,
+      city,
+      state,
+    ]
+  );
+  const complaintId = complaintRows[0].id as string;
+
+  let attachmentId: string | null = null;
+  if (file) {
+    if (!c.env.R2_BUCKET) {
+      return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+    }
+    const key = `${crypto.randomUUID()}-${file.name}`;
+    await c.env.R2_BUCKET.put(key, await file.arrayBuffer(), {
+      httpMetadata: { contentType: file.type || "application/octet-stream" },
+    });
+    const attachmentRows = await sql(
+      `
+      INSERT INTO attachments (complaint_id, s3_key, mime_type, size, visibility)
+      VALUES ($1, $2, $3, $4, 'public')
+      RETURNING id
+      `,
+      [complaintId, key, file.type || "application/octet-stream", file.size]
+    );
+    attachmentId = attachmentRows[0].id as string;
+    await sql(
+      "UPDATE complaints SET photo_attachment_id = $1 WHERE id = $2",
+      [attachmentId, complaintId]
+    );
+  }
+
+  await sql(
+    `
+    INSERT INTO complaint_sensitive (complaint_id, ip_address, user_agent)
+    VALUES ($1, $2, $3)
+    `,
+    [
+      complaintId,
+      getClientIp(c),
+      c.req.header("User-Agent") ?? null,
+    ]
+  );
+
+  return c.json({
+    ok: true,
+    id: complaintId,
+    photo_attachment_id: attachmentId,
+  });
+});
+
+app.get("/admin/complaints", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const status = c.req.query("status");
+  const city = c.req.query("city");
+  const state = c.req.query("state");
+  const type = c.req.query("type");
+  const limitRaw = toNumber(c.req.query("limit")) ?? 200;
+  const limit = Math.min(Math.max(1, Math.floor(limitRaw)), 500);
+
+  const filters: string[] = ["1=1"];
+  const params: (string | number)[] = [];
+  if (status) {
+    params.push(status);
+    filters.push(`status = $${params.length}`);
+  }
+  if (city) {
+    params.push(`%${city}%`);
+    filters.push(`city ILIKE $${params.length}`);
+  }
+  if (state) {
+    params.push(`%${state}%`);
+    filters.push(`state ILIKE $${params.length}`);
+  }
+  if (type) {
+    params.push(`%${type}%`);
+    filters.push(`type ILIKE $${params.length}`);
+  }
+  params.push(limit);
+  const rows = await sql(
+    `
+    SELECT id, type, description, location_text, lat, lng, city, state, status,
+           photo_attachment_id, created_at
+    FROM complaints
+    WHERE ${filters.join(" AND ")}
+    ORDER BY created_at DESC
+    LIMIT $${params.length}
+    `,
+    params
+  );
+  const baseUrl = getPublicBaseUrl(c, c.env);
+  const items = rows.map((row) => ({
+    ...row,
+    photo_url: row.photo_attachment_id
+      ? `${baseUrl}/attachments/${row.photo_attachment_id}`
+      : null,
+  }));
+  return c.json({ items });
+});
+
+app.put("/admin/complaints/:id", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const body = (await c.req.json().catch(() => null)) as
+    | { status?: "new" | "reviewing" | "closed" }
+    | null;
+  if (!body?.status) {
+    return jsonError(c, 400, "status is required");
+  }
+  const id = c.req.param("id");
+  await sql("UPDATE complaints SET status = $2 WHERE id = $1", [
+    id,
+    body.status,
+  ]);
+  await logAudit(sql, claims.sub, "complaint_update", "complaints", id, {
+    status: body.status,
+  });
+  return c.json({ ok: true });
+});
+
+app.get("/secure/complaints", async (c) => {
+  const sql = getSql(c.env);
+  if (!hasComplaintSecret(c, c.env)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const limitRaw = toNumber(c.req.query("limit")) ?? 200;
+  const limit = Math.min(Math.max(1, Math.floor(limitRaw)), 500);
+  const rows = await sql(
+    `
+    SELECT c.*,
+           s.ip_address,
+           s.user_agent
+    FROM complaints c
+    LEFT JOIN complaint_sensitive s ON s.complaint_id = c.id
+    ORDER BY c.created_at DESC
+    LIMIT $1
+    `,
+    [limit]
+  );
+  const baseUrl = getPublicBaseUrl(c, c.env);
+  const items = rows.map((row) => ({
+    ...row,
+    photo_url: row.photo_attachment_id
+      ? `${baseUrl}/attachments/${row.photo_attachment_id}`
+      : null,
+  }));
+  return c.json({ items });
 });
 
 app.post("/assignments", async (c) => {
@@ -1464,6 +2084,9 @@ app.post("/assignments", async (c) => {
     await sql("ROLLBACK");
     throw error;
   }
+  await logAudit(sql, claims.sub, "assignment_create", "resident_point_assignments", body.resident_id, {
+    point_id: body.point_id,
+  });
   return c.json({ ok: true });
 });
 
@@ -1473,10 +2096,11 @@ app.get("/audit", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  const isAdmin = claims.role === "admin";
+  const actor = c.req.query("actor_user_id");
+  if (!isAdmin && actor && actor !== claims.sub) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
-  const actor = c.req.query("actor_user_id");
   const entity = c.req.query("entity_type");
   const from = c.req.query("from");
   const to = c.req.query("to");
@@ -1486,10 +2110,10 @@ app.get("/audit", async (c) => {
   const filters: string[] = ["1=1"];
   const params: (string | number)[] = [];
   let index = 0;
-  if (actor) {
+  if (actor || !isAdmin) {
     index += 1;
     filters.push(`actor_user_id = $${index}`);
-    params.push(actor);
+    params.push(actor ?? claims.sub);
   }
   if (entity) {
     index += 1;
@@ -1522,6 +2146,7 @@ app.get("/audit", async (c) => {
 });
 
 app.post("/admin/sync/public-map", async (c) => {
+  const sql = getSql(c.env);
   const claims = await requireAuth(c, c.env);
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
@@ -1530,6 +2155,7 @@ app.post("/admin/sync/public-map", async (c) => {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   await refreshPublicCache(c.env);
+  await logAudit(sql, claims.sub, "public_cache_refresh", "public_map_cache", "daily");
   return c.json({ ok: true });
 });
 

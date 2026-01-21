@@ -1,17 +1,33 @@
 import { useEffect, useState } from "react";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
-import { listAdminUsers, updateAdminUser, type AdminUser } from "../services/api";
-
-const auditEntries: AuditEntry[] = [];
+import {
+  fetchAuditEntries,
+  fetchProductivity,
+  listAdminUsers,
+  listComplaints,
+  updateAdminUser,
+  updateComplaintStatus,
+  type AdminUser,
+  type Complaint,
+  type ProductivityResponse,
+} from "../services/api";
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<
-    "requests" | "users" | "settings" | "audit"
+    "requests" | "users" | "complaints" | "productivity" | "settings" | "audit"
   >("requests");
   const [pendingUsers, setPendingUsers] = useState<AdminUser[]>([]);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [productivity, setProductivity] = useState<ProductivityResponse | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
+  const [complaintLoading, setComplaintLoading] = useState(false);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [productivityLoading, setProductivityLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadUsers = async () => {
@@ -35,6 +51,9 @@ export default function Admin() {
 
   useEffect(() => {
     void loadUsers();
+    void loadComplaints();
+    void loadAudit();
+    void loadProductivity();
   }, []);
 
   const handleApprove = async (id: string) => {
@@ -45,6 +64,58 @@ export default function Admin() {
   const handleDisable = async (id: string) => {
     await updateAdminUser(id, { status: "disabled" });
     await loadUsers();
+  };
+
+  const loadComplaints = async () => {
+    setComplaintLoading(true);
+    try {
+      const response = await listComplaints();
+      setComplaints(response.items);
+    } catch {
+      setComplaints([]);
+    } finally {
+      setComplaintLoading(false);
+    }
+  };
+
+  const handleComplaintStatus = async (
+    id: string,
+    status: "new" | "reviewing" | "closed"
+  ) => {
+    await updateComplaintStatus(id, status);
+    await loadComplaints();
+  };
+
+  const loadAudit = async () => {
+    setAuditLoading(true);
+    try {
+      const response = await fetchAuditEntries({ limit: 200 });
+      const mapped = response.items.map((entry) => ({
+        id: String(entry.id ?? ""),
+        actor_user_id: String(entry.actor_user_id ?? ""),
+        action: String(entry.action ?? ""),
+        entity_type: String(entry.entity_type ?? ""),
+        entity_id: String(entry.entity_id ?? ""),
+        created_at: String(entry.created_at ?? ""),
+      }));
+      setAuditEntries(mapped);
+    } catch {
+      setAuditEntries([]);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  const loadProductivity = async () => {
+    setProductivityLoading(true);
+    try {
+      const response = await fetchProductivity({ period: "month" });
+      setProductivity(response);
+    } catch {
+      setProductivity(null);
+    } finally {
+      setProductivityLoading(false);
+    }
   };
 
   return (
@@ -83,6 +154,20 @@ export default function Admin() {
             onClick={() => setActiveTab("users")}
           >
             Usuarios
+          </button>
+          <button
+            className={`tab ${activeTab === "complaints" ? "active" : ""}`}
+            type="button"
+            onClick={() => setActiveTab("complaints")}
+          >
+            Denuncias
+          </button>
+          <button
+            className={`tab ${activeTab === "productivity" ? "active" : ""}`}
+            type="button"
+            onClick={() => setActiveTab("productivity")}
+          >
+            Produtividade
           </button>
           <button
             className={`tab ${activeTab === "settings" ? "active" : ""}`}
@@ -212,6 +297,142 @@ export default function Admin() {
             </table>
           </div>
         )}
+        {activeTab === "complaints" && (
+          <div className="table-card">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Tipo</th>
+                  <th>Cidade</th>
+                  <th>Estado</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {complaintLoading ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="table-empty">Carregando...</div>
+                    </td>
+                  </tr>
+                ) : complaints.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="table-empty">
+                        Nenhuma denuncia registrada.
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  complaints.map((complaint) => (
+                    <tr key={complaint.id}>
+                      <td>{complaint.id}</td>
+                      <td>{complaint.type}</td>
+                      <td>{complaint.city ?? "-"}</td>
+                      <td>{complaint.state ?? "-"}</td>
+                      <td>
+                        <span className={`status ${complaint.status}`}>
+                          {formatStatus(complaint.status)}
+                        </span>
+                      </td>
+                      <td>
+                        {new Date(complaint.created_at).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <select
+                          className="select"
+                          value={complaint.status}
+                          onChange={(event) =>
+                            void handleComplaintStatus(
+                              complaint.id,
+                              event.target.value as "new" | "reviewing" | "closed"
+                            )
+                          }
+                        >
+                          <option value="new">Novo</option>
+                          <option value="reviewing">Em analise</option>
+                          <option value="closed">Encerrado</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {activeTab === "productivity" && (
+          <div className="dashboard-card">
+            <h3>Resumo de produtividade</h3>
+            {productivityLoading && <p className="muted">Carregando...</p>}
+            {!productivityLoading && !productivity && (
+              <p className="muted">Sem dados disponiveis.</p>
+            )}
+            {productivity && (
+              <>
+                <div className="summary-grid">
+                  <div>
+                    <span>Total de cadastros</span>
+                    <strong>{productivity.summary.total_residents}</strong>
+                  </div>
+                  <div>
+                    <span>Total de pontos</span>
+                    <strong>{productivity.summary.total_points}</strong>
+                  </div>
+                  <div>
+                    <span>Periodo</span>
+                    <strong>{productivity.summary.period}</strong>
+                  </div>
+                </div>
+                <div className="table-card">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Agente</th>
+                        <th>Email</th>
+                        <th>Cadastros</th>
+                        <th>Pontos</th>
+                        <th>Media Saude</th>
+                        <th>Media Educacao</th>
+                        <th>Media Renda</th>
+                        <th>Media Moradia</th>
+                        <th>Media Seguranca</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {productivity.by_user.length === 0 ? (
+                        <tr>
+                          <td colSpan={9}>
+                            <div className="table-empty">
+                              Nenhuma atividade registrada.
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        productivity.by_user.map((item) => (
+                          <tr key={item.user_id}>
+                            <td>{item.full_name ?? "-"}</td>
+                            <td>{item.email ?? "-"}</td>
+                            <td>{item.residents}</td>
+                            <td>{item.points}</td>
+                            <td>{item.health_avg ?? "-"}</td>
+                            <td>{item.education_avg ?? "-"}</td>
+                            <td>{item.income_avg ?? "-"}</td>
+                            <td>{item.housing_avg ?? "-"}</td>
+                            <td>{item.security_avg ?? "-"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+        )}
         {activeTab === "settings" && (
           <div className="dashboard-card">
             <h3>Configuracoes</h3>
@@ -230,13 +451,20 @@ export default function Admin() {
                   <th>Ator</th>
                   <th>Acao</th>
                   <th>Entidade</th>
+                  <th>Registro</th>
                   <th>Data</th>
                 </tr>
               </thead>
               <tbody>
-                {auditEntries.length === 0 ? (
+                {auditLoading ? (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
+                      <div className="table-empty">Carregando...</div>
+                    </td>
+                  </tr>
+                ) : auditEntries.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>
                       <div className="table-empty">
                         Nenhum evento de auditoria registrado ainda.
                       </div>
@@ -246,10 +474,11 @@ export default function Admin() {
                   auditEntries.map((entry) => (
                     <tr key={entry.id}>
                       <td>{entry.id}</td>
-                      <td>{entry.actor}</td>
+                      <td>{entry.actor_user_id}</td>
                       <td>{entry.action}</td>
-                      <td>{entry.entity}</td>
-                      <td>{entry.createdAt}</td>
+                      <td>{entry.entity_type}</td>
+                      <td>{entry.entity_id}</td>
+                      <td>{new Date(entry.created_at).toLocaleString()}</td>
                     </tr>
                   ))
                 )}

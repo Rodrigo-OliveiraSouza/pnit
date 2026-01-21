@@ -2,12 +2,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import MapEditor, { type SelectedLocation } from "../components/MapEditor";
-import type { ResidentProfile } from "../types/models";
+import type { AuditEntry } from "../types/models";
 import {
   assignResidentPoint,
   createPoint,
   createResident,
   createResidentProfile,
+  fetchAuditEntries,
   listResidents,
   uploadAttachment,
   type CreatePointPayload,
@@ -24,14 +25,6 @@ type DashboardResident = {
   created_at: string;
 };
 
-const defaultProfile: ResidentProfile = {
-  healthScore: 5,
-  educationScore: 5,
-  incomeScore: 5,
-  housingScore: 5,
-  securityScore: 5,
-};
-
 function parseLatLng(input: string) {
   const matches = input.match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/i);
   if (!matches) return null;
@@ -42,56 +35,209 @@ function parseLatLng(input: string) {
   return { lat, lng };
 }
 
+const initialFormState = {
+  fullName: "",
+  docId: "",
+  phone: "",
+  email: "",
+  address: "",
+  city: "",
+  state: "",
+  status: "active" as "active" | "inactive",
+  category: "Residencia",
+  precision: "approx" as "approx" | "exact",
+  publicNote: "",
+  notes: "",
+  locationText: "",
+  raceIdentity: "",
+  territoryNarrative: "",
+  territoryMemories: "",
+  territoryConflicts: "",
+  territoryCulture: "",
+  healthHasClinic: false,
+  healthHasEmergency: false,
+  healthHasCommunityAgent: false,
+  healthNotes: "",
+  educationLevel: "",
+  educationHasSchool: false,
+  educationHasTransport: false,
+  educationMaterialSupport: false,
+  educationNotes: "",
+  incomeMonthly: "",
+  incomeSource: "",
+  assetsHasCar: false,
+  assetsHasFridge: false,
+  assetsHasFurniture: false,
+  assetsHasLand: false,
+  housingRooms: "",
+  housingAreaM2: "",
+  housingLandM2: "",
+  housingType: "",
+  securityHasPoliceStation: false,
+  securityHasPatrol: false,
+  securityNotes: "",
+};
+
+type IndicatorSummary = {
+  score: number;
+  note: string;
+};
+
+type IndicatorSet = {
+  health: IndicatorSummary;
+  education: IndicatorSummary;
+  income: IndicatorSummary;
+  housing: IndicatorSummary;
+  security: IndicatorSummary;
+};
+
+function clampScore(value: number) {
+  return Math.min(10, Math.max(1, Math.round(value)));
+}
+
+function parseNumber(value: string) {
+  const parsed = Number(value.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function computeIndicators(form: typeof initialFormState): IndicatorSet {
+  let healthScore = 2;
+  const healthParts: string[] = [];
+  if (form.healthHasClinic) {
+    healthScore += 3;
+    healthParts.push("posto proximo");
+  } else {
+    healthParts.push("sem posto");
+  }
+  if (form.healthHasEmergency) {
+    healthScore += 3;
+    healthParts.push("emergencia");
+  }
+  if (form.healthHasCommunityAgent) {
+    healthScore += 2;
+    healthParts.push("agente comunitario");
+  }
+
+  let educationScore = 2;
+  const educationParts: string[] = [];
+  if (form.educationHasSchool) {
+    educationScore += 3;
+    educationParts.push("escola proxima");
+  }
+  if (form.educationHasTransport) {
+    educationScore += 2;
+    educationParts.push("transporte escolar");
+  }
+  if (form.educationMaterialSupport) {
+    educationScore += 2;
+    educationParts.push("materiais fornecidos");
+  }
+  if (form.educationLevel.trim()) {
+    educationScore += 1;
+    educationParts.push(`nivel: ${form.educationLevel.trim()}`);
+  }
+
+  let incomeScore = 2;
+  const incomeParts: string[] = [];
+  const incomeMonthly = parseNumber(form.incomeMonthly);
+  if (incomeMonthly !== null) {
+    if (incomeMonthly >= 3000) {
+      incomeScore += 4;
+    } else if (incomeMonthly >= 1500) {
+      incomeScore += 3;
+    } else if (incomeMonthly >= 800) {
+      incomeScore += 2;
+    } else if (incomeMonthly > 0) {
+      incomeScore += 1;
+    }
+    incomeParts.push(`renda: R$ ${incomeMonthly.toFixed(0)}`);
+  }
+  if (form.assetsHasCar) {
+    incomeScore += 1;
+    incomeParts.push("carro");
+  }
+  if (form.assetsHasFridge) {
+    incomeScore += 1;
+    incomeParts.push("geladeira");
+  }
+  if (form.assetsHasFurniture) {
+    incomeScore += 1;
+    incomeParts.push("moveis");
+  }
+  if (form.assetsHasLand) {
+    incomeScore += 1;
+    incomeParts.push("terreno");
+  }
+
+  let housingScore = 2;
+  const housingParts: string[] = [];
+  const rooms = parseNumber(form.housingRooms);
+  const area = parseNumber(form.housingAreaM2);
+  const land = parseNumber(form.housingLandM2);
+  if (rooms !== null) {
+    if (rooms >= 3) housingScore += 2;
+    else if (rooms >= 2) housingScore += 1;
+    housingParts.push(`${rooms} quartos`);
+  }
+  if (area !== null) {
+    if (area >= 80) housingScore += 2;
+    else if (area >= 50) housingScore += 1;
+    housingParts.push(`${area}m2`);
+  }
+  if (land !== null) {
+    if (land >= 150) housingScore += 2;
+    else if (land >= 100) housingScore += 1;
+    housingParts.push(`terreno ${land}m2`);
+  }
+  if (form.housingType.trim()) {
+    housingScore += 1;
+    housingParts.push(form.housingType.trim());
+  }
+
+  let securityScore = 2;
+  const securityParts: string[] = [];
+  if (form.securityHasPoliceStation) {
+    securityScore += 3;
+    securityParts.push("delegacia");
+  }
+  if (form.securityHasPatrol) {
+    securityScore += 3;
+    securityParts.push("patrulha");
+  }
+
+  return {
+    health: {
+      score: clampScore(healthScore),
+      note: healthParts.join(", ") || "sem informacoes",
+    },
+    education: {
+      score: clampScore(educationScore),
+      note: educationParts.join(", ") || "sem informacoes",
+    },
+    income: {
+      score: clampScore(incomeScore),
+      note: incomeParts.join(", ") || "sem informacoes",
+    },
+    housing: {
+      score: clampScore(housingScore),
+      note: housingParts.join(", ") || "sem informacoes",
+    },
+    security: {
+      score: clampScore(securityScore),
+      note: securityParts.join(", ") || "sem informacoes",
+    },
+  };
+}
+
 export default function EmployeeDashboard() {
   const [selectedLocation, setSelectedLocation] =
     useState<SelectedLocation | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [residents, setResidents] = useState<DashboardResident[]>([]);
-  const [formState, setFormState] = useState({
-    fullName: "",
-    docId: "",
-    phone: "",
-    email: "",
-    address: "",
-    city: "",
-    state: "",
-    status: "active" as "active" | "inactive",
-    category: "Residencia",
-    precision: "approx" as "approx" | "exact",
-    publicNote: "",
-    notes: "",
-    locationText: "",
-    raceIdentity: "",
-    territoryNarrative: "",
-    territoryMemories: "",
-    territoryConflicts: "",
-    territoryCulture: "",
-    healthHasClinic: false,
-    healthHasEmergency: false,
-    healthHasCommunityAgent: false,
-    healthNotes: "",
-    educationLevel: "",
-    educationHasSchool: false,
-    educationHasTransport: false,
-    educationMaterialSupport: false,
-    educationNotes: "",
-    incomeMonthly: "",
-    incomeSource: "",
-    assetsHasCar: false,
-    assetsHasFridge: false,
-    assetsHasFurniture: false,
-    assetsHasLand: false,
-    housingRooms: "",
-    housingAreaM2: "",
-    housingLandM2: "",
-    housingType: "",
-    securityHasPoliceStation: false,
-    securityHasPatrol: false,
-    securityNotes: "",
-  });
-  const [profileState, setProfileState] =
-    useState<ResidentProfile>(defaultProfile);
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [formState, setFormState] = useState(initialFormState);
   const [saving, setSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{
     type: "success" | "error";
@@ -107,8 +253,29 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const loadAudit = async () => {
+    setAuditLoading(true);
+    try {
+      const response = await fetchAuditEntries({ limit: 10 });
+      const mapped = response.items.map((entry) => ({
+        id: String(entry.id ?? ""),
+        actor_user_id: String(entry.actor_user_id ?? ""),
+        action: String(entry.action ?? ""),
+        entity_type: String(entry.entity_type ?? ""),
+        entity_id: String(entry.entity_id ?? ""),
+        created_at: String(entry.created_at ?? ""),
+      }));
+      setAuditEntries(mapped);
+    } catch {
+      setAuditEntries([]);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   useEffect(() => {
     void loadResidents();
+    void loadAudit();
   }, []);
 
   const handleFieldChange = (
@@ -121,60 +288,8 @@ export default function EmployeeDashboard() {
     }));
   };
 
-  const handleProfileChange = (
-    field: keyof ResidentProfile,
-    value: string | number | boolean
-  ) => {
-    setProfileState((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  };
-
   const resetForm = () => {
-    setFormState({
-      fullName: "",
-      docId: "",
-      phone: "",
-      email: "",
-      address: "",
-      city: "",
-      state: "",
-      status: "active",
-      category: "Residencia",
-      precision: "approx",
-      publicNote: "",
-      notes: "",
-      locationText: "",
-      raceIdentity: "",
-      territoryNarrative: "",
-      territoryMemories: "",
-      territoryConflicts: "",
-      territoryCulture: "",
-      healthHasClinic: false,
-      healthHasEmergency: false,
-      healthHasCommunityAgent: false,
-      healthNotes: "",
-      educationLevel: "",
-      educationHasSchool: false,
-      educationHasTransport: false,
-      educationMaterialSupport: false,
-      educationNotes: "",
-      incomeMonthly: "",
-      incomeSource: "",
-      assetsHasCar: false,
-      assetsHasFridge: false,
-      assetsHasFurniture: false,
-      assetsHasLand: false,
-      housingRooms: "",
-      housingAreaM2: "",
-      housingLandM2: "",
-      housingType: "",
-      securityHasPoliceStation: false,
-      securityHasPatrol: false,
-      securityNotes: "",
-    });
-    setProfileState(defaultProfile);
+    setFormState(initialFormState);
     setPhotoFile(null);
     setSelectedLocation(null);
     setResetKey((current) => current + 1);
@@ -185,6 +300,8 @@ export default function EmployeeDashboard() {
     if (!formState.locationText) return null;
     return parseLatLng(formState.locationText);
   }, [formState.locationText, selectedLocation]);
+
+  const indicators = useMemo(() => computeIndicators(formState), [formState]);
 
   const handleSave = async () => {
     if (!resolvedLocation) {
@@ -245,18 +362,18 @@ export default function EmployeeDashboard() {
       });
 
       await createResidentProfile(residentResponse.id, {
-        health_score: profileState.healthScore,
+        health_score: indicators.health.score,
         health_has_clinic: formState.healthHasClinic,
         health_has_emergency: formState.healthHasEmergency,
         health_has_community_agent: formState.healthHasCommunityAgent,
         health_notes: formState.healthNotes || null,
-        education_score: profileState.educationScore,
+        education_score: indicators.education.score,
         education_level: formState.educationLevel || null,
         education_has_school: formState.educationHasSchool,
         education_has_transport: formState.educationHasTransport,
         education_material_support: formState.educationMaterialSupport,
         education_notes: formState.educationNotes || null,
-        income_score: profileState.incomeScore,
+        income_score: indicators.income.score,
         income_monthly: formState.incomeMonthly
           ? Number(formState.incomeMonthly)
           : null,
@@ -265,7 +382,7 @@ export default function EmployeeDashboard() {
         assets_has_fridge: formState.assetsHasFridge,
         assets_has_furniture: formState.assetsHasFurniture,
         assets_has_land: formState.assetsHasLand,
-        housing_score: profileState.housingScore,
+        housing_score: indicators.housing.score,
         housing_rooms: formState.housingRooms
           ? Number(formState.housingRooms)
           : null,
@@ -276,7 +393,7 @@ export default function EmployeeDashboard() {
           ? Number(formState.housingLandM2)
           : null,
         housing_type: formState.housingType || null,
-        security_score: profileState.securityScore,
+        security_score: indicators.security.score,
         security_has_police_station: formState.securityHasPoliceStation,
         security_has_patrol: formState.securityHasPatrol,
         security_notes: formState.securityNotes || null,
@@ -556,11 +673,10 @@ export default function EmployeeDashboard() {
                     type="number"
                     min={1}
                     max={10}
-                    value={profileState.healthScore}
-                    onChange={(event) =>
-                      handleProfileChange("healthScore", Number(event.target.value))
-                    }
+                    value={indicators.health.score}
+                    readOnly
                   />
+                  <span className="muted">Criterios: {indicators.health.note}</span>
                 </label>
                 <label>
                   Educacao
@@ -568,14 +684,12 @@ export default function EmployeeDashboard() {
                     type="number"
                     min={1}
                     max={10}
-                    value={profileState.educationScore}
-                    onChange={(event) =>
-                      handleProfileChange(
-                        "educationScore",
-                        Number(event.target.value)
-                      )
-                    }
+                    value={indicators.education.score}
+                    readOnly
                   />
+                  <span className="muted">
+                    Criterios: {indicators.education.note}
+                  </span>
                 </label>
               </div>
               <div className="form-row">
@@ -585,11 +699,10 @@ export default function EmployeeDashboard() {
                     type="number"
                     min={1}
                     max={10}
-                    value={profileState.incomeScore}
-                    onChange={(event) =>
-                      handleProfileChange("incomeScore", Number(event.target.value))
-                    }
+                    value={indicators.income.score}
+                    readOnly
                   />
+                  <span className="muted">Criterios: {indicators.income.note}</span>
                 </label>
                 <label>
                   Moradia
@@ -597,14 +710,10 @@ export default function EmployeeDashboard() {
                     type="number"
                     min={1}
                     max={10}
-                    value={profileState.housingScore}
-                    onChange={(event) =>
-                      handleProfileChange(
-                        "housingScore",
-                        Number(event.target.value)
-                      )
-                    }
+                    value={indicators.housing.score}
+                    readOnly
                   />
+                  <span className="muted">Criterios: {indicators.housing.note}</span>
                 </label>
                 <label>
                   Seguranca
@@ -612,14 +721,12 @@ export default function EmployeeDashboard() {
                     type="number"
                     min={1}
                     max={10}
-                    value={profileState.securityScore}
-                    onChange={(event) =>
-                      handleProfileChange(
-                        "securityScore",
-                        Number(event.target.value)
-                      )
-                    }
+                    value={indicators.security.score}
+                    readOnly
                   />
+                  <span className="muted">
+                    Criterios: {indicators.security.note}
+                  </span>
                 </label>
               </div>
 
@@ -1053,6 +1160,53 @@ export default function EmployeeDashboard() {
                       </span>
                     </td>
                     <td>{new Date(resident.created_at).toLocaleDateString()}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="table-section">
+        <div className="table-header">
+          <div>
+            <span className="eyebrow">Registro</span>
+            <h2>Minhas acoes recentes</h2>
+          </div>
+        </div>
+        <div className="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>Acao</th>
+                <th>Entidade</th>
+                <th>Registro</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {auditLoading ? (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="table-empty">Carregando...</div>
+                  </td>
+                </tr>
+              ) : auditEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="table-empty">
+                      Nenhuma acao registrada ainda.
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                auditEntries.map((entry) => (
+                  <tr key={entry.id}>
+                    <td>{entry.action}</td>
+                    <td>{entry.entity_type}</td>
+                    <td>{entry.entity_id}</td>
+                    <td>{new Date(entry.created_at).toLocaleString()}</td>
                   </tr>
                 ))
               )}

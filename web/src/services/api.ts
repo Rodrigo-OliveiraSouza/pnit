@@ -86,6 +86,14 @@ export type PublicPointsResponse = {
   last_sync_at?: string;
 };
 
+export type ReportFilters = {
+  city?: string;
+  state?: string;
+  region?: string;
+  from?: string;
+  to?: string;
+};
+
 export type ReportPreviewResponse = {
   report_id?: string;
   summary?: {
@@ -107,6 +115,45 @@ export type ReportExportResponse = {
   content?: string;
   content_type?: string;
   filename?: string;
+};
+
+export type Complaint = {
+  id: string;
+  type: string;
+  description: string;
+  location_text?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  city?: string | null;
+  state?: string | null;
+  status: "new" | "reviewing" | "closed";
+  photo_attachment_id?: string | null;
+  photo_url?: string | null;
+  created_at: string;
+};
+
+export type ProductivityResponse = {
+  summary: {
+    total_residents: number;
+    total_points: number;
+    period: "day" | "week" | "month";
+  };
+  by_user: Array<{
+    user_id: string;
+    full_name?: string | null;
+    email?: string | null;
+    residents: number;
+    points: number;
+    health_avg?: number | null;
+    education_avg?: number | null;
+    income_avg?: number | null;
+    housing_avg?: number | null;
+    security_avg?: number | null;
+  }>;
+  series: {
+    residents: Array<{ bucket: string; total: number }>;
+    points: Array<{ bucket: string; total: number }>;
+  };
 };
 
 export type GeocodeResponse = {
@@ -210,6 +257,9 @@ export async function fetchPublicPoints(params: {
   precision?: string;
   updated_since?: string;
   cursor?: string;
+  city?: string;
+  state?: string;
+  region?: string;
 }): Promise<PublicPointsResponse> {
   const query = new URLSearchParams({
     bbox: params.bbox,
@@ -219,6 +269,9 @@ export async function fetchPublicPoints(params: {
   if (params.precision) query.set("precision", params.precision);
   if (params.updated_since) query.set("updated_since", params.updated_since);
   if (params.cursor) query.set("cursor", params.cursor);
+  if (params.city) query.set("city", params.city);
+  if (params.state) query.set("state", params.state);
+  if (params.region) query.set("region", params.region);
 
   return apiFetch<PublicPointsResponse>(`/map/points?${query.toString()}`);
 }
@@ -290,12 +343,13 @@ export async function assignResidentPoint(payload: {
 }
 
 export async function generateReportPreview(payload: {
-  bounds: {
+  bounds?: {
     north: number;
     south: number;
     east: number;
     west: number;
   };
+  filters?: ReportFilters;
   include?: {
     indicators?: boolean;
     points?: boolean;
@@ -309,13 +363,14 @@ export async function generateReportPreview(payload: {
 }
 
 export async function exportReport(payload: {
-  bounds: {
+  bounds?: {
     north: number;
     south: number;
     east: number;
     west: number;
   };
   format: "PDF" | "CSV" | "JSON";
+  filters?: ReportFilters;
   include?: {
     indicators?: boolean;
     points?: boolean;
@@ -326,6 +381,99 @@ export async function exportReport(payload: {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function submitComplaint(payload: {
+  type: string;
+  description: string;
+  location_text?: string;
+  city?: string;
+  state?: string;
+  file?: File | null;
+}): Promise<{ ok: boolean; id: string }> {
+  const form = new FormData();
+  form.set("type", payload.type);
+  form.set("description", payload.description);
+  if (payload.location_text) form.set("location_text", payload.location_text);
+  if (payload.city) form.set("city", payload.city);
+  if (payload.state) form.set("state", payload.state);
+  if (payload.file) form.set("file", payload.file);
+
+  const response = await fetch(`${API_BASE_URL}/public/complaints`, {
+    method: "POST",
+    body: form,
+  });
+  if (!response.ok) {
+    throw new Error(`Erro ${response.status}`);
+  }
+  return (await response.json()) as { ok: boolean; id: string };
+}
+
+export async function listComplaints(params?: {
+  status?: string;
+  city?: string;
+  state?: string;
+  type?: string;
+}): Promise<{ items: Complaint[] }> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  if (params?.city) query.set("city", params.city);
+  if (params?.state) query.set("state", params.state);
+  if (params?.type) query.set("type", params.type);
+  const suffix = query.toString();
+  return apiFetch<{ items: Complaint[] }>(
+    `/admin/complaints${suffix ? `?${suffix}` : ""}`
+  );
+}
+
+export async function updateComplaintStatus(
+  id: string,
+  status: "new" | "reviewing" | "closed"
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/admin/complaints/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function fetchAuditEntries(params?: {
+  actor_user_id?: string;
+  entity_type?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+}): Promise<{ items: Array<Record<string, unknown>> }> {
+  const query = new URLSearchParams();
+  if (params?.actor_user_id) query.set("actor_user_id", params.actor_user_id);
+  if (params?.entity_type) query.set("entity_type", params.entity_type);
+  if (params?.from) query.set("from", params.from);
+  if (params?.to) query.set("to", params.to);
+  if (params?.limit) query.set("limit", String(params.limit));
+  const suffix = query.toString();
+  return apiFetch<{ items: Array<Record<string, unknown>> }>(
+    `/audit${suffix ? `?${suffix}` : ""}`
+  );
+}
+
+export async function fetchProductivity(params?: {
+  period?: "day" | "week" | "month";
+  from?: string;
+  to?: string;
+  city?: string;
+  state?: string;
+  user_id?: string;
+}): Promise<ProductivityResponse> {
+  const query = new URLSearchParams();
+  if (params?.period) query.set("period", params.period);
+  if (params?.from) query.set("from", params.from);
+  if (params?.to) query.set("to", params.to);
+  if (params?.city) query.set("city", params.city);
+  if (params?.state) query.set("state", params.state);
+  if (params?.user_id) query.set("user_id", params.user_id);
+  const suffix = query.toString();
+  return apiFetch<ProductivityResponse>(
+    `/admin/productivity${suffix ? `?${suffix}` : ""}`
+  );
 }
 
 export async function geocodeAddress(query: string): Promise<GeocodeResponse> {
