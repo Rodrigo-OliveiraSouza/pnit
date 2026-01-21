@@ -24,6 +24,7 @@ export default function MapShell({
 }: MapShellProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const googleMapsRef = useRef<typeof google | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -41,10 +42,13 @@ export default function MapShell({
     }
 
     let isCancelled = false;
+    const loaderLibraries = librariesKey
+      ? (librariesKey.split(",") as Libraries)
+      : DEFAULT_LIBRARIES;
     const loader = new Loader({
       apiKey,
       version: "weekly",
-      libraries: resolvedLibraries,
+      libraries: loaderLibraries,
     });
 
     loader
@@ -59,6 +63,7 @@ export default function MapShell({
         if (!googleMaps?.maps) {
           throw new Error("Google Maps indisponivel.");
         }
+        googleMapsRef.current = googleMaps;
 
         if (!mapInstanceRef.current) {
           const mapOptions: google.maps.MapOptions = {
@@ -75,71 +80,9 @@ export default function MapShell({
             mapRef.current,
             mapOptions
           );
-        } else {
-          mapInstanceRef.current.setCenter(center);
-          mapInstanceRef.current.setZoom(zoom);
         }
 
         onMapReady?.(mapInstanceRef.current);
-
-        markersRef.current.forEach((marker) => marker.setMap(null));
-        if (!infoWindowRef.current) {
-          infoWindowRef.current = new googleMaps.maps.InfoWindow();
-        }
-
-        markersRef.current = points.map((point) => {
-          const hasPhoto = Boolean(point.photoUrl);
-          const marker = new googleMaps.maps.Marker({
-            position: { lat: point.publicLat, lng: point.publicLng },
-            map: mapInstanceRef.current!,
-            title: point.id,
-            icon: hasPhoto
-              ? {
-                  url: point.photoUrl!,
-                  scaledSize: new googleMaps.maps.Size(48, 48),
-                }
-              : undefined,
-          });
-
-          marker.addListener("click", () => {
-            if (!infoWindowRef.current || !mapInstanceRef.current) {
-              return;
-            }
-            const container = document.createElement("div");
-            if (point.photoUrl) {
-              const img = document.createElement("img");
-              img.src = point.photoUrl;
-              img.alt = "Foto do ponto";
-              img.style.width = "120px";
-              img.style.height = "80px";
-              img.style.objectFit = "cover";
-              img.style.display = "block";
-              img.style.marginBottom = "0.5rem";
-              container.appendChild(img);
-            }
-            const title = document.createElement("strong");
-            title.textContent = point.publicNote
-              ? point.publicNote
-              : `Ponto ${point.id}`;
-            const meta = document.createElement("div");
-            meta.textContent = `Status: ${point.status}`;
-            const region = document.createElement("div");
-            region.textContent = `Regiao: ${point.region}`;
-            const residents = document.createElement("div");
-            residents.textContent = `Residentes: ${point.residents}`;
-            container.appendChild(title);
-            container.appendChild(meta);
-            container.appendChild(region);
-            container.appendChild(residents);
-            infoWindowRef.current.setContent(container);
-            infoWindowRef.current.open({
-              anchor: marker,
-              map: mapInstanceRef.current,
-            });
-          });
-
-          return marker;
-        });
 
         setLoadError(null);
         setIsLoaded(true);
@@ -159,7 +102,82 @@ export default function MapShell({
     return () => {
       isCancelled = true;
     };
-  }, [apiKey, center, librariesKey, mapId, onMapReady, points, zoom]);
+  }, [apiKey, librariesKey, mapId, onMapReady]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) {
+      return;
+    }
+    mapInstanceRef.current.setCenter(center);
+    mapInstanceRef.current.setZoom(zoom);
+  }, [center, zoom]);
+
+  useEffect(() => {
+    const mapInstance = mapInstanceRef.current;
+    const googleMaps = googleMapsRef.current;
+    if (!mapInstance || !googleMaps) {
+      return;
+    }
+
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new googleMaps.maps.InfoWindow();
+    }
+
+    markersRef.current = points.map((point) => {
+      const hasPhoto = Boolean(point.photoUrl);
+      const marker = new googleMaps.maps.Marker({
+        position: { lat: point.publicLat, lng: point.publicLng },
+        map: mapInstance,
+        title: point.id,
+        icon: hasPhoto
+          ? {
+              url: point.photoUrl!,
+              scaledSize: new googleMaps.maps.Size(48, 48),
+            }
+          : undefined,
+      });
+
+      marker.addListener("click", () => {
+        if (!infoWindowRef.current) {
+          return;
+        }
+        const container = document.createElement("div");
+        if (point.photoUrl) {
+          const img = document.createElement("img");
+          img.src = point.photoUrl;
+          img.alt = "Foto do ponto";
+          img.style.width = "120px";
+          img.style.height = "80px";
+          img.style.objectFit = "cover";
+          img.style.display = "block";
+          img.style.marginBottom = "0.5rem";
+          container.appendChild(img);
+        }
+        const title = document.createElement("strong");
+        title.textContent = point.publicNote
+          ? point.publicNote
+          : `Ponto ${point.id}`;
+        const meta = document.createElement("div");
+        meta.textContent = `Status: ${point.status}`;
+        const region = document.createElement("div");
+        region.textContent = `Regiao: ${point.region}`;
+        const residents = document.createElement("div");
+        residents.textContent = `Residentes: ${point.residents}`;
+        container.appendChild(title);
+        container.appendChild(meta);
+        container.appendChild(region);
+        container.appendChild(residents);
+        infoWindowRef.current.setContent(container);
+        infoWindowRef.current.open({
+          anchor: marker,
+          map: mapInstance,
+        });
+      });
+
+      return marker;
+    });
+  }, [points, isLoaded]);
 
   return (
     <div className="map-shell" style={{ height }}>

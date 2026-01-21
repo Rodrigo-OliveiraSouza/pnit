@@ -169,7 +169,7 @@ export default function Admin() {
             onClick={() => void handleForceRefresh()}
             disabled={refreshLoading}
           >
-            {refreshLoading ? "Atualizando..." : "Forcar atualizacao diaria"}
+            {refreshLoading ? "Atualizando..." : "Atualizar mapa geral"}
           </button>
           <button className="btn btn-outline" type="button">
             Exportar auditoria
@@ -185,6 +185,7 @@ export default function Admin() {
             onClick={() => setActiveTab("requests")}
           >
             Cadastros pendentes
+            {pendingUsers.length > 0 ? ` (${pendingUsers.length})` : ""}
           </button>
           <button
             className={`tab ${activeTab === "users" ? "active" : ""}`}

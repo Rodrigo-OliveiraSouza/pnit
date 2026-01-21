@@ -893,6 +893,21 @@ textarea {
   overflow: auto;
 }
 
+.table-footer {
+  margin-top: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pager {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .table-empty {
   padding: 0.8rem 0;
   text-align: center;

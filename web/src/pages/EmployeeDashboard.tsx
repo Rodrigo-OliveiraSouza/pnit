@@ -237,6 +237,8 @@ export default function EmployeeDashboard() {
   const [residents, setResidents] = useState<DashboardResident[]>([]);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [auditView, setAuditView] = useState<"recent" | "history">("recent");
+  const [auditPage, setAuditPage] = useState(0);
   const [formState, setFormState] = useState(initialFormState);
   const [saving, setSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{
@@ -256,7 +258,7 @@ export default function EmployeeDashboard() {
   const loadAudit = async () => {
     setAuditLoading(true);
     try {
-      const response = await fetchAuditEntries({ limit: 10 });
+      const response = await fetchAuditEntries({ limit: 100 });
       const mapped = response.items.map((entry) => ({
         id: String(entry.id ?? ""),
         actor_user_id: String(entry.actor_user_id ?? ""),
@@ -266,12 +268,22 @@ export default function EmployeeDashboard() {
         created_at: String(entry.created_at ?? ""),
       }));
       setAuditEntries(mapped);
+      setAuditPage(0);
+      setAuditView("recent");
     } catch {
       setAuditEntries([]);
     } finally {
       setAuditLoading(false);
     }
   };
+
+  const auditPageSize = 10;
+  const auditTotalPages = Math.max(1, Math.ceil(auditEntries.length / auditPageSize));
+  const recentAuditEntries = auditEntries.slice(0, auditPageSize);
+  const pagedAuditEntries = auditEntries.slice(
+    auditPage * auditPageSize,
+    auditPage * auditPageSize + auditPageSize
+  );
 
   useEffect(() => {
     void loadResidents();
@@ -432,10 +444,10 @@ export default function EmployeeDashboard() {
       <section className="dashboard-hero">
         <div>
           <span className="eyebrow">Painel do funcionario</span>
-          <h1>Cadastro territorial e solicitacoes</h1>
+          <h1>Cadastro de pessoas no mapa</h1>
           <p>
-            Registre pessoas, pontos e indicadores sociais. A exibicao publica
-            ocorre na sincronizacao diaria do mapa.
+            Registre pessoas e indicadores sociais. Cada pessoa vira um ponto
+            no mapa e aparece na sincronizacao diaria.
           </p>
         </div>
         <div className="dashboard-actions">
@@ -449,7 +461,7 @@ export default function EmployeeDashboard() {
         <div className="form-header">
           <div>
             <span className="eyebrow">Cadastro e georreferenciamento</span>
-            <h2>Registrar pessoa e informacoes no mapa</h2>
+            <h2>Registrar pessoa (ponto no mapa)</h2>
             <p className="muted">
               Preencha os dados, inclua fotografia e indicadores. O mapa publico
               sera atualizado a cada 24 horas.
@@ -1116,8 +1128,8 @@ export default function EmployeeDashboard() {
       <section className="table-section">
         <div className="table-header">
           <div>
-            <span className="eyebrow">Solicitacoes</span>
-            <h2>Cadastros registrados</h2>
+            <span className="eyebrow">Pessoas</span>
+            <h2>Pessoas cadastradas (pontos)</h2>
           </div>
           <Link className="btn btn-primary" to="/relatorios">
             Gerar relatorio publico
@@ -1169,8 +1181,30 @@ export default function EmployeeDashboard() {
         <div className="table-header">
           <div>
             <span className="eyebrow">Registro</span>
-            <h2>Minhas acoes recentes</h2>
+            <h2>
+              {auditView === "recent"
+                ? "Minhas acoes recentes (ultimas 10)"
+                : "Historico completo de acoes"}
+            </h2>
           </div>
+          {auditView === "recent" && auditEntries.length > auditPageSize && (
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => setAuditView("history")}
+            >
+              Ver todas as acoes
+            </button>
+          )}
+          {auditView === "history" && (
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => setAuditView("recent")}
+            >
+              Voltar para recentes
+            </button>
+          )}
         </div>
         <div className="table-card">
           <table>
@@ -1198,7 +1232,10 @@ export default function EmployeeDashboard() {
                   </td>
                 </tr>
               ) : (
-                auditEntries.map((entry) => (
+                (auditView === "recent"
+                  ? recentAuditEntries
+                  : pagedAuditEntries
+                ).map((entry) => (
                   <tr key={entry.id}>
                     <td>{entry.action}</td>
                     <td>{entry.entity_type}</td>
@@ -1209,6 +1246,35 @@ export default function EmployeeDashboard() {
               )}
             </tbody>
           </table>
+          {auditView === "history" && auditEntries.length > auditPageSize && (
+            <div className="table-footer">
+              <span className="muted">
+                Pagina {auditPage + 1} de {auditTotalPages}
+              </span>
+              <div className="pager">
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => setAuditPage((current) => Math.max(0, current - 1))}
+                  disabled={auditPage === 0}
+                >
+                  Anterior
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() =>
+                    setAuditPage((current) =>
+                      Math.min(auditTotalPages - 1, current + 1)
+                    )
+                  }
+                  disabled={auditPage >= auditTotalPages - 1}
+                >
+                  Proxima
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>
