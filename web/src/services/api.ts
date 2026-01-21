@@ -107,6 +107,7 @@ export type PublicPointDto = {
   region?: string;
   city?: string | null;
   state?: string | null;
+  community_name?: string | null;
   residents?: number;
   public_note?: string;
   photo_url?: string | null;
@@ -202,6 +203,7 @@ export type CreateResidentPayload = {
   address?: string;
   city?: string;
   state?: string;
+  community_name?: string;
   status: "active" | "inactive";
   notes?: string;
 };
@@ -216,6 +218,7 @@ export type CreatePointPayload = {
   public_note?: string;
   city?: string;
   state?: string;
+  community_name?: string;
   location_text?: string;
 };
 
@@ -284,10 +287,76 @@ export type UserSummaryResponse = {
     full_name: string;
     city?: string | null;
     state?: string | null;
+    community_name?: string | null;
     status: string;
     created_at: string;
   }>;
   active_users?: number | null;
+};
+
+export type ResidentDetailResponse = {
+  resident: {
+    id: string;
+    full_name: string;
+    doc_id?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    community_name?: string | null;
+    status: "active" | "inactive";
+    notes?: string | null;
+    created_at?: string;
+    updated_at?: string;
+  };
+  profile?: Record<string, unknown> | null;
+  point?: {
+    id: string;
+    status?: "active" | "inactive";
+    precision?: "approx" | "exact";
+    category?: string | null;
+    public_note?: string | null;
+    city?: string | null;
+    state?: string | null;
+    community_name?: string | null;
+    location_text?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  } | null;
+};
+
+export type AdminUserDetailsResponse = {
+  user: AdminUser;
+  residents: Array<{
+    id: string;
+    full_name?: string | null;
+    doc_id?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    community_name?: string | null;
+    status?: string | null;
+    notes?: string | null;
+    created_at?: string;
+    health_score?: number | null;
+    education_score?: number | null;
+    income_score?: number | null;
+    income_monthly?: number | null;
+    housing_score?: number | null;
+    security_score?: number | null;
+    point_id?: string | null;
+    point_status?: string | null;
+    point_precision?: string | null;
+    point_category?: string | null;
+    point_public_note?: string | null;
+    point_city?: string | null;
+    point_state?: string | null;
+    point_community_name?: string | null;
+    point_created_at?: string | null;
+  }>;
 };
 
 export async function fetchPublicPoints(params: {
@@ -300,6 +369,7 @@ export async function fetchPublicPoints(params: {
   city?: string;
   state?: string;
   region?: string;
+  community?: string;
 }): Promise<PublicPointsResponse> {
   const query = new URLSearchParams({
     bbox: params.bbox,
@@ -312,12 +382,38 @@ export async function fetchPublicPoints(params: {
   if (params.city) query.set("city", params.city);
   if (params.state) query.set("state", params.state);
   if (params.region) query.set("region", params.region);
+  if (params.community) query.set("community", params.community);
 
   return apiFetch<PublicPointsResponse>(`/map/points?${query.toString()}`);
 }
 
 export async function fetchPublicPointById(id: string): Promise<PublicPointDto> {
   return apiFetch<PublicPointDto>(`/map/points/${id}`);
+}
+
+export async function fetchPublicCommunities(params?: {
+  city?: string;
+  state?: string;
+}): Promise<{
+  items: Array<{
+    community_name: string;
+    city?: string | null;
+    state?: string | null;
+    count?: number;
+  }>;
+}> {
+  const query = new URLSearchParams();
+  if (params?.city) query.set("city", params.city);
+  if (params?.state) query.set("state", params.state);
+  const suffix = query.toString();
+  return apiFetch<{
+    items: Array<{
+      community_name: string;
+      city?: string | null;
+      state?: string | null;
+      count?: number;
+    }>;
+  }>(`/map/communities${suffix ? `?${suffix}` : ""}`);
 }
 
 export async function createResident(
@@ -331,9 +427,45 @@ export async function createResident(
 
 export async function listResidents(createdBy?: "me") {
   const query = createdBy ? "?created_by=me" : "";
-  return apiFetch<{ items: Array<{ id: string; full_name: string; city?: string | null; state?: string | null; status: string; created_at: string }> }>(
+  return apiFetch<{
+    items: Array<{
+      id: string;
+      full_name: string;
+      city?: string | null;
+      state?: string | null;
+      community_name?: string | null;
+      status: string;
+      created_at: string;
+    }>;
+  }>(
     `/residents${query}`
   );
+}
+
+export async function fetchResidentDetail(
+  residentId: string
+): Promise<ResidentDetailResponse> {
+  return apiFetch<ResidentDetailResponse>(`/residents/${residentId}`);
+}
+
+export async function updateResident(
+  residentId: string,
+  payload: Partial<CreateResidentPayload>
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/residents/${residentId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePoint(
+  pointId: string,
+  payload: Partial<CreatePointPayload>
+): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/points/${pointId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function createResidentProfile(
@@ -380,6 +512,12 @@ export async function assignResidentPoint(payload: {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchAdminUserDetails(
+  userId: string
+): Promise<AdminUserDetailsResponse> {
+  return apiFetch<AdminUserDetailsResponse>(`/admin/users/${userId}/details`);
 }
 
 export async function generateReportPreview(payload: {

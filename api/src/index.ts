@@ -439,6 +439,37 @@ function jitterPoint(lat: number, lng: number, accuracy?: number | null) {
   return { lat: lat + deltaLat, lng: lng + deltaLng };
 }
 
+type MapCoordinate = { lat: number; lng: number };
+
+function buildStaticMapUrl(apiKey: string, points: MapCoordinate[]) {
+  const url = new URL("https://maps.googleapis.com/maps/api/staticmap");
+  url.searchParams.set("size", "640x420");
+  url.searchParams.set("scale", "2");
+  url.searchParams.set("maptype", "roadmap");
+  url.searchParams.set("key", apiKey);
+
+  if (points.length > 0) {
+    const lats = points.map((p) => p.lat);
+    const lngs = points.map((p) => p.lng);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs);
+    const maxLng = Math.max(...lngs);
+    url.searchParams.append("visible", `${minLat},${minLng}`);
+    url.searchParams.append("visible", `${maxLat},${maxLng}`);
+  }
+
+  const markerColor = "0xd9482b";
+  points.slice(0, 50).forEach((point) => {
+    url.searchParams.append(
+      "markers",
+      `color:${markerColor}|${point.lat},${point.lng}`
+    );
+  });
+
+  return url.toString();
+}
+
 type PublicCacheRefreshResult = {
   skipped: boolean;
   last_refresh?: string;
@@ -476,6 +507,14 @@ async function refreshPublicCache(
         FROM resident_point_assignments
         WHERE active = true
         GROUP BY point_id
+      ),
+      latest_photo AS (
+        SELECT DISTINCT ON (point_id)
+          id,
+          point_id
+        FROM attachments
+        WHERE visibility = 'public' AND point_id IS NOT NULL
+        ORDER BY point_id, created_at DESC
       )
       INSERT INTO public_map_cache (
         point_id,
@@ -484,8 +523,12 @@ async function refreshPublicCache(
         status,
         precision,
         region,
+        city,
+        state,
+        community_name,
         residents,
         public_note,
+        photo_attachment_id,
         snapshot_date,
         geog,
         updated_at
@@ -497,13 +540,18 @@ async function refreshPublicCache(
         mp.status,
         mp.precision,
         NULL,
+        mp.city,
+        mp.state,
+        mp.community_name,
         COALESCE(a.residents, 0),
         mp.public_note,
+        lp.id,
         CURRENT_DATE,
         ST_SetSRID(ST_MakePoint(mp.public_lng, mp.public_lat), 4326)::geography,
         now()
       FROM map_points mp
       LEFT JOIN active_assignments a ON a.point_id = mp.id
+      LEFT JOIN latest_photo lp ON lp.point_id = mp.id
       WHERE mp.deleted_at IS NULL
       `
     );
@@ -658,6 +706,7 @@ app.get("/map/points", async (c) => {
   const city = c.req.query("city");
   const state = c.req.query("state");
   const region = c.req.query("region");
+  const community = c.req.query("community");
 
   const filters: string[] = [
     "snapshot_date = CURRENT_DATE",
@@ -700,6 +749,11 @@ app.get("/map/points", async (c) => {
     filters.push(`region ILIKE $${index}`);
     params.push(`%${region}%`);
   }
+  if (community) {
+    index += 1;
+    filters.push(`community_name ILIKE $${index}`);
+    params.push(`%${community}%`);
+  }
   index += 1;
   const offsetParam = index;
   params.push(offset);
@@ -718,6 +772,7 @@ app.get("/map/points", async (c) => {
            region,
            city,
            state,
+           community_name,
            residents,
            photo_attachment_id
     FROM public_map_cache
@@ -748,6 +803,33 @@ app.get("/map/points", async (c) => {
   });
 });
 
+app.get("/map/communities", async (c) => {
+  const sql = getSql(c.env);
+  const city = c.req.query("city");
+  const state = c.req.query("state");
+  const filters = ["snapshot_date = CURRENT_DATE", "community_name IS NOT NULL"];
+  const params: string[] = [];
+  if (city) {
+    params.push(city);
+    filters.push(`city = $${params.length}`);
+  }
+  if (state) {
+    params.push(state);
+    filters.push(`state = $${params.length}`);
+  }
+  const rows = await sql(
+    `
+    SELECT community_name, city, state, COUNT(*)::int AS count
+    FROM public_map_cache
+    WHERE ${filters.join(" AND ")}
+    GROUP BY community_name, city, state
+    ORDER BY community_name
+    `,
+    params
+  );
+  return c.json({ items: rows });
+});
+
 app.get("/map/points/:id", async (c) => {
   const sql = getSql(c.env);
   const id = c.req.param("id");
@@ -762,6 +844,7 @@ app.get("/map/points/:id", async (c) => {
            region,
            city,
            state,
+           community_name,
            updated_at,
            photo_attachment_id
     FROM public_map_cache
@@ -967,6 +1050,7 @@ app.post("/reports/export", async (c) => {
            region,
            city,
            state,
+           community_name,
            residents,
            public_note,
            updated_at
@@ -1001,6 +1085,19 @@ app.post("/reports/export", async (c) => {
     });
   }
 
+  const pointsForMap = rows
+    .map((row) => ({
+      lat: Number(row.public_lat),
+      lng: Number(row.public_lng),
+    }))
+    .filter(
+      (point) =>
+        Number.isFinite(point.lat) &&
+        Number.isFinite(point.lng) &&
+        Math.abs(point.lat) <= 90 &&
+        Math.abs(point.lng) <= 180
+    );
+
   if (body.format === "CSV") {
     const header = [
       "id",
@@ -1011,6 +1108,7 @@ app.post("/reports/export", async (c) => {
       "region",
       "city",
       "state",
+      "community_name",
       "residents",
       "public_note",
       "updated_at",
@@ -1072,6 +1170,47 @@ app.post("/reports/export", async (c) => {
     font,
     color: rgb(0.1, 0.1, 0.1),
   });
+
+  if (pointsForMap.length > 0 && c.env.GOOGLE_MAPS_API_KEY) {
+    try {
+      const mapUrl = buildStaticMapUrl(
+        c.env.GOOGLE_MAPS_API_KEY,
+        pointsForMap
+      );
+      const mapResponse = await fetch(mapUrl);
+      if (mapResponse.ok) {
+        const mapImage = await mapResponse.arrayBuffer();
+        const mapPage = pdf.addPage([842, 595]);
+        const mapWidth = mapPage.getWidth();
+        const mapHeight = mapPage.getHeight();
+        const image = await pdf.embedPng(mapImage);
+        const margin = 40;
+        mapPage.drawText("Mapa dos pontos selecionados", {
+          x: margin,
+          y: mapHeight - 40,
+          size: 16,
+          font,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+        const maxWidth = mapWidth - margin * 2;
+        const maxHeight = mapHeight - margin * 2 - 20;
+        const scale = Math.min(
+          maxWidth / image.width,
+          maxHeight / image.height
+        );
+        const drawWidth = image.width * scale;
+        const drawHeight = image.height * scale;
+        mapPage.drawImage(image, {
+          x: margin,
+          y: margin,
+          width: drawWidth,
+          height: drawHeight,
+        });
+      }
+    } catch (error) {
+      console.warn("static_map_failed", error);
+    }
+  }
   const bytes = await pdf.save();
   const base64 = btoa(String.fromCharCode(...bytes));
   return c.json({
@@ -1127,7 +1266,7 @@ app.get("/reports/user-summary", async (c) => {
   );
   const residents = await sql(
     `
-    SELECT id, full_name, city, state, status, created_at
+    SELECT id, full_name, city, state, community_name, status, created_at
     FROM residents
     WHERE created_by = $1 AND deleted_at IS NULL
     ORDER BY created_at DESC
@@ -1188,6 +1327,71 @@ app.get("/admin/users", async (c) => {
     params
   );
   return c.json({ items: rows });
+});
+
+app.get("/admin/users/:id/details", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const userId = c.req.param("id");
+  const users = await sql(
+    `
+    SELECT id, email, role, status, full_name, phone, organization, city, state,
+           territory, access_reason, created_at, last_login_at
+    FROM app_users
+    WHERE id = $1
+    `,
+    [userId]
+  );
+  if (users.length === 0) {
+    return jsonError(c, 404, "User not found", "NOT_FOUND");
+  }
+  const residents = await sql(
+    `
+    SELECT
+      r.id,
+      r.full_name,
+      r.doc_id,
+      r.phone,
+      r.email,
+      r.address,
+      r.city,
+      r.state,
+      r.community_name,
+      r.status,
+      r.notes,
+      r.created_at,
+      rp.health_score,
+      rp.education_score,
+      rp.income_score,
+      rp.income_monthly,
+      rp.housing_score,
+      rp.security_score,
+      mp.id AS point_id,
+      mp.status AS point_status,
+      mp.precision AS point_precision,
+      mp.category AS point_category,
+      mp.public_note AS point_public_note,
+      mp.city AS point_city,
+      mp.state AS point_state,
+      mp.community_name AS point_community_name,
+      mp.created_at AS point_created_at
+    FROM residents r
+    LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+    LEFT JOIN resident_point_assignments rpa
+      ON rpa.resident_id = r.id AND rpa.active = true
+    LEFT JOIN map_points mp ON mp.id = rpa.point_id
+    WHERE r.created_by = $1 AND r.deleted_at IS NULL
+    ORDER BY r.created_at DESC
+    `,
+    [userId]
+  );
+  return c.json({ user: users[0], residents });
 });
 
 app.post("/admin/users", async (c) => {
@@ -1528,6 +1732,7 @@ app.post("/residents", async (c) => {
         address?: string;
         city?: string;
         state?: string;
+        community_name?: string;
         status?: "active" | "inactive";
         notes?: string;
       }
@@ -1539,9 +1744,9 @@ app.post("/residents", async (c) => {
   const rows = await sql(
     `
     INSERT INTO residents (
-      full_name, doc_id, phone, email, address, city, state, notes, status, created_by
+      full_name, doc_id, phone, email, address, city, state, community_name, notes, status, created_by
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING id
     `,
     [
@@ -1552,6 +1757,7 @@ app.post("/residents", async (c) => {
       body.address ?? null,
       body.city ?? null,
       body.state ?? null,
+      body.community_name ?? null,
       body.notes ?? null,
       body.status,
       actorId,
@@ -1559,6 +1765,166 @@ app.post("/residents", async (c) => {
   );
   await logAudit(sql, actorId, "resident_create", "residents", rows[0].id);
   return c.json({ id: rows[0].id });
+});
+
+app.get("/residents/:id", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!requireStaff(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  if (claims.role !== "admin") {
+    const owner = await sql(
+      "SELECT id FROM residents WHERE id = $1 AND created_by = $2",
+      [id, claims.sub]
+    );
+    if (owner.length === 0) {
+      return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
+  }
+  const rows = await sql(
+    `
+    SELECT
+      r.id,
+      r.full_name,
+      r.doc_id,
+      r.phone,
+      r.email,
+      r.address,
+      r.city,
+      r.state,
+      r.community_name,
+      r.status,
+      r.notes,
+      r.created_at,
+      r.updated_at,
+      rp.health_score,
+      rp.health_has_clinic,
+      rp.health_has_emergency,
+      rp.health_has_community_agent,
+      rp.health_notes,
+      rp.education_score,
+      rp.education_level,
+      rp.education_has_school,
+      rp.education_has_transport,
+      rp.education_material_support,
+      rp.education_notes,
+      rp.income_score,
+      rp.income_monthly,
+      rp.income_source,
+      rp.assets_has_car,
+      rp.assets_has_fridge,
+      rp.assets_has_furniture,
+      rp.assets_has_land,
+      rp.housing_score,
+      rp.housing_rooms,
+      rp.housing_area_m2,
+      rp.housing_land_m2,
+      rp.housing_type,
+      rp.security_score,
+      rp.security_has_police_station,
+      rp.security_has_patrol,
+      rp.security_notes,
+      rp.race_identity,
+      rp.territory_narrative,
+      rp.territory_memories,
+      rp.territory_conflicts,
+      rp.territory_culture,
+      mp.id AS point_id,
+      mp.status AS point_status,
+      mp.precision AS point_precision,
+      mp.category AS point_category,
+      mp.public_note AS point_public_note,
+      mp.city AS point_city,
+      mp.state AS point_state,
+      mp.community_name AS point_community_name,
+      mp.source_location AS point_location_text,
+      mp.lat AS point_lat,
+      mp.lng AS point_lng
+    FROM residents r
+    LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+    LEFT JOIN resident_point_assignments rpa
+      ON rpa.resident_id = r.id AND rpa.active = true
+    LEFT JOIN map_points mp ON mp.id = rpa.point_id
+    WHERE r.id = $1 AND r.deleted_at IS NULL
+    `,
+    [id]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Resident not found", "NOT_FOUND");
+  }
+  const row = rows[0] as Record<string, unknown>;
+  const pointId = row.point_id as string | null;
+  return c.json({
+    resident: {
+      id: row.id,
+      full_name: row.full_name,
+      doc_id: row.doc_id,
+      phone: row.phone,
+      email: row.email,
+      address: row.address,
+      city: row.city,
+      state: row.state,
+      community_name: row.community_name,
+      status: row.status,
+      notes: row.notes,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    },
+    profile: row.health_score !== null ? {
+      health_score: row.health_score,
+      health_has_clinic: row.health_has_clinic,
+      health_has_emergency: row.health_has_emergency,
+      health_has_community_agent: row.health_has_community_agent,
+      health_notes: row.health_notes,
+      education_score: row.education_score,
+      education_level: row.education_level,
+      education_has_school: row.education_has_school,
+      education_has_transport: row.education_has_transport,
+      education_material_support: row.education_material_support,
+      education_notes: row.education_notes,
+      income_score: row.income_score,
+      income_monthly: row.income_monthly,
+      income_source: row.income_source,
+      assets_has_car: row.assets_has_car,
+      assets_has_fridge: row.assets_has_fridge,
+      assets_has_furniture: row.assets_has_furniture,
+      assets_has_land: row.assets_has_land,
+      housing_score: row.housing_score,
+      housing_rooms: row.housing_rooms,
+      housing_area_m2: row.housing_area_m2,
+      housing_land_m2: row.housing_land_m2,
+      housing_type: row.housing_type,
+      security_score: row.security_score,
+      security_has_police_station: row.security_has_police_station,
+      security_has_patrol: row.security_has_patrol,
+      security_notes: row.security_notes,
+      race_identity: row.race_identity,
+      territory_narrative: row.territory_narrative,
+      territory_memories: row.territory_memories,
+      territory_conflicts: row.territory_conflicts,
+      territory_culture: row.territory_culture,
+    } : null,
+    point: pointId
+      ? {
+          id: pointId,
+          status: row.point_status,
+          precision: row.point_precision,
+          category: row.point_category,
+          public_note: row.point_public_note,
+          city: row.point_city,
+          state: row.point_state,
+          community_name: row.point_community_name,
+          location_text: row.point_location_text,
+          lat: row.point_lat,
+          lng: row.point_lng,
+        }
+      : null,
+  });
 });
 
 app.put("/residents/:id", async (c) => {
@@ -1589,6 +1955,7 @@ app.put("/residents/:id", async (c) => {
     "address",
     "city",
     "state",
+    "community_name",
     "notes",
     "status",
   ];
@@ -1638,7 +2005,7 @@ app.get("/residents", async (c) => {
   }
   const rows = await sql(
     `
-    SELECT id, full_name, city, state, status, created_at
+    SELECT id, full_name, city, state, community_name, status, created_at
     FROM residents
     WHERE ${filters.join(" AND ")}
     ORDER BY created_at DESC
@@ -1735,7 +2102,7 @@ app.post("/points", async (c) => {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as
-    | {
+      | {
         lat?: number;
         lng?: number;
         accuracy_m?: number | null;
@@ -1745,6 +2112,7 @@ app.post("/points", async (c) => {
         public_note?: string;
         city?: string;
         state?: string;
+        community_name?: string;
         location_text?: string;
       }
     | null;
@@ -1773,12 +2141,12 @@ app.post("/points", async (c) => {
     `
     INSERT INTO map_points (
       lat, lng, public_lat, public_lng, accuracy_m, precision, status, category, public_note,
-      city, state, source_location, geog, created_by
+      city, state, community_name, source_location, geog, created_by
     )
     VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-      $13
+      $14
     )
     RETURNING id, public_lat, public_lng, precision
     `,
@@ -1794,6 +2162,7 @@ app.post("/points", async (c) => {
       body.public_note ?? null,
       body.city ?? null,
       body.state ?? null,
+      body.community_name ?? null,
       body.location_text ?? null,
       actorId,
     ]
@@ -1825,7 +2194,7 @@ app.put("/points/:id", async (c) => {
     }
   }
   const body = (await c.req.json().catch(() => null)) as
-    | {
+      | {
         lat?: number;
         lng?: number;
         accuracy_m?: number | null;
@@ -1835,6 +2204,7 @@ app.put("/points/:id", async (c) => {
         public_note?: string;
         city?: string;
         state?: string;
+        community_name?: string;
         source_location?: string;
       }
     | null;
@@ -1853,6 +2223,8 @@ app.put("/points/:id", async (c) => {
     fields.push(["public_note", body.public_note]);
   if (body.city !== undefined) fields.push(["city", body.city]);
   if (body.state !== undefined) fields.push(["state", body.state]);
+  if (body.community_name !== undefined)
+    fields.push(["community_name", body.community_name]);
   if (body.source_location !== undefined)
     fields.push(["source_location", body.source_location]);
   if (fields.length === 0) {

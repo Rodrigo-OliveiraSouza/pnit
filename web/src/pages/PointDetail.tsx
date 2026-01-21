@@ -48,6 +48,7 @@ export default function PointDetail() {
       city: point.city ?? null,
       state: point.state ?? null,
       residents: point.residents ?? 0,
+      communityName: point.community_name ?? null,
       publicNote: point.public_note,
       photoUrl: point.photo_url ?? null,
     };
@@ -83,7 +84,7 @@ export default function PointDetail() {
       <section className="detail-hero">
         <div>
           <span className="eyebrow">Detalhe publico</span>
-          <h1>{mapPoint.id}</h1>
+          <h1>{mapPoint.communityName ?? mapPoint.id}</h1>
           <p>
             Este ponto exibe apenas dados publicos e coordenadas aproximadas.
           </p>
@@ -112,6 +113,12 @@ export default function PointDetail() {
                 <strong>
                   {[mapPoint.city, mapPoint.state].filter(Boolean).join(" / ")}
                 </strong>
+              </div>
+            )}
+            {mapPoint.communityName && (
+              <div>
+                <span>Comunidade quilombola</span>
+                <strong>{mapPoint.communityName}</strong>
               </div>
             )}
             {mapPoint.publicNote && (

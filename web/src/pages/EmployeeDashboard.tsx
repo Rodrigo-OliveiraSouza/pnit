@@ -10,8 +10,12 @@ import {
   createPoint,
   createResident,
   createResidentProfile,
+  fetchResidentDetail,
+  fetchPublicCommunities,
   getAuthRole,
   listResidents,
+  updatePoint,
+  updateResident,
   uploadAttachment,
   type CreatePointPayload,
   type CreateResidentPayload,
@@ -23,6 +27,7 @@ type DashboardResident = {
   full_name: string;
   city?: string | null;
   state?: string | null;
+  community_name?: string | null;
   status: string;
   created_at: string;
 };
@@ -48,6 +53,7 @@ const initialFormState = {
   address: "",
   city: "",
   state: "",
+  communityName: "",
   status: "active" as "active" | "inactive",
   category: "Residencia",
   precision: "approx" as "approx" | "exact",
@@ -94,6 +100,21 @@ type IndicatorSet = {
   income: IndicatorSummary;
   housing: IndicatorSummary;
   security: IndicatorSummary;
+};
+
+type EditResidentForm = {
+  id: string;
+  pointId?: string | null;
+  fullName: string;
+  docId: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  state: string;
+  communityName: string;
+  status: "active" | "inactive";
+  notes: string;
 };
 
 function clampScore(value: number) {
@@ -242,8 +263,14 @@ export default function EmployeeDashboard() {
   const [residents, setResidents] = useState<DashboardResident[]>([]);
   const role = getAuthRole();
   const isAdmin = role === "admin";
-  const [activeTab, setActiveTab] = useState<"general" | "admin">("general");
+  const [activeTab, setActiveTab] = useState<
+    "register" | "people" | "admin"
+  >("register");
   const [formState, setFormState] = useState(initialFormState);
+  const [communityOptions, setCommunityOptions] = useState<string[]>([]);
+  const [communityOptionsError, setCommunityOptionsError] = useState<string | null>(
+    null
+  );
   const [saving, setSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{
     type: "success" | "error";
@@ -255,6 +282,16 @@ export default function EmployeeDashboard() {
   }, [formState.state]);
   const selectedCityValue =
     formState.city && formState.state ? `${formState.city}__${formState.state}` : "";
+  const [editForm, setEditForm] = useState<EditResidentForm | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editFeedback, setEditFeedback] = useState<string | null>(null);
+  const editAvailableCities = useMemo(() => {
+    if (!editForm?.state) return BRAZIL_CITIES;
+    return BRAZIL_CITIES.filter((city) => city.state === editForm.state);
+  }, [editForm?.state]);
+  const editSelectedCityValue =
+    editForm?.city && editForm.state ? `${editForm.city}__${editForm.state}` : "";
 
   const loadResidents = async () => {
     try {
@@ -267,6 +304,30 @@ export default function EmployeeDashboard() {
 
   useEffect(() => {
     void loadResidents();
+  }, []);
+
+  const loadCommunityOptions = async () => {
+    setCommunityOptionsError(null);
+    try {
+      const response = await fetchPublicCommunities();
+      const names = response.items
+        .map((item) => item.community_name)
+        .filter(Boolean);
+      const unique = Array.from(new Set(names)).sort((a, b) =>
+        a.localeCompare(b)
+      );
+      setCommunityOptions(unique);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Falha ao carregar quilombos.";
+      setCommunityOptionsError(message);
+    }
+  };
+
+  useEffect(() => {
+    void loadCommunityOptions();
   }, []);
 
   const handleFieldChange = (
@@ -300,6 +361,56 @@ export default function EmployeeDashboard() {
     }));
   };
 
+  const handleEditFieldChange = (
+    field: keyof EditResidentForm,
+    value: string
+  ) => {
+    setEditForm((current) =>
+      current
+        ? {
+            ...current,
+            [field]: value,
+          }
+        : current
+    );
+  };
+
+  const handleEditStateSelect = (value: string) => {
+    setEditForm((current) =>
+      current
+        ? {
+            ...current,
+            state: value,
+            city: "",
+          }
+        : current
+    );
+  };
+
+  const handleEditCitySelect = (value: string) => {
+    if (!value) {
+      setEditForm((current) =>
+        current
+          ? {
+              ...current,
+              city: "",
+            }
+          : current
+      );
+      return;
+    }
+    const [cityName, stateCode] = value.split("__");
+    setEditForm((current) =>
+      current
+        ? {
+            ...current,
+            city: cityName,
+            state: stateCode,
+          }
+        : current
+    );
+  };
+
   const resetForm = () => {
     setFormState(initialFormState);
     setPhotoFile(null);
@@ -331,6 +442,13 @@ export default function EmployeeDashboard() {
       });
       return;
     }
+    if (!formState.communityName.trim()) {
+      setSaveFeedback({
+        type: "error",
+        message: "Informe a comunidade quilombola.",
+      });
+      return;
+    }
     if (!photoFile) {
       setSaveFeedback({
         type: "error",
@@ -350,6 +468,7 @@ export default function EmployeeDashboard() {
         address: formState.address || undefined,
         city: formState.city || undefined,
         state: formState.state || undefined,
+        community_name: formState.communityName || undefined,
         status: formState.status,
         notes: formState.notes || undefined,
       };
@@ -364,6 +483,7 @@ export default function EmployeeDashboard() {
         public_note: formState.publicNote || undefined,
         city: formState.city || undefined,
         state: formState.state || undefined,
+        community_name: formState.communityName || undefined,
         location_text: formState.locationText || undefined,
       };
       const pointResponse = await createPoint(pointPayload);
@@ -428,6 +548,17 @@ export default function EmployeeDashboard() {
         message:
           "Cadastro salvo. O mapa publico sera atualizado no proximo ciclo diario.",
       });
+      const normalizedCommunity = formState.communityName.trim();
+      if (
+        normalizedCommunity &&
+        !communityOptions.includes(normalizedCommunity)
+      ) {
+        setCommunityOptions((current) =>
+          [...current, normalizedCommunity].sort((a, b) =>
+            a.localeCompare(b)
+          )
+        );
+      }
       resetForm();
       await loadResidents();
     } catch (error) {
@@ -439,30 +570,126 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const handleStartEdit = async (residentId: string) => {
+    setEditLoading(true);
+    setEditFeedback(null);
+    try {
+      const detail = await fetchResidentDetail(residentId);
+      const resident = detail.resident;
+      setEditForm({
+        id: resident.id,
+        pointId: detail.point?.id ?? null,
+        fullName: resident.full_name ?? "",
+        docId: resident.doc_id ?? "",
+        phone: resident.phone ?? "",
+        email: resident.email ?? "",
+        address: resident.address ?? "",
+        city: resident.city ?? "",
+        state: resident.state ?? "",
+        communityName: resident.community_name ?? detail.point?.community_name ?? "",
+        status: resident.status ?? "active",
+        notes: resident.notes ?? "",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Falha ao carregar cadastro.";
+      setEditFeedback(message);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditForm(null);
+    setEditFeedback(null);
+  };
+
+  const handleEditSave = async () => {
+    if (!editForm) {
+      return;
+    }
+    setEditSaving(true);
+    setEditFeedback(null);
+    try {
+      await updateResident(editForm.id, {
+        full_name: editForm.fullName,
+        doc_id: editForm.docId || undefined,
+        phone: editForm.phone || undefined,
+        email: editForm.email || undefined,
+        address: editForm.address || undefined,
+        city: editForm.city || undefined,
+        state: editForm.state || undefined,
+        community_name: editForm.communityName || undefined,
+        status: editForm.status,
+        notes: editForm.notes || undefined,
+      });
+      if (editForm.pointId) {
+        await updatePoint(editForm.pointId, {
+          city: editForm.city || undefined,
+          state: editForm.state || undefined,
+          status: editForm.status,
+          community_name: editForm.communityName || undefined,
+        });
+      }
+      const normalizedCommunity = editForm.communityName.trim();
+      if (
+        normalizedCommunity &&
+        !communityOptions.includes(normalizedCommunity)
+      ) {
+        setCommunityOptions((current) =>
+          [...current, normalizedCommunity].sort((a, b) =>
+            a.localeCompare(b)
+          )
+        );
+      }
+      await loadResidents();
+      setEditFeedback("Cadastro atualizado.");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Falha ao atualizar cadastro.";
+      setEditFeedback(message);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (!isAdmin && activeTab === "admin") {
-      setActiveTab("general");
+      setActiveTab("register");
     }
   }, [activeTab, isAdmin]);
 
-  const panelTabs = isAdmin ? (
+  const panelTabs = (
     <div className="tabs" style={{ marginBottom: "1.5rem" }}>
       <button
-        className={`tab ${activeTab === "general" ? "active" : ""}`}
+        className={`tab ${activeTab === "register" ? "active" : ""}`}
         type="button"
-        onClick={() => setActiveTab("general")}
+        onClick={() => setActiveTab("register")}
       >
         Cadastro
       </button>
       <button
-        className={`tab ${activeTab === "admin" ? "active" : ""}`}
+        className={`tab ${activeTab === "people" ? "active" : ""}`}
         type="button"
-        onClick={() => setActiveTab("admin")}
+        onClick={() => setActiveTab("people")}
       >
-        Painel ADM
+        Minhas pessoas
       </button>
+      {isAdmin && (
+        <button
+          className={`tab ${activeTab === "admin" ? "active" : ""}`}
+          type="button"
+          onClick={() => setActiveTab("admin")}
+        >
+          Painel ADM
+        </button>
+      )}
     </div>
-  ) : null;
+  );
 
   if (isAdmin && activeTab === "admin") {
     return (
@@ -476,35 +703,37 @@ export default function EmployeeDashboard() {
   return (
     <div className="page">
       {panelTabs}
-      <section className="dashboard-hero">
-        <div>
-          <h1>Cadastro de pessoas no mapa</h1>
-          <p>
-            Registre pessoas e indicadores sociais. Cada pessoa vira um ponto
-            no mapa e aparece na sincronizacao diaria.
-          </p>
-        </div>
-        <div className="dashboard-actions">
-          <button className="btn btn-primary" type="button">
-            Novo cadastro
-          </button>
-        </div>
-      </section>
+      {activeTab === "register" && (
+        <>
+          <section className="dashboard-hero">
+            <div>
+              <h1>Cadastro de pessoas no mapa</h1>
+              <p>
+                Registre pessoas e indicadores sociais. Cada pessoa vira um ponto
+                no mapa e aparece na sincronizacao diaria.
+              </p>
+            </div>
+            <div className="dashboard-actions">
+              <button className="btn btn-primary" type="button">
+                Novo cadastro
+              </button>
+            </div>
+          </section>
 
-      <section className="form-section">
-        <div className="form-header">
-          <div>
-            <span className="eyebrow">Cadastro e georreferenciamento</span>
-            <h2>Registrar pessoa (ponto no mapa)</h2>
-            <p className="muted">
-              Preencha os dados, inclua fotografia e indicadores. O mapa publico
-              sera atualizado a cada 24 horas.
-            </p>
-          </div>
-        </div>
-        <div className="form-grid">
-          <div className="form-card">
-            <form className="form">
+          <section className="form-section">
+            <div className="form-header">
+              <div>
+                <span className="eyebrow">Cadastro e georreferenciamento</span>
+                <h2>Registrar pessoa (ponto no mapa)</h2>
+                <p className="muted">
+                  Preencha os dados, inclua fotografia e indicadores. O mapa publico
+                  sera atualizado a cada 24 horas.
+                </p>
+              </div>
+            </div>
+            <div className="form-grid">
+              <div className="form-card">
+                <form className="form">
               <label>
                 Nome completo
                 <input
@@ -562,6 +791,27 @@ export default function EmployeeDashboard() {
                   }
                 />
               </label>
+              <label>
+                Comunidade quilombola
+                <input
+                  type="text"
+                  list="quilombo-options"
+                  placeholder="Selecione ou informe o quilombo"
+                  value={formState.communityName}
+                  onChange={(event) =>
+                    handleFieldChange("communityName", event.target.value)
+                  }
+                  required
+                />
+              </label>
+              <datalist id="quilombo-options">
+                {communityOptions.map((name) => (
+                  <option key={name} value={name} />
+                ))}
+              </datalist>
+              {communityOptionsError && (
+                <div className="alert">{communityOptionsError}</div>
+              )}
               <div className="form-row">
                 <label>
                   Cidade
@@ -1169,15 +1419,17 @@ export default function EmployeeDashboard() {
               adicionar informacoes do territorio.
             </div>
           </div>
-        </div>
-      </section>
+            </div>
+          </section>
+        </>
+      )}
 
-      {isAdmin ? (
+      {activeTab === "people" && (
         <section className="table-section">
           <div className="table-header">
             <div>
               <span className="eyebrow">Pessoas</span>
-              <h2>Pessoas cadastradas (pontos)</h2>
+              <h2>Cadastros realizados por voce</h2>
             </div>
             <Link className="btn btn-primary" to="/relatorios">
               Gerar relatorio publico
@@ -1189,16 +1441,18 @@ export default function EmployeeDashboard() {
                 <tr>
                   <th>ID</th>
                   <th>Nome</th>
+                  <th>Comunidade</th>
                   <th>Cidade</th>
                   <th>Estado</th>
                   <th>Status</th>
                   <th>Criado em</th>
+                  <th>Acoes</th>
                 </tr>
               </thead>
               <tbody>
                 {residents.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={8}>
                       <div className="table-empty">
                         Nenhum cadastro registrado ainda.
                       </div>
@@ -1209,6 +1463,7 @@ export default function EmployeeDashboard() {
                     <tr key={resident.id}>
                       <td>{resident.id}</td>
                       <td>{resident.full_name}</td>
+                      <td>{resident.community_name ?? "-"}</td>
                       <td>{resident.city ?? "-"}</td>
                       <td>{resident.state ?? "-"}</td>
                       <td>
@@ -1217,29 +1472,186 @@ export default function EmployeeDashboard() {
                         </span>
                       </td>
                       <td>{new Date(resident.created_at).toLocaleDateString()}</td>
+                      <td>
+                        <button
+                          className="btn btn-ghost"
+                          type="button"
+                          onClick={() => void handleStartEdit(resident.id)}
+                        >
+                          Editar
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-        </section>
-      ) : (
-        <section className="table-section">
-          <div className="table-header">
-            <div>
-              <span className="eyebrow">Relatorios</span>
-              <h2>Relatorio geral</h2>
+          {editLoading && (
+            <div className="table-card">
+              <p className="muted">Carregando dados do cadastro...</p>
             </div>
-            <Link className="btn btn-primary" to="/relatorios">
-              Gerar relatorio publico
-            </Link>
-          </div>
-          <div className="table-card">
-            <p className="muted">
-              Consulte indicadores agregados e pontos cadastrados no mapa.
-            </p>
-          </div>
+          )}
+          {editForm && (
+            <div className="table-card">
+              <div className="form-header">
+                <div>
+                  <span className="eyebrow">Edicao</span>
+                  <h3>Atualizar cadastro</h3>
+                </div>
+              </div>
+              <form className="form">
+                <label>
+                  Nome completo
+                  <input
+                    type="text"
+                    value={editForm.fullName}
+                    onChange={(event) =>
+                      handleEditFieldChange("fullName", event.target.value)
+                    }
+                  />
+                </label>
+                <div className="form-row">
+                  <label>
+                    Documento
+                    <input
+                      type="text"
+                      value={editForm.docId}
+                      onChange={(event) =>
+                        handleEditFieldChange("docId", event.target.value)
+                      }
+                    />
+                  </label>
+                  <label>
+                    Telefone
+                    <input
+                      type="tel"
+                      value={editForm.phone}
+                      onChange={(event) =>
+                        handleEditFieldChange("phone", event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(event) =>
+                      handleEditFieldChange("email", event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  Endereco
+                  <input
+                    type="text"
+                    value={editForm.address}
+                    onChange={(event) =>
+                      handleEditFieldChange("address", event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  Comunidade quilombola
+                  <input
+                    type="text"
+                    list="quilombo-options-edit"
+                    value={editForm.communityName}
+                    onChange={(event) =>
+                      handleEditFieldChange("communityName", event.target.value)
+                    }
+                  />
+                </label>
+                <datalist id="quilombo-options-edit">
+                  {communityOptions.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+                <div className="form-row">
+                  <label>
+                    Cidade
+                    <select
+                      className="select"
+                      value={editSelectedCityValue}
+                      onChange={(event) => handleEditCitySelect(event.target.value)}
+                    >
+                      <option value="">Selecione uma cidade</option>
+                      {editAvailableCities.map((city) => (
+                        <option
+                          key={`${city.name}-${city.state}`}
+                          value={`${city.name}__${city.state}`}
+                        >
+                          {city.name} ({city.state})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Estado
+                    <select
+                      className="select"
+                      value={editForm.state}
+                      onChange={(event) => handleEditStateSelect(event.target.value)}
+                    >
+                      <option value="">Selecione um estado</option>
+                      {BRAZIL_STATES.map((state) => (
+                        <option key={state.code} value={state.code}>
+                          {state.code} - {state.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <label>
+                  Status
+                  <select
+                    className="select"
+                    value={editForm.status}
+                    onChange={(event) =>
+                      handleEditFieldChange(
+                        "status",
+                        event.target.value === "inactive" ? "inactive" : "active"
+                      )
+                    }
+                  >
+                    <option value="active">Ativo</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
+                </label>
+                <label>
+                  Observacoes
+                  <textarea
+                    rows={3}
+                    value={editForm.notes}
+                    onChange={(event) =>
+                      handleEditFieldChange("notes", event.target.value)
+                    }
+                  />
+                </label>
+                {editFeedback && <div className="alert">{editFeedback}</div>}
+                <div className="form-actions">
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={handleEditSave}
+                    disabled={editSaving}
+                  >
+                    {editSaving ? "Salvando..." : "Salvar alteracoes"}
+                  </button>
+                  <button
+                    className="btn btn-outline"
+                    type="button"
+                    onClick={handleEditCancel}
+                    disabled={editSaving}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </section>
       )}
     </div>

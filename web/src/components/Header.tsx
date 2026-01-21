@@ -43,14 +43,16 @@ export default function Header() {
           >
             Mapa
           </NavLink>
-          <NavLink
-            to="/relatorios"
-            className={({ isActive }) =>
-              `nav-link${isActive ? " active" : ""}`
-            }
-          >
-            Relatorios
-          </NavLink>
+          {isLoggedIn && (
+            <NavLink
+              to="/relatorios"
+              className={({ isActive }) =>
+                `nav-link${isActive ? " active" : ""}`
+              }
+            >
+              Relatorios
+            </NavLink>
+          )}
           <NavLink
             to="/denuncias"
             className={({ isActive }) =>

@@ -3,6 +3,7 @@ import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
 import {
   fetchAuditEntries,
+  fetchAdminUserDetails,
   fetchProductivity,
   fetchUserSummary,
   getAuthRole,
@@ -19,7 +20,13 @@ import {
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState<
-    "requests" | "users" | "complaints" | "productivity" | "settings" | "audit"
+    | "requests"
+    | "users"
+    | "complaints"
+    | "productivity"
+    | "management"
+    | "settings"
+    | "audit"
   >("requests");
   const [pendingUsers, setPendingUsers] = useState<AdminUser[]>([]);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
@@ -48,6 +55,14 @@ export function AdminPanel() {
   const [productivityDownloadId, setProductivityDownloadId] = useState<string | null>(
     null
   );
+  const [managedUserId, setManagedUserId] = useState<string | null>(null);
+  const [managedUserDetails, setManagedUserDetails] = useState<
+    Record<string, Awaited<ReturnType<typeof fetchAdminUserDetails>>>
+  >({});
+  const [managedUserLoadingId, setManagedUserLoadingId] = useState<string | null>(
+    null
+  );
+  const [managedUserError, setManagedUserError] = useState<string | null>(null);
   const [refreshLoading, setRefreshLoading] = useState(false);
   const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
   const [auditView, setAuditView] = useState<"recent" | "history">("recent");
@@ -176,6 +191,29 @@ export function AdminPanel() {
     }
   };
 
+  const handleToggleManagedUser = async (userId: string) => {
+    if (managedUserId === userId) {
+      setManagedUserId(null);
+      return;
+    }
+    setManagedUserId(userId);
+    if (managedUserDetails[userId]) {
+      return;
+    }
+    setManagedUserLoadingId(userId);
+    setManagedUserError(null);
+    try {
+      const detail = await fetchAdminUserDetails(userId);
+      setManagedUserDetails((current) => ({ ...current, [userId]: detail }));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao carregar usuario.";
+      setManagedUserError(message);
+    } finally {
+      setManagedUserLoadingId(null);
+    }
+  };
+
   const loadAudit = async () => {
     setAuditLoading(true);
     try {
@@ -301,6 +339,13 @@ export function AdminPanel() {
             onClick={() => setActiveTab("users")}
           >
             Cadastros registrados
+          </button>
+          <button
+            className={`tab ${activeTab === "management" ? "active" : ""}`}
+            type="button"
+            onClick={() => setActiveTab("management")}
+          >
+            Gerenciar usuarios
           </button>
           <button
             className={`tab ${activeTab === "complaints" ? "active" : ""}`}
@@ -439,6 +484,144 @@ export function AdminPanel() {
                       </td>
                     </tr>
                   ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {activeTab === "management" && (
+          <div className="table-card">
+            {managedUserError && <div className="alert">{managedUserError}</div>}
+            <table>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Perfil</th>
+                  <th>Status</th>
+                  <th>Cidade/UF</th>
+                  <th>Acoes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="table-empty">Carregando...</div>
+                    </td>
+                  </tr>
+                ) : allUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="table-empty">
+                        Nenhum usuario cadastrado ainda.
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  allUsers.map((user) => {
+                    const isOpen = managedUserId === user.id;
+                    const detail = managedUserDetails[user.id];
+                    const detailLoading = managedUserLoadingId === user.id;
+                    return (
+                      <Fragment key={user.id}>
+                        <tr>
+                          <td>{user.full_name ?? "-"}</td>
+                          <td>{user.email}</td>
+                          <td>{user.role}</td>
+                          <td>
+                            <span className={`status ${user.status}`}>
+                              {formatStatus(user.status)}
+                            </span>
+                          </td>
+                          <td>
+                            {[user.city, user.state].filter(Boolean).join(" / ") ||
+                              "-"}
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-ghost"
+                              type="button"
+                              onClick={() => void handleToggleManagedUser(user.id)}
+                            >
+                              {isOpen ? "Fechar" : "Ver cadastros"}
+                            </button>
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr>
+                            <td colSpan={6}>
+                              <div className="table-empty" style={{ textAlign: "left" }}>
+                                <strong>Dados do usuario</strong>
+                                <div className="summary-grid" style={{ marginTop: "0.8rem" }}>
+                                  <div>
+                                    <span>Organizacao</span>
+                                    <strong>{detail?.user.organization ?? "-"}</strong>
+                                  </div>
+                                  <div>
+                                    <span>Telefone</span>
+                                    <strong>{detail?.user.phone ?? "-"}</strong>
+                                  </div>
+                                  <div>
+                                    <span>Territorio</span>
+                                    <strong>{detail?.user.territory ?? "-"}</strong>
+                                  </div>
+                                  <div>
+                                    <span>Motivo</span>
+                                    <strong>{detail?.user.access_reason ?? "-"}</strong>
+                                  </div>
+                                </div>
+                                {detailLoading && (
+                                  <p className="muted">Carregando cadastros...</p>
+                                )}
+                                {detail && detail.residents.length > 0 && (
+                                  <div className="table-card" style={{ marginTop: "1rem" }}>
+                                    <table>
+                                      <thead>
+                                        <tr>
+                                          <th>Nome</th>
+                                          <th>Comunidade</th>
+                                          <th>Cidade</th>
+                                          <th>Estado</th>
+                                          <th>Status</th>
+                                          <th>Criado em</th>
+                                          <th>Ponto</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {detail.residents.map((resident) => (
+                                          <tr key={resident.id}>
+                                            <td>{resident.full_name ?? "-"}</td>
+                                            <td>{resident.community_name ?? "-"}</td>
+                                            <td>{resident.city ?? "-"}</td>
+                                            <td>{resident.state ?? "-"}</td>
+                                            <td>{resident.status ?? "-"}</td>
+                                            <td>
+                                              {resident.created_at
+                                                ? new Date(resident.created_at).toLocaleDateString()
+                                                : "-"}
+                                            </td>
+                                            <td>
+                                              {resident.point_status
+                                                ? `${resident.point_status} / ${resident.point_precision ?? "-"}`
+                                                : "-"}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                                {detail && detail.residents.length === 0 && (
+                                  <p className="muted">Nenhum cadastro encontrado.</p>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>

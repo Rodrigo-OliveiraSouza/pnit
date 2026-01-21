@@ -9,6 +9,7 @@ export type MapPoint = {
   city?: string | null;
   state?: string | null;
   residents: number;
+  communityName?: string | null;
   publicNote?: string;
   photoUrl?: string | null;
 };

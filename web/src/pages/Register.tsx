@@ -216,7 +216,6 @@ export default function Register() {
               </button>
             </form>
             <div className="auth-footer">
-              <span>Ja tem acesso?</span>
               <Link to="/login">Entrar</Link>
             </div>
           </>

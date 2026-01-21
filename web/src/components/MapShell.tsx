@@ -5,6 +5,26 @@ import type { MapPoint } from "../types/models";
 const defaultCenter = { lat: -14.235, lng: -51.925 };
 const DEFAULT_LIBRARIES: Libraries = ["drawing"];
 const PHOTO_PIN_COLOR = "#d9482b";
+let sharedLoaderPromise: Promise<typeof google> | null = null;
+let sharedLoaderKey: string | null = null;
+
+function loadGoogleMaps(apiKey: string, libraries: Libraries) {
+  const win = window as typeof window & { google?: typeof google };
+  if (win.google?.maps) {
+    return Promise.resolve(win.google);
+  }
+  const normalizedLibraries = Array.from(new Set(libraries));
+  const key = `${apiKey}|${[...normalizedLibraries].sort().join(",")}`;
+  if (!sharedLoaderPromise || sharedLoaderKey !== key) {
+    sharedLoaderKey = key;
+    sharedLoaderPromise = new Loader({
+      apiKey,
+      version: "weekly",
+      libraries: normalizedLibraries,
+    }).load();
+  }
+  return sharedLoaderPromise;
+}
 
 function buildPhotoPinIcon(
   googleMaps: typeof google,
@@ -52,14 +72,19 @@ export default function MapShell({
   const googleMapsRef = useRef<typeof google | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const onMapReadyRef = useRef(onMapReady);
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined;
-  const resolvedLibraries = libraries
+  const resolvedLibraries = libraries?.length
     ? Array.from(new Set([...DEFAULT_LIBRARIES, ...libraries]))
     : DEFAULT_LIBRARIES;
-  const librariesKey = resolvedLibraries.join(",");
+  const librariesKey = resolvedLibraries.slice().sort().join(",");
+
+  useEffect(() => {
+    onMapReadyRef.current = onMapReady;
+  }, [onMapReady]);
 
   useEffect(() => {
     if (!apiKey || !mapRef.current) {
@@ -70,21 +95,12 @@ export default function MapShell({
     const loaderLibraries = librariesKey
       ? (librariesKey.split(",") as Libraries)
       : DEFAULT_LIBRARIES;
-    const loader = new Loader({
-      apiKey,
-      version: "weekly",
-      libraries: loaderLibraries,
-    });
 
-    loader
-      .load()
-      .then(() => {
+    loadGoogleMaps(apiKey, loaderLibraries)
+      .then((googleMaps) => {
         if (isCancelled || !mapRef.current) {
           return;
         }
-        const googleMaps = (
-          window as typeof window & { google?: typeof google }
-        ).google;
         if (!googleMaps?.maps) {
           throw new Error("Google Maps indisponivel.");
         }
@@ -107,7 +123,7 @@ export default function MapShell({
           );
         }
 
-        onMapReady?.(mapInstanceRef.current);
+        onMapReadyRef.current?.(mapInstanceRef.current);
 
         setLoadError(null);
         setIsLoaded(true);
@@ -154,7 +170,7 @@ export default function MapShell({
       const marker = new googleMaps.maps.Marker({
         position: { lat: point.publicLat, lng: point.publicLng },
         map: mapInstance,
-        title: point.id,
+        title: point.communityName ?? point.publicNote ?? point.id,
         icon: hasPhoto
           ? buildPhotoPinIcon(googleMaps, point.photoUrl!)
           : undefined,
@@ -164,33 +180,73 @@ export default function MapShell({
         if (!infoWindowRef.current) {
           return;
         }
-        const container = document.createElement("div");
+        const card = document.createElement("div");
+        card.style.display = "flex";
+        card.style.gap = "12px";
+        card.style.alignItems = "center";
+        card.style.padding = "8px";
+        card.style.maxWidth = "280px";
+
+        const media = document.createElement("div");
+        media.style.width = "64px";
+        media.style.height = "64px";
+        media.style.borderRadius = "50%";
+        media.style.overflow = "hidden";
+        media.style.background = "#f1ece6";
+        media.style.flexShrink = "0";
         if (point.photoUrl) {
           const img = document.createElement("img");
           img.src = point.photoUrl;
           img.alt = "Foto do ponto";
-          img.style.width = "140px";
-          img.style.height = "92px";
+          img.style.width = "100%";
+          img.style.height = "100%";
           img.style.objectFit = "cover";
-          img.style.display = "block";
-          img.style.marginBottom = "0.5rem";
-          container.appendChild(img);
+          media.appendChild(img);
         }
+
+        const content = document.createElement("div");
+        content.style.display = "grid";
+        content.style.gap = "4px";
+
+        const header = document.createElement("div");
+        header.style.display = "flex";
+        header.style.alignItems = "center";
+        header.style.justifyContent = "space-between";
+        header.style.gap = "8px";
+
         const title = document.createElement("strong");
-        title.textContent = point.publicNote
-          ? point.publicNote
-          : `Ponto ${point.id}`;
+        title.textContent =
+          point.communityName ?? point.publicNote ?? `Ponto ${point.id}`;
+        title.style.fontSize = "14px";
+
+        const statusDot = document.createElement("span");
+        statusDot.style.width = "10px";
+        statusDot.style.height = "10px";
+        statusDot.style.borderRadius = "50%";
+        statusDot.style.background = point.status === "active" ? "#e1552d" : "#9d8c82";
+
+        header.appendChild(title);
+        header.appendChild(statusDot);
+
+        const description = document.createElement("div");
+        description.textContent =
+          point.publicNote ?? "Ponto cadastrado por agente de campo.";
+        description.style.fontSize = "12px";
+        description.style.color = "#5b4c44";
+
         const meta = document.createElement("div");
-        meta.textContent = `Status: ${point.status}`;
-        const region = document.createElement("div");
-        region.textContent = `Regiao: ${point.region}`;
-        const residents = document.createElement("div");
-        residents.textContent = `Residentes: ${point.residents}`;
-        container.appendChild(title);
-        container.appendChild(meta);
-        container.appendChild(region);
-        container.appendChild(residents);
-        infoWindowRef.current.setContent(container);
+        meta.textContent = `Residentes: ${point.residents}`;
+        meta.style.fontSize = "12px";
+        meta.style.color = "#5b4c44";
+
+        content.appendChild(header);
+        content.appendChild(description);
+        content.appendChild(meta);
+
+        card.appendChild(media);
+        card.appendChild(content);
+
+        infoWindowRef.current.setContent(card);
         infoWindowRef.current.open({
           anchor: marker,
           map: mapInstance,

@@ -12,9 +12,11 @@ import { Bar, Pie } from "react-chartjs-2";
 import MapShell from "./MapShell";
 import MapFilters from "./MapFilters";
 import type { MapPoint } from "../types/models";
+import citiesData from "../data/brazil-cities.json";
 import {
   exportReport,
   fetchPublicPoints,
+  fetchPublicCommunities,
   geocodeAddress,
   generateReportPreview,
   type PublicPointDto,
@@ -51,6 +53,7 @@ type PointFilters = {
   city: string;
   state: string;
   region: string;
+  community: string;
 };
 
 const emptyPoints: MapPoint[] = [];
@@ -61,6 +64,15 @@ const defaultFilters: PointFilters = {
   city: "",
   state: "",
   region: "",
+  community: "",
+};
+
+type BrazilCity = { name: string; state: string };
+const BRAZIL_CITIES = citiesData as BrazilCity[];
+
+type PublicMapMode = "public" | "reports";
+type PublicMapSectionProps = {
+  mode?: PublicMapMode;
 };
 
 function mapPointFromApi(point: PublicPointDto): MapPoint {
@@ -75,12 +87,14 @@ function mapPointFromApi(point: PublicPointDto): MapPoint {
     city: point.city ?? null,
     state: point.state ?? null,
     residents: point.residents ?? 0,
+    communityName: point.community_name ?? null,
     publicNote: point.public_note,
     photoUrl: point.photo_url ?? null,
   };
 }
 
-export default function PublicMapSection() {
+export default function PublicMapSection({ mode = "reports" }: PublicMapSectionProps) {
+  const isPublicMode = mode === "public";
   const [selectionActive, setSelectionActive] = useState(false);
   const [selectedBounds, setSelectedBounds] = useState<Bounds | null>(null);
   const [reportStatus, setReportStatus] = useState<ReportStatus>("idle");
@@ -107,11 +121,27 @@ export default function PublicMapSection() {
     useState<PointFilters>(defaultFilters);
   const [appliedFilters, setAppliedFilters] =
     useState<PointFilters>(defaultFilters);
+  const [publicFilters, setPublicFilters] =
+    useState<PointFilters>(defaultFilters);
+  const [publicCommunities, setPublicCommunities] = useState<
+    Array<{
+      community_name: string;
+      city?: string | null;
+      state?: string | null;
+      count?: number;
+    }>
+  >([]);
+  const [publicCommunitiesLoading, setPublicCommunitiesLoading] = useState(false);
+  const [publicCommunitiesError, setPublicCommunitiesError] = useState<string | null>(
+    null
+  );
   const mapRef = useRef<google.maps.Map | null>(null);
   const rectangleRef = useRef<google.maps.Rectangle | null>(null);
   const drawingManagerRef = useRef<google.maps.drawing.DrawingManager | null>(null);
   const idleListenerRef = useRef<google.maps.MapsEventListener | null>(null);
   const fetchTimeoutRef = useRef<number | null>(null);
+  const lastRequestRef = useRef<string | null>(null);
+  const activeFiltersRef = useRef<PointFilters>(defaultFilters);
 
   const getGoogleMaps = useCallback(
     () => (window as typeof window & { google?: typeof google }).google,
@@ -120,7 +150,8 @@ export default function PublicMapSection() {
 
   const loadPointsForBounds = useCallback(async (
     bounds: google.maps.LatLngBounds,
-    filtersOverride?: PointFilters
+    filtersOverride?: PointFilters,
+    force = false
   ) => {
     const northEast = bounds.getNorthEast();
     const southWest = bounds.getSouthWest();
@@ -136,6 +167,23 @@ export default function PublicMapSection() {
     const city = filters.city.trim() ? filters.city.trim() : undefined;
     const state = filters.state.trim() ? filters.state.trim() : undefined;
     const region = filters.region.trim() ? filters.region.trim() : undefined;
+    const community = filters.community.trim()
+      ? filters.community.trim()
+      : undefined;
+    const requestKey = JSON.stringify({
+      bbox,
+      status,
+      precision,
+      updatedSince,
+      city,
+      state,
+      region,
+      community,
+    });
+    if (!force && lastRequestRef.current === requestKey) {
+      return;
+    }
+    lastRequestRef.current = requestKey;
     setPointsLoading(true);
     setPointsError(null);
     try {
@@ -148,6 +196,7 @@ export default function PublicMapSection() {
         city,
         state,
         region,
+        community,
       });
       setMapPoints(response.items.map(mapPointFromApi));
       setLastSyncAt(response.last_sync_at ?? null);
@@ -175,7 +224,7 @@ export default function PublicMapSection() {
           window.clearTimeout(fetchTimeoutRef.current);
         }
         fetchTimeoutRef.current = window.setTimeout(() => {
-          void loadPointsForBounds(bounds);
+          void loadPointsForBounds(bounds, activeFiltersRef.current);
         }, 350);
       });
     },
@@ -363,7 +412,7 @@ export default function PublicMapSection() {
     if (!bounds) {
       return;
     }
-    void loadPointsForBounds(bounds);
+    void loadPointsForBounds(bounds, activeFiltersRef.current, true);
   }, [loadPointsForBounds]);
 
   const handleSearchSubmit = useCallback(() => {
@@ -407,6 +456,49 @@ export default function PublicMapSection() {
     setFilterDraft((current) => ({ ...current, updatedWithinDays: value }));
   }, []);
 
+  const selectedPublicCityValue =
+    publicFilters.city && publicFilters.state
+      ? `${publicFilters.city}__${publicFilters.state}`
+      : "";
+
+  const handlePublicCityChange = (value: string) => {
+    if (!value) {
+      setPublicFilters((current) => ({
+        ...current,
+        city: "",
+        state: "",
+        community: "",
+      }));
+      return;
+    }
+    const [city, state] = value.split("__");
+    setPublicFilters((current) => ({
+      ...current,
+      city,
+      state,
+      community: "",
+    }));
+  };
+
+  const handlePublicCommunityChange = (value: string) => {
+    setPublicFilters((current) => ({ ...current, community: value }));
+  };
+
+  useEffect(() => {
+    if (!isPublicMode || !mapRef.current) {
+      return;
+    }
+    const bounds = mapRef.current.getBounds();
+    if (!bounds) {
+      return;
+    }
+    void loadPointsForBounds(bounds, publicFilters);
+  }, [isPublicMode, loadPointsForBounds, publicFilters]);
+
+  useEffect(() => {
+    activeFiltersRef.current = isPublicMode ? publicFilters : appliedFilters;
+  }, [appliedFilters, isPublicMode, publicFilters]);
+
   const handleApplyFilters = useCallback(() => {
     setAppliedFilters(filterDraft);
     const bounds = mapRef.current?.getBounds();
@@ -415,6 +507,54 @@ export default function PublicMapSection() {
     }
     void loadPointsForBounds(bounds, filterDraft);
   }, [filterDraft, loadPointsForBounds]);
+
+  const loadPublicCommunities = useCallback(
+    async (city?: string, state?: string) => {
+      setPublicCommunitiesLoading(true);
+      setPublicCommunitiesError(null);
+      try {
+        const response = await fetchPublicCommunities({ city, state });
+        const items = response.items ?? [];
+        if (city || state) {
+          setPublicCommunities(items);
+        } else {
+          const unique = new Map<string, (typeof items)[number]>();
+          items.forEach((item) => {
+            if (!unique.has(item.community_name)) {
+              unique.set(item.community_name, item);
+            }
+          });
+          setPublicCommunities(Array.from(unique.values()));
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Falha ao carregar quilombos.";
+        setPublicCommunitiesError(message);
+        setPublicCommunities([]);
+      } finally {
+        setPublicCommunitiesLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!isPublicMode) {
+      return;
+    }
+    void loadPublicCommunities(
+      publicFilters.city || undefined,
+      publicFilters.state || undefined
+    );
+  }, [
+    isPublicMode,
+    loadPublicCommunities,
+    lastSyncAt,
+    publicFilters.city,
+    publicFilters.state,
+  ]);
 
   useEffect(() => {
     if (!selectionActive || !mapRef.current) {
@@ -554,53 +694,121 @@ export default function PublicMapSection() {
   return (
     <section className="map-section" id="relatorios">
       <div className="map-grid">
-        <MapFilters
-          selectionActive={selectionActive}
-          selectedBounds={selectedBounds}
-          reportReady={reportStatus === "ready"}
-          reportLoading={reportLoading}
-          canGenerateReport={canGenerateReport}
-          reportFormat={reportFormat}
-          reportName={reportName}
-          includeIndicators={reportInclude.indicators}
-          includePoints={reportInclude.points}
-          includeNarratives={reportInclude.narratives}
-          searchValue={searchValue}
-          searchFeedback={searchFeedback}
-          statusFilter={filterDraft.status}
-          precisionFilter={filterDraft.precision}
-          updatedWithinDays={filterDraft.updatedWithinDays}
-          cityFilter={filterDraft.city}
-          stateFilter={filterDraft.state}
-          regionFilter={filterDraft.region}
-          onSearchChange={setSearchValue}
-          onSearchSubmit={handleSearchSubmit}
-          onReportFormatChange={setReportFormat}
-          onReportNameChange={setReportName}
-          onIncludeChange={handleIncludeChange}
-          onStartSelection={toggleSelection}
-          onUseViewport={useViewportBounds}
-          onClearSelection={clearSelection}
-          onGenerateReport={handleGenerateReport}
-          onStatusFilterChange={handleStatusFilterChange}
-          onPrecisionFilterChange={handlePrecisionFilterChange}
-          onUpdatedFilterChange={handleUpdatedFilterChange}
-          onCityFilterChange={(value) =>
-            setFilterDraft((current) => ({ ...current, city: value }))
-          }
-          onStateFilterChange={(value) =>
-            setFilterDraft((current) => ({ ...current, state: value }))
-          }
-          onRegionFilterChange={(value) =>
-            setFilterDraft((current) => ({ ...current, region: value }))
-          }
-          onApplyFilters={handleApplyFilters}
-        />
+        {isPublicMode ? (
+          <aside className="map-filters">
+            <div className="filter-block">
+              <span className="eyebrow">Navegacao</span>
+              <h3>Mapa publico</h3>
+              <p>
+                Navegue pelos pontos cadastrados e filtre por cidade ou
+                comunidade quilombola.
+              </p>
+            </div>
+
+            <div className="filter-block">
+              <span className="eyebrow">Filtros</span>
+              <label className="filter-label">Cidade</label>
+              <select
+                className="select"
+                value={selectedPublicCityValue}
+                onChange={(event) => handlePublicCityChange(event.target.value)}
+              >
+                <option value="">Selecione uma cidade</option>
+                {BRAZIL_CITIES.map((city) => (
+                  <option
+                    key={`${city.name}-${city.state}`}
+                    value={`${city.name}__${city.state}`}
+                  >
+                    {city.name} ({city.state})
+                  </option>
+                ))}
+              </select>
+              <label className="filter-label">Comunidade quilombola</label>
+              <select
+                className="select"
+                value={publicFilters.community}
+                onChange={(event) => handlePublicCommunityChange(event.target.value)}
+                disabled={publicCommunitiesLoading}
+              >
+                <option value="">Selecione um quilombo</option>
+                {publicCommunities.map((item) => (
+                  <option
+                    key={`${item.community_name}-${item.city}-${item.state}`}
+                    value={item.community_name}
+                  >
+                    {item.community_name}
+                  </option>
+                ))}
+              </select>
+              {publicCommunitiesError && (
+                <div className="alert">{publicCommunitiesError}</div>
+              )}
+              {publicFilters.community && (
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={() => handlePublicCommunityChange("")}
+                >
+                  Limpar quilombo
+                </button>
+              )}
+            </div>
+          </aside>
+        ) : (
+          <MapFilters
+            selectionActive={selectionActive}
+            selectedBounds={selectedBounds}
+            reportReady={reportStatus === "ready"}
+            reportLoading={reportLoading}
+            canGenerateReport={canGenerateReport}
+            reportFormat={reportFormat}
+            reportName={reportName}
+            includeIndicators={reportInclude.indicators}
+            includePoints={reportInclude.points}
+            includeNarratives={reportInclude.narratives}
+            searchValue={searchValue}
+            searchFeedback={searchFeedback}
+            statusFilter={filterDraft.status}
+            precisionFilter={filterDraft.precision}
+            updatedWithinDays={filterDraft.updatedWithinDays}
+            cityFilter={filterDraft.city}
+            stateFilter={filterDraft.state}
+            regionFilter={filterDraft.region}
+            onSearchChange={setSearchValue}
+            onSearchSubmit={handleSearchSubmit}
+            onReportFormatChange={setReportFormat}
+            onReportNameChange={setReportName}
+            onIncludeChange={handleIncludeChange}
+            onStartSelection={toggleSelection}
+            onUseViewport={useViewportBounds}
+            onClearSelection={clearSelection}
+            onGenerateReport={handleGenerateReport}
+            onStatusFilterChange={handleStatusFilterChange}
+            onPrecisionFilterChange={handlePrecisionFilterChange}
+            onUpdatedFilterChange={handleUpdatedFilterChange}
+            onCityFilterChange={(value) =>
+              setFilterDraft((current) => ({ ...current, city: value }))
+            }
+            onStateFilterChange={(value) =>
+              setFilterDraft((current) => ({ ...current, state: value }))
+            }
+            onRegionFilterChange={(value) =>
+              setFilterDraft((current) => ({ ...current, region: value }))
+            }
+            onApplyFilters={handleApplyFilters}
+          />
+        )}
         <div className="map-area">
           <div className="map-header">
             <div>
-              <span className="eyebrow">Mapa e relatorios</span>
-              <h2>Navegacao publica com selecao de areas</h2>
+              <span className="eyebrow">
+                {isPublicMode ? "Mapa publico" : "Mapa e relatorios"}
+              </span>
+              <h2>
+                {isPublicMode
+                  ? "Navegacao por cidade e quilombo"
+                  : "Navegacao publica com selecao de areas"}
+              </h2>
             </div>
             <div className="map-actions">
               <button
@@ -611,21 +819,23 @@ export default function PublicMapSection() {
               >
                 Atualizar area
               </button>
-              <button
-                className="btn btn-primary"
-                type="button"
-                disabled={!canGenerateReport || reportLoading}
-                onClick={handleExportReport}
-              >
-                Exportar relatorio
-              </button>
+              {!isPublicMode && (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  disabled={!canGenerateReport || reportLoading}
+                  onClick={handleExportReport}
+                >
+                  Exportar relatorio
+                </button>
+              )}
             </div>
           </div>
           <MapShell
             points={mapPoints}
             center={defaultCenter}
             zoom={4}
-            libraries={["drawing"]}
+            libraries={isPublicMode ? [] : ["drawing"]}
             onMapReady={handleMapReady}
           />
           <div className="map-info-grid">
@@ -650,93 +860,101 @@ export default function PublicMapSection() {
                 <p className="muted">Dados publicos sincronizados diariamente.</p>
               )}
             </div>
-            <div className="info-card">
-              <span className="eyebrow">Relatorio</span>
-              <h3>Status da selecao</h3>
-              <p className="muted">
-                {selectedBounds
-                  ? "Area pronta para gerar relatorio."
-                  : "Selecione uma area no mapa para iniciar."}
-              </p>
-              {reportLoading && (
-                <p className="muted">Gerando relatorio agregado...</p>
-              )}
-              {reportError && <div className="alert">{reportError}</div>}
-              {reportSummary && (
-                <div className="summary-grid">
-                  <div>
-                    <span>Pontos</span>
-                    <strong>{reportSummary.points ?? 0}</strong>
-                  </div>
-                  <div>
-                    <span>Residentes</span>
-                    <strong>{reportSummary.residents ?? 0}</strong>
-                  </div>
+            {!isPublicMode && (
+              <>
+                <div className="info-card">
+                  <span className="eyebrow">Relatorio</span>
+                  <h3>Status da selecao</h3>
+                  <p className="muted">
+                    {selectedBounds
+                      ? "Area pronta para gerar relatorio."
+                      : "Selecione uma area no mapa para iniciar."}
+                  </p>
+                  {reportLoading && (
+                    <p className="muted">Gerando relatorio agregado...</p>
+                  )}
+                  {reportError && <div className="alert">{reportError}</div>}
+                  {reportSummary && (
+                    <div className="summary-grid">
+                      <div>
+                        <span>Pontos</span>
+                        <strong>{reportSummary.points ?? 0}</strong>
+                      </div>
+                      <div>
+                        <span>Residentes</span>
+                        <strong>{reportSummary.residents ?? 0}</strong>
+                      </div>
+                    </div>
+                  )}
+                  {reportStatus === "ready" && (
+                    <div className="report-ready">
+                      Relatorio pronto para exportar.
+                    </div>
+                  )}
+                  {reportFeedback && (
+                    <div className="report-ready">{reportFeedback}</div>
+                  )}
                 </div>
-              )}
-              {reportStatus === "ready" && (
-                <div className="report-ready">Relatorio pronto para exportar.</div>
-              )}
-              {reportFeedback && (
-                <div className="report-ready">{reportFeedback}</div>
-              )}
-            </div>
-            <div className="info-card">
-              <span className="eyebrow">Grafico</span>
-              <h3>Status dos pontos</h3>
-              {reportBreakdown?.status && reportBreakdown.status.length > 0 ? (
-                <Pie data={statusChart} />
-              ) : (
-                <p className="muted">Gere o relatorio para visualizar.</p>
-              )}
-            </div>
-            <div className="info-card">
-              <span className="eyebrow">Grafico</span>
-              <h3>Precisao dos pontos</h3>
-              {reportBreakdown?.precision &&
-              reportBreakdown.precision.length > 0 ? (
-                <Bar data={precisionChart} />
-              ) : (
-                <p className="muted">Gere o relatorio para visualizar.</p>
-              )}
-            </div>
-          </div>
-          <div className="info-card" style={{ marginTop: "1.5rem" }}>
-            <span className="eyebrow">Tabela</span>
-            <h3>Resumo por cidade e estado</h3>
-            {reportBreakdown?.by_city?.length ||
-            reportBreakdown?.by_state?.length ? (
-              <div className="table-card">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Tipo</th>
-                      <th>Local</th>
-                      <th>Quantidade</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(reportBreakdown?.by_city ?? []).map((item) => (
-                      <tr key={`city-${item.city}`}>
-                        <td>Cidade</td>
-                        <td>{item.city}</td>
-                        <td>{item.count}</td>
-                      </tr>
-                    ))}
-                    {(reportBreakdown?.by_state ?? []).map((item) => (
-                      <tr key={`state-${item.state}`}>
-                        <td>Estado</td>
-                        <td>{item.state}</td>
-                        <td>{item.count}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="muted">Gere o relatorio para ver a tabela.</p>
+                <div className="info-card">
+                  <span className="eyebrow">Grafico</span>
+                  <h3>Status dos pontos</h3>
+                  {reportBreakdown?.status && reportBreakdown.status.length > 0 ? (
+                    <Pie data={statusChart} />
+                  ) : (
+                    <p className="muted">Gere o relatorio para visualizar.</p>
+                  )}
+                </div>
+                <div className="info-card">
+                  <span className="eyebrow">Grafico</span>
+                  <h3>Precisao dos pontos</h3>
+                  {reportBreakdown?.precision &&
+                  reportBreakdown.precision.length > 0 ? (
+                    <Bar data={precisionChart} />
+                  ) : (
+                    <p className="muted">Gere o relatorio para visualizar.</p>
+                  )}
+                </div>
+              </>
             )}
           </div>
+          {!isPublicMode && (
+            <div className="info-card" style={{ marginTop: "1.5rem" }}>
+              <span className="eyebrow">Tabela</span>
+              <h3>Resumo por cidade e estado</h3>
+              {reportBreakdown?.by_city?.length ||
+              reportBreakdown?.by_state?.length ? (
+                <div className="table-card">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Tipo</th>
+                        <th>Local</th>
+                        <th>Quantidade</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(reportBreakdown?.by_city ?? []).map((item) => (
+                        <tr key={`city-${item.city}`}>
+                          <td>Cidade</td>
+                          <td>{item.city}</td>
+                          <td>{item.count}</td>
+                        </tr>
+                      ))}
+                      {(reportBreakdown?.by_state ?? []).map((item) => (
+                        <tr key={`state-${item.state}`}>
+                          <td>Estado</td>
+                          <td>{item.state}</td>
+                          <td>{item.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="muted">Gere o relatorio para ver a tabela.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </section>

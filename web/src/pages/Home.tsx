@@ -87,7 +87,7 @@ export default function Home() {
         </div>
       </section>
 
-      <PublicMapSection />
+      <PublicMapSection mode="public" />
     </div>
   );
 }
