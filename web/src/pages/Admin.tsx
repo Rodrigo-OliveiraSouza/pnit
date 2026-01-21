@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
 import {
@@ -23,6 +23,7 @@ export function AdminPanel() {
   const [pendingUsers, setPendingUsers] = useState<AdminUser[]>([]);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [openComplaintId, setOpenComplaintId] = useState<string | null>(null);
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [productivity, setProductivity] = useState<ProductivityResponse | null>(
     null
@@ -91,6 +92,10 @@ export function AdminPanel() {
   ) => {
     await updateComplaintStatus(id, status);
     await loadComplaints();
+  };
+
+  const handleToggleComplaint = (id: string) => {
+    setOpenComplaintId((current) => (current === id ? null : id));
   };
 
   const loadAudit = async () => {
@@ -391,38 +396,66 @@ export function AdminPanel() {
                     </td>
                   </tr>
                 ) : (
-                  complaints.map((complaint) => (
-                    <tr key={complaint.id}>
-                      <td>{complaint.id}</td>
-                      <td>{complaint.type}</td>
-                      <td>{complaint.city ?? "-"}</td>
-                      <td>{complaint.state ?? "-"}</td>
-                      <td>
-                        <span className={`status ${complaint.status}`}>
-                          {formatStatus(complaint.status)}
-                        </span>
-                      </td>
-                      <td>
-                        {new Date(complaint.created_at).toLocaleDateString()}
-                      </td>
-                      <td>
-                        <select
-                          className="select"
-                          value={complaint.status}
-                          onChange={(event) =>
-                            void handleComplaintStatus(
-                              complaint.id,
-                              event.target.value as "new" | "reviewing" | "closed"
-                            )
-                          }
-                        >
-                          <option value="new">Novo</option>
-                          <option value="reviewing">Em analise</option>
-                          <option value="closed">Encerrado</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))
+                  complaints.map((complaint) => {
+                    const isOpen = openComplaintId === complaint.id;
+                    return (
+                      <Fragment key={complaint.id}>
+                        <tr>
+                          <td>{complaint.id}</td>
+                          <td>{complaint.type}</td>
+                          <td>{complaint.city ?? "-"}</td>
+                          <td>{complaint.state ?? "-"}</td>
+                          <td>
+                            <span className={`status ${complaint.status}`}>
+                              {formatStatus(complaint.status)}
+                            </span>
+                          </td>
+                          <td>
+                            {new Date(complaint.created_at).toLocaleDateString()}
+                          </td>
+                          <td>
+                            <select
+                              className="select"
+                              value={complaint.status}
+                              onChange={(event) =>
+                                void handleComplaintStatus(
+                                  complaint.id,
+                                  event.target.value as
+                                    | "new"
+                                    | "reviewing"
+                                    | "closed"
+                                )
+                              }
+                            >
+                              <option value="new">Novo</option>
+                              <option value="reviewing">Em analise</option>
+                              <option value="closed">Encerrado</option>
+                            </select>
+                            <button
+                              className="btn btn-ghost"
+                              type="button"
+                              onClick={() => handleToggleComplaint(complaint.id)}
+                            >
+                              {isOpen ? "Fechar denuncia" : "Ver denuncia"}
+                            </button>
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr>
+                            <td colSpan={7}>
+                              <div className="table-empty" style={{ textAlign: "left" }}>
+                                <strong>Descricao</strong>
+                                <p>{complaint.description}</p>
+                                {complaint.location_text && (
+                                  <p>Local: {complaint.location_text}</p>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })
                 )}
               </tbody>
             </table>
