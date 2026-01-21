@@ -452,7 +452,7 @@ export default function EmployeeDashboard() {
         type="button"
         onClick={() => setActiveTab("general")}
       >
-        Painel geral
+        Cadastro
       </button>
       <button
         className={`tab ${activeTab === "admin" ? "active" : ""}`}
@@ -478,7 +478,6 @@ export default function EmployeeDashboard() {
       {panelTabs}
       <section className="dashboard-hero">
         <div>
-          <span className="eyebrow">Painel geral</span>
           <h1>Cadastro de pessoas no mapa</h1>
           <p>
             Registre pessoas e indicadores sociais. Cada pessoa vira um ponto
