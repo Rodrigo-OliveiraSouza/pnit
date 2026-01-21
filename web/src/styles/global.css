@@ -242,6 +242,102 @@ img {
   align-items: center;
 }
 
+.landing-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 3rem;
+  align-items: center;
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(140deg, var(--color-sky), var(--color-white));
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+
+.landing-hero::before {
+  content: "";
+  position: absolute;
+  inset: -40% 40% auto auto;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--color-emerald-rgb), 0.35), transparent 70%);
+  opacity: 0.9;
+}
+
+.landing-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -30% auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(var(--color-sun-rgb), 0.35), transparent 70%);
+}
+
+.landing-badges {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0 0.4rem;
+}
+
+.badge {
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(var(--color-forest-rgb), 0.08);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.18);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.hero-gallery {
+  display: grid;
+  gap: 1.2rem;
+  position: relative;
+  z-index: 1;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.gallery-card {
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  padding: 0.9rem;
+  box-shadow: var(--shadow-card);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.gallery-card img {
+  height: 140px;
+  width: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: var(--color-sky);
+}
+
+.gallery-card figcaption {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.landing-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+
+.landing-card h2 {
+  margin: 0.4rem 0 0.6rem;
+  font-family: "Newsreader", serif;
+}
+
 .public-hero {
   display: flex;
   justify-content: space-between;
@@ -1055,6 +1151,7 @@ th {
 
 @media (max-width: 980px) {
   .hero,
+  .landing-hero,
   .auth-page,
   .map-grid,
   .detail-grid {
@@ -1063,6 +1160,14 @@ th {
 
   .app-main {
     padding: 0 6vw 4rem;
+  }
+
+  .landing-hero {
+    padding: 2rem;
+  }
+
+  .gallery-grid {
+    grid-template-columns: 1fr;
   }
 }
 
