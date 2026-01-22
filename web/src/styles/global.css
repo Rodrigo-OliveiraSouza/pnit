@@ -347,7 +347,7 @@ img {
 
 .news-card-media {
   width: 100%;
-  height: clamp(140px, 22vh, 200px);
+  height: 50vh;
   border-radius: var(--radius-lg);
   position: relative;
   animation: newsEnter 480ms ease;
