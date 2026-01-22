@@ -373,7 +373,7 @@ export function AdminPanel() {
             type="button"
             onClick={() => setActiveTab("audit")}
           >
-            Minhas acoes
+            Minhas atividades
           </button>
         </div>
         {error && <div className="alert">{error}</div>}
@@ -387,7 +387,7 @@ export function AdminPanel() {
                   <th>Email</th>
                   <th>Territorio</th>
                   <th>Status</th>
-                  <th>Acoes</th>
+                  <th>Opcoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -443,7 +443,7 @@ export function AdminPanel() {
                   <th>Email</th>
                   <th>Perfil</th>
                   <th>Status</th>
-                  <th>Acoes</th>
+                  <th>Opcoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -500,7 +500,7 @@ export function AdminPanel() {
                   <th>Perfil</th>
                   <th>Status</th>
                   <th>Cidade/UF</th>
-                  <th>Acoes</th>
+                  <th>Opcoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -638,7 +638,7 @@ export function AdminPanel() {
                   <th>Estado</th>
                   <th>Status</th>
                   <th>Data</th>
-                  <th>Acoes</th>
+                  <th>Opcoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -758,7 +758,7 @@ export function AdminPanel() {
                         <th>Media Renda</th>
                         <th>Media Moradia</th>
                         <th>Media Seguranca</th>
-                        <th>Acoes</th>
+                        <th>Opcoes</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -911,8 +911,8 @@ export function AdminPanel() {
                 <span className="eyebrow">Registro</span>
                 <h3>
                   {auditView === "recent"
-                    ? "Minhas acoes recentes (ultimas 10)"
-                    : "Historico completo de acoes"}
+                    ? "Minhas atividades recentes (ultimas 10)"
+                    : "Historico completo de atividades"}
                 </h3>
               </div>
               {auditView === "recent" && auditEntries.length > auditPageSize && (
@@ -921,7 +921,7 @@ export function AdminPanel() {
                   type="button"
                   onClick={() => setAuditView("history")}
                 >
-                  Ver todas as acoes
+                  Ver todas as atividades
                 </button>
               )}
               {auditView === "history" && (
@@ -937,7 +937,7 @@ export function AdminPanel() {
             <table>
               <thead>
                 <tr>
-                  <th>Acao</th>
+                  <th>Atividade</th>
                   <th>Entidade</th>
                   <th>Registro</th>
                   <th>Data</th>
@@ -954,7 +954,7 @@ export function AdminPanel() {
                   <tr>
                     <td colSpan={4}>
                       <div className="table-empty">
-                        Nenhuma acao registrada ainda.
+                        Nenhuma atividade registrada ainda.
                       </div>
                     </td>
                   </tr>
