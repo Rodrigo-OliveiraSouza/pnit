@@ -1,16 +1,17 @@
 export default function Footer() {
+  const baseUrl = import.meta.env.BASE_URL || "/";
   return (
     <footer className="site-footer">
       <div className="footer-grid">
         <div>
           <div className="footer-logos">
             <img
-              src="/logos/mir.png"
+              src={`${baseUrl}logos/mir.png`}
               alt="MIR - Ministerio da Igualdade Racial"
               className="logo logo-mir"
             />
             <img
-              src="/logos/diversifica.png"
+              src={`${baseUrl}logos/diversifica.png`}
               alt="Diversifica Inclusao e Diversidade"
               className="logo logo-diversifica"
             />
@@ -39,7 +40,7 @@ export default function Footer() {
       <div className="footer-bottom">
         <div className="footer-logos">
           <img
-            src="/logos/governo-brasil.png"
+            src={`${baseUrl}logos/governo-brasil.png`}
             alt="Governo do Brasil"
             className="logo logo-governo"
           />

@@ -9,6 +9,7 @@ import {
 
 export default function Header() {
   const navigate = useNavigate();
+  const baseUrl = import.meta.env.BASE_URL || "/";
   const isLoggedIn = Boolean(getAuthToken());
   const role = getAuthRole();
   const isAdmin = role === "admin";
@@ -27,24 +28,25 @@ export default function Header() {
       <div className="header-top header-top-logos">
         <div className="header-logos">
           <img
-            src="/logos/governo-brasil.png"
+            src={`${baseUrl}logos/governo-brasil.png`}
             alt="Governo do Brasil"
             className="logo logo-governo"
           />
           <img
-            src="/logos/diversifica.png"
+            src={`${baseUrl}logos/diversifica.png`}
             alt="Diversifica Inclusao e Diversidade"
             className="logo logo-diversifica"
           />
         </div>
+        <img
+          src={`${baseUrl}logos/mir.png`}
+          alt="MIR - Ministerio da Igualdade Racial"
+          className="logo logo-mir-top"
+        />
       </div>
       <div className="header-main">
-        <div className="brand brand-logos">
-          <img
-            src="/logos/mir.png"
-            alt="MIR - Ministerio da Igualdade Racial"
-            className="logo logo-mir"
-          />
+        <div className="brand">
+          <span className="brand-mark">GTERF</span>
           <span className="brand-sub">Mapa publico de residentes</span>
         </div>
         <nav className="nav">
