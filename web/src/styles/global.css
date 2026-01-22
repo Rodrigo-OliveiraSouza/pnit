@@ -281,6 +281,11 @@ img {
   box-shadow: var(--shadow-soft);
 }
 
+.news-hero-media {
+  grid-template-columns: 1fr;
+  padding: 1.2rem;
+}
+
 .news-carousel {
   display: flex;
   justify-content: center;
