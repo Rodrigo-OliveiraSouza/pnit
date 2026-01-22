@@ -54,6 +54,14 @@ export default function Header() {
             </NavLink>
           )}
           <NavLink
+            to="/imagens-noticias"
+            className={({ isActive }) =>
+              `nav-link${isActive ? " active" : ""}`
+            }
+          >
+            Imagens
+          </NavLink>
+          <NavLink
             to="/denuncias"
             className={({ isActive }) =>
               `nav-link${isActive ? " active" : ""}`

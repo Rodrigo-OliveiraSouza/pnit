@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 import PublicMapSection from "../components/PublicMapSection";
-import orgField from "../assets/org-field.svg";
-import orgNetwork from "../assets/org-network.svg";
-import orgCommunity from "../assets/org-community.svg";
+import NewsCarousel from "../components/NewsCarousel";
 
 export default function Home() {
   return (
@@ -34,56 +32,13 @@ export default function Home() {
           </div>
         </div>
         <div className="hero-gallery">
-          <div className="gallery-grid">
-            <figure className="gallery-card">
-              <img src={orgField} alt="Agentes de campo em atuacao" />
-              <figcaption>Agentes de campo</figcaption>
-              <p className="muted">Equipe local mapeia realidades e necessidades.</p>
-            </figure>
-            <figure className="gallery-card">
-              <img src={orgNetwork} alt="Rede de integracao territorial" />
-              <figcaption>Rede territorial</figcaption>
-              <p className="muted">Dados conectados entre bairros e municipios.</p>
-            </figure>
-            <figure className="gallery-card">
-              <img src={orgCommunity} alt="Comunidades monitoradas" />
-              <figcaption>Comunidades</figcaption>
-              <p className="muted">Visao humana para orientar decisoes publicas.</p>
-            </figure>
-          </div>
+          <NewsCarousel className="news-carousel-hero" showDots={false} />
           <div className="hero-note">
             <p>
               O GTERF nasceu para apoiar a gestao territorial com dados confiaveis,
               respeitando a privacidade e valorizando a memoria das comunidades.
             </p>
           </div>
-        </div>
-      </section>
-
-      <section className="landing-info">
-        <div className="info-card landing-card">
-          <span className="eyebrow">Objetivo</span>
-          <h2>Transformar dados sociais em estrategia publica</h2>
-          <p className="muted">
-            Consolidamos indicadores de saude, educacao, renda, moradia e
-            seguranca para oferecer um retrato atualizado das condicoes locais.
-          </p>
-        </div>
-        <div className="info-card landing-card">
-          <span className="eyebrow">Como funciona</span>
-          <h2>Cadastro de pessoas vira ponto no mapa</h2>
-          <p className="muted">
-            Agentes registram informacoes em campo, adicionam evidencias e o
-            sistema publica dados agregados com atualizacao diaria.
-          </p>
-        </div>
-        <div className="info-card landing-card">
-          <span className="eyebrow">Analise territorial</span>
-          <h2>Analise sua regiao diretamente no mapa</h2>
-          <p className="muted">
-            Filtre por cidade e selecione areas para entender necessidades e
-            prioridades locais.
-          </p>
         </div>
       </section>
 

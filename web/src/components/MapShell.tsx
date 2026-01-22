@@ -28,10 +28,13 @@ function loadGoogleMaps(apiKey: string, libraries: Libraries) {
 
 function buildPhotoPinIcon(
   googleMaps: typeof google,
-  photoUrl: string
+  photoUrl?: string | null
 ): google.maps.Icon {
   const width = 56;
   const height = 70;
+  const photoMarkup = photoUrl
+    ? `<image href="${photoUrl}" x="14" y="5" width="28" height="28" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip)" />`
+    : `<circle cx="28" cy="19" r="14" fill="#f4eee8"/>`;
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 56 70">
       <path fill="${PHOTO_PIN_COLOR}" d="M28 0C17.2 0 8.4 8.8 8.4 19.6 8.4 35.6 28 70 28 70s19.6-34.4 19.6-50.4C47.6 8.8 38.8 0 28 0z"/>
@@ -39,7 +42,7 @@ function buildPhotoPinIcon(
       <clipPath id="clip">
         <circle cx="28" cy="19" r="14"/>
       </clipPath>
-      <image href="${photoUrl}" x="14" y="5" width="28" height="28" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip)" />
+      ${photoMarkup}
     </svg>
   `;
   const url = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
@@ -72,6 +75,8 @@ export default function MapShell({
   const googleMapsRef = useRef<typeof google | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const photoCacheRef = useRef<Map<string, string | null>>(new Map());
+  const photoPromiseRef = useRef<Map<string, Promise<string | null>>>(new Map());
   const onMapReadyRef = useRef(onMapReady);
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -165,6 +170,43 @@ export default function MapShell({
       infoWindowRef.current = new googleMaps.maps.InfoWindow();
     }
 
+    let isActive = true;
+
+    const loadPhotoDataUrl = (photoUrl: string) => {
+      const cached = photoCacheRef.current.get(photoUrl);
+      if (cached !== undefined) {
+        return Promise.resolve(cached);
+      }
+      const inflight = photoPromiseRef.current.get(photoUrl);
+      if (inflight) {
+        return inflight;
+      }
+      const promise = fetch(photoUrl)
+        .then((response) => (response.ok ? response.blob() : null))
+        .then(
+          (blob) =>
+            new Promise<string | null>((resolve) => {
+              if (!blob) {
+                resolve(null);
+                return;
+              }
+              const reader = new FileReader();
+              reader.onloadend = () =>
+                resolve(typeof reader.result === "string" ? reader.result : null);
+              reader.onerror = () => resolve(null);
+              reader.readAsDataURL(blob);
+            })
+        )
+        .catch(() => null)
+        .then((dataUrl) => {
+          photoCacheRef.current.set(photoUrl, dataUrl);
+          photoPromiseRef.current.delete(photoUrl);
+          return dataUrl;
+        });
+      photoPromiseRef.current.set(photoUrl, promise);
+      return promise;
+    };
+
     markersRef.current = points.map((point) => {
       const hasPhoto = Boolean(point.photoUrl);
       const marker = new googleMaps.maps.Marker({
@@ -172,9 +214,21 @@ export default function MapShell({
         map: mapInstance,
         title: point.communityName ?? point.publicNote ?? point.id,
         icon: hasPhoto
-          ? buildPhotoPinIcon(googleMaps, point.photoUrl!)
+          ? buildPhotoPinIcon(
+              googleMaps,
+              photoCacheRef.current.get(point.photoUrl!) ?? null
+            )
           : undefined,
       });
+
+      if (hasPhoto && point.photoUrl) {
+        loadPhotoDataUrl(point.photoUrl).then((dataUrl) => {
+          if (!isActive || !dataUrl) {
+            return;
+          }
+          marker.setIcon(buildPhotoPinIcon(googleMaps, dataUrl));
+        });
+      }
 
       marker.addListener("click", () => {
         if (!infoWindowRef.current) {
@@ -255,6 +309,10 @@ export default function MapShell({
 
       return marker;
     });
+
+    return () => {
+      isActive = false;
+    };
   }, [points, isLoaded]);
 
   return (
