@@ -379,6 +379,16 @@ export default function EmployeeDashboard() {
       ) ?? null
     );
   }, [formState.communityName, communityCatalog]);
+  const communitySelectValue = useMemo(() => {
+    const name = formState.communityName.trim();
+    if (!name) return "";
+    return communityOptions.includes(name) ? name : "__custom__";
+  }, [formState.communityName, communityOptions]);
+  const editCommunitySelectValue = useMemo(() => {
+    const name = editForm?.communityName?.trim();
+    if (!name) return "";
+    return communityOptions.includes(name) ? name : "__custom__";
+  }, [editForm?.communityName, communityOptions]);
 
   const loadResidents = async () => {
     try {
@@ -409,7 +419,7 @@ export default function EmployeeDashboard() {
       const message =
         error instanceof Error
           ? error.message
-          : "Falha ao carregar quilombos.";
+          : "Falha ao carregar comunidades.";
       setCommunityOptionsError(message);
     }
   };
@@ -426,6 +436,35 @@ export default function EmployeeDashboard() {
       ...current,
       [field]: value,
     }));
+  };
+
+  const handleCommunitySelect = (value: string) => {
+    if (!value) {
+      handleFieldChange("communityName", "");
+      return;
+    }
+    if (value === "__custom__") {
+      if (communityOptions.includes(formState.communityName.trim())) {
+        handleFieldChange("communityName", "");
+      }
+      return;
+    }
+    handleFieldChange("communityName", value);
+  };
+
+  const handleEditCommunitySelect = (value: string) => {
+    if (!editForm) return;
+    if (!value) {
+      handleEditFieldChange("communityName", "");
+      return;
+    }
+    if (value === "__custom__") {
+      if (communityOptions.includes(editForm.communityName.trim())) {
+        handleEditFieldChange("communityName", "");
+      }
+      return;
+    }
+    handleEditFieldChange("communityName", value);
   };
 
   const handleStateSelect = (value: string) => {
@@ -648,7 +687,7 @@ export default function EmployeeDashboard() {
     if (!formState.communityName.trim()) {
       setSaveFeedback({
         type: "error",
-        message: "Informe a comunidade quilombola.",
+        message: "Informe a comunidade.",
       });
       return;
     }
@@ -1337,18 +1376,22 @@ export default function EmployeeDashboard() {
                 </label>
               </div>
               <label>
-                Comunidade quilombola
+                Comunidade
                 <div className="community-input-row">
-                  <input
-                    type="text"
-                    list="quilombo-options"
-                    placeholder="Selecione ou informe o quilombo"
-                    value={formState.communityName}
-                    onChange={(event) =>
-                      handleFieldChange("communityName", event.target.value)
-                    }
+                  <select
+                    className="select"
+                    value={communitySelectValue}
+                    onChange={(event) => handleCommunitySelect(event.target.value)}
                     required
-                  />
+                  >
+                    <option value="">Selecione uma comunidade</option>
+                    {communityOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                    <option value="__custom__">Outra (digitar manualmente)</option>
+                  </select>
                   <button
                     type="button"
                     className="btn btn-outline btn-icon"
@@ -1359,11 +1402,20 @@ export default function EmployeeDashboard() {
                   </button>
                 </div>
               </label>
-              <datalist id="quilombo-options">
-                {communityOptions.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
+              {communitySelectValue === "__custom__" && (
+                <label>
+                  Nome da comunidade
+                  <input
+                    type="text"
+                    placeholder="Informe a comunidade"
+                    value={formState.communityName}
+                    onChange={(event) =>
+                      handleFieldChange("communityName", event.target.value)
+                    }
+                    required
+                  />
+                </label>
+              )}
               {communityOptionsError && (
                 <div className="alert">{communityOptionsError}</div>
               )}
@@ -2843,21 +2895,38 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Comunidade quilombola
-                  <input
-                    type="text"
-                    list="quilombo-options-edit"
-                    value={editForm.communityName}
+                  Comunidade
+                  <select
+                    className="select"
+                    value={editCommunitySelectValue}
                     onChange={(event) =>
-                      handleEditFieldChange("communityName", event.target.value)
+                      handleEditCommunitySelect(event.target.value)
                     }
-                  />
+                  >
+                    <option value="">Selecione uma comunidade</option>
+                    {communityOptions.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                    <option value="__custom__">Outra (digitar manualmente)</option>
+                  </select>
                 </label>
-                <datalist id="quilombo-options-edit">
-                  {communityOptions.map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
+                {editCommunitySelectValue === "__custom__" && (
+                  <label>
+                    Nome da comunidade
+                    <input
+                      type="text"
+                      value={editForm.communityName}
+                      onChange={(event) =>
+                        handleEditFieldChange(
+                          "communityName",
+                          event.target.value
+                        )
+                      }
+                    />
+                  </label>
+                )}
                 <div className="form-row">
                   <label>
                     Cidade

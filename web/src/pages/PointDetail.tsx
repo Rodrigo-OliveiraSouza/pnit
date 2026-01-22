@@ -117,7 +117,7 @@ export default function PointDetail() {
             )}
             {mapPoint.communityName && (
               <div>
-                <span>Comunidade quilombola</span>
+                <span>Comunidade</span>
                 <strong>{mapPoint.communityName}</strong>
               </div>
             )}

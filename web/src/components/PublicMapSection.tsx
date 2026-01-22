@@ -547,7 +547,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
         const message =
           error instanceof Error
             ? error.message
-            : "Falha ao carregar quilombos.";
+          : "Falha ao carregar comunidades.";
         setPublicCommunitiesError(message);
         setPublicCommunities([]);
       } finally {
@@ -807,7 +807,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
               <h3>Mapa publico</h3>
               <p>
                 Navegue pelos pontos cadastrados e filtre por cidade ou
-                comunidade quilombola.
+                comunidade.
               </p>
             </div>
 
@@ -829,14 +829,14 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                   </option>
                 ))}
               </select>
-              <label className="filter-label">Comunidade quilombola</label>
+              <label className="filter-label">Comunidade</label>
               <select
                 className="select"
                 value={publicFilters.community}
                 onChange={(event) => handlePublicCommunityChange(event.target.value)}
                 disabled={publicCommunitiesLoading}
               >
-                <option value="">Selecione um quilombo</option>
+                <option value="">Selecione uma comunidade</option>
                 {publicCommunities.map((item) => (
                   <option
                     key={`${item.community_name}-${item.city}-${item.state}`}
@@ -855,7 +855,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                   type="button"
                   onClick={() => handlePublicCommunityChange("")}
                 >
-                  Limpar quilombo
+                  Limpar comunidade
                 </button>
               )}
             </div>
@@ -912,7 +912,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
               </span>
               <h2>
                 {isPublicMode
-                  ? "Navegacao por cidade e quilombo"
+                  ? "Navegacao por cidade e comunidade"
                   : "Navegacao publica com selecao de areas"}
               </h2>
             </div>
