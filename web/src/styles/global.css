@@ -311,7 +311,7 @@ img {
 
 .news-card-media {
   width: 100%;
-  min-height: clamp(240px, 45vh, 420px);
+  min-height: clamp(200px, 38vh, 340px);
   border-radius: var(--radius-lg);
   position: relative;
   animation: newsEnter 480ms ease;
