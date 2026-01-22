@@ -826,6 +826,190 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const html = `<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <title>Modelo de cadastro - GTERF</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: "Times New Roman", serif; margin: 32px; color: #2c1a12; }
+      h1 { font-size: 22px; margin: 0 0 12px; }
+      h2 { font-size: 16px; margin: 20px 0 8px; }
+      p { margin: 0 0 8px; font-size: 12px; }
+      .section { border: 1px solid #d8c6b7; padding: 12px; border-radius: 8px; margin-bottom: 12px; }
+      .field { margin-bottom: 6px; font-size: 12px; }
+      .line { display: inline-block; border-bottom: 1px solid #a68e7b; min-width: 260px; height: 14px; vertical-align: middle; }
+      .checkbox { display: inline-block; width: 10px; height: 10px; border: 1px solid #8f7763; margin-right: 6px; }
+      .note { font-size: 11px; color: #6b5244; margin-top: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>Modelo de cadastro de pessoas (uso em campo)</h1>
+    <p>Imprima este modelo e preencha no campo. Depois, transcreva no sistema.</p>
+
+    <div class="section">
+      <h2>1) Identificacao do cidadao</h2>
+      <div class="field">Nome completo: <span class="line"></span></div>
+      <div class="field">CPF / RG: <span class="line"></span></div>
+      <div class="field">Data de nascimento: <span class="line"></span></div>
+      <div class="field">Sexo (opcional): <span class="line"></span></div>
+      <div class="field">Telefone: <span class="line"></span></div>
+      <div class="field">Email: <span class="line"></span></div>
+      <div class="field">Endereco completo: <span class="line"></span></div>
+      <div class="field">Numero de moradores no domicilio: <span class="line"></span></div>
+      <div class="field">Quantas criancas: <span class="line"></span></div>
+      <div class="field">Quantos idosos: <span class="line"></span></div>
+      <div class="field">Pessoas com deficiencia (PCD)? <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>2) Localizacao territorial</h2>
+      <div class="field">Estado: <span class="line"></span></div>
+      <div class="field">Municipio: <span class="line"></span></div>
+      <div class="field">Bairro / Zona rural: <span class="line"></span></div>
+      <div class="field">Ponto de referencia: <span class="line"></span></div>
+      <div class="field">Latitude: <span class="line"></span></div>
+      <div class="field">Longitude: <span class="line"></span></div>
+      <div class="field">
+        Tipo de area:
+        <span class="checkbox"></span>Urbana
+        <span class="checkbox"></span>Rural
+        <span class="checkbox"></span>Periurbana
+      </div>
+      <div class="field">
+        Precisao da localizacao:
+        <span class="checkbox"></span>Exata
+        <span class="checkbox"></span>Aproximada
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>3) Caracterizacao da comunidade</h2>
+      <div class="field">Nome da localidade/comunidade: <span class="line"></span></div>
+      <div class="field">Quantidade aproximada de familias: <span class="line"></span></div>
+      <div class="field">
+        Tipo de organizacao social:
+        <span class="checkbox"></span>Associacao
+        <span class="checkbox"></span>Cooperativa
+        <span class="checkbox"></span>Grupo comunitario
+        <span class="checkbox"></span>Nenhuma
+      </div>
+      <div class="field">Possui lideranca comunitaria? Nome: <span class="line"></span></div>
+      <div class="field">Contato: <span class="line"></span></div>
+      <div class="field">Atividades coletivas existentes: <span class="line"></span></div>
+      <div class="field">
+        Frequencia de reunioes comunitarias:
+        <span class="checkbox"></span>Semanal
+        <span class="checkbox"></span>Mensal
+        <span class="checkbox"></span>Eventual
+        <span class="checkbox"></span>Inexistente
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>4) Infraestrutura basica</h2>
+      <div class="field">Energia eletrica: <span class="line"></span></div>
+      <div class="field">Abastecimento de agua: <span class="line"></span></div>
+      <div class="field">Tratamento da agua: <span class="line"></span></div>
+      <div class="field">Esgotamento sanitario: <span class="line"></span></div>
+      <div class="field">Coleta de lixo: <span class="line"></span></div>
+      <div class="field">Acesso a internet: <span class="line"></span></div>
+      <div class="field">Acesso a transporte publico: <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>5) Saude</h2>
+      <div class="field">Unidade de saude mais proxima (km): <span class="line"></span></div>
+      <div class="field">Tempo medio de deslocamento: <span class="line"></span></div>
+      <div class="field">Possui atendimento regular? <span class="line"></span></div>
+      <div class="field">Existe posto de saude? <span class="line"></span></div>
+      <div class="field">Existe agente comunitario? <span class="line"></span></div>
+      <div class="field">Existe ambulancia? <span class="line"></span></div>
+      <div class="field">Principais dificuldades: <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>6) Educacao</h2>
+      <div class="field">Nivel de escolaridade predominante: <span class="line"></span></div>
+      <div class="field">Escola proxima? <span class="line"></span></div>
+      <div class="field">Transporte escolar? <span class="line"></span></div>
+      <div class="field">Acesso a material escolar? <span class="line"></span></div>
+      <div class="field">Acesso a internet para estudo? <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>7) Trabalho e renda</h2>
+      <div class="field">Renda familiar aproximada: <span class="line"></span></div>
+      <div class="field">Quantas pessoas contribuem com renda: <span class="line"></span></div>
+      <div class="field">Tipo de ocupacao: <span class="line"></span></div>
+      <div class="field">Participa de programas sociais? Qual? <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>8) Habitacao</h2>
+      <div class="field">Tipo de moradia: <span class="line"></span></div>
+      <div class="field">Material predominante: <span class="line"></span></div>
+      <div class="field">Possui banheiro interno? <span class="line"></span></div>
+      <div class="field">Possui agua tratada? <span class="line"></span></div>
+      <div class="field">Condicao da moradia: <span class="line"></span></div>
+      <div class="field">Riscos ambientais: <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>9) Seguranca e servicos publicos</h2>
+      <div class="field">Presenca de delegacia? <span class="line"></span></div>
+      <div class="field">Patrulhamento? <span class="line"></span></div>
+      <div class="field">Guarda municipal? <span class="line"></span></div>
+      <div class="field">Ocorrencias frequentes: <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>10) Participacao social</h2>
+      <div class="field">Participa de: <span class="line"></span></div>
+      <div class="field">Ja participou de: <span class="line"></span></div>
+      <div class="field">Grau de engajamento comunitario: <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>11) Demandas prioritarias</h2>
+      <div class="field">Infraestrutura / Saude / Educacao / Emprego / Regularizacao / Assistencia: <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>12) Registros visuais</h2>
+      <div class="field">Foto do local: <span class="line"></span></div>
+      <div class="field">Foto da residencia: <span class="line"></span></div>
+      <div class="field">Foto de equipamentos publicos: <span class="line"></span></div>
+      <div class="field">Documentos (opcional): <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>13) Avaliacao tecnica do agente</h2>
+      <div class="field">Nivel de vulnerabilidade: <span class="line"></span></div>
+      <div class="field">Principais problemas identificados: <span class="line"></span></div>
+      <div class="field">Encaminhamentos realizados: <span class="line"></span></div>
+      <div class="field">Orgaos acionados: <span class="line"></span></div>
+    </div>
+
+    <div class="section">
+      <h2>14) Termo de consentimento (institucional)</h2>
+      <p>Autorizo a utilizacao dos dados coletados exclusivamente para fins de diagnostico territorial, planejamento de politicas publicas e relatorios institucionais, conforme a LGPD.</p>
+      <div class="field">Assinatura: <span class="line"></span> Data: <span class="line"></span></div>
+    </div>
+
+    <p class="note">Dica: apos preencher no campo, transcreva no sistema para manter o cadastro atualizado.</p>
+  </body>
+</html>`;
+    const printable = window.open("", "_blank", "width=900,height=700");
+    if (!printable) return;
+    printable.document.write(html);
+    printable.document.close();
+    printable.focus();
+    printable.print();
+  };
+
   const handleStartEdit = async (residentId: string) => {
     setEditLoading(true);
     setEditFeedback(null);
@@ -972,6 +1156,13 @@ export default function EmployeeDashboard() {
             <div className="dashboard-actions">
               <button className="btn btn-primary" type="button">
                 Novo cadastro
+              </button>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={handleDownloadTemplate}
+              >
+                Baixar modelo (PDF)
               </button>
             </div>
           </section>
