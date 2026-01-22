@@ -2574,9 +2574,9 @@ app.post("/points", async (c) => {
       area_type, reference_point, city, state, community_name, source_location, geog, created_by
     )
     VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-      $15
+      $16
     )
     RETURNING id, public_lat, public_lng, precision
     `,
