@@ -115,11 +115,11 @@ img {
 }
 
 .logo-governo {
-  height: 30px;
+  height: 100px;
 }
 
 .logo-diversifica {
-  height: 26px;
+  height: 100px;
 }
 
 .header-tag {
@@ -150,7 +150,7 @@ img {
 }
 
 .logo-mir {
-  height: 56px;
+  height: 100px;
 }
 
 .brand-mark {
@@ -347,7 +347,7 @@ img {
 
 .news-card-media {
   width: 100%;
-  height: 50vh;
+  height: clamp(300px, 50vh, 560px);
   border-radius: var(--radius-lg);
   position: relative;
   animation: newsEnter 480ms ease;
@@ -1546,4 +1546,3 @@ th {
     animation: none;
   }
 }
-
