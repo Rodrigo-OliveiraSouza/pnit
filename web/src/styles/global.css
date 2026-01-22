@@ -197,6 +197,11 @@ img {
   background: rgba(var(--color-forest-rgb), 0.08);
 }
 
+.btn-sm {
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+}
+
 .eyebrow {
   display: inline-block;
   font-size: 0.75rem;
@@ -527,6 +532,11 @@ img {
 .gallery-card figcaption {
   font-weight: 700;
   font-size: 0.95rem;
+}
+
+.gallery-card-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .landing-info {

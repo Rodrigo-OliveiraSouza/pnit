@@ -154,9 +154,11 @@ CREATE TABLE IF NOT EXISTS attachments (
   resident_id uuid NULL REFERENCES residents(id),
   point_id uuid NULL REFERENCES map_points(id),
   s3_key text NOT NULL,
+  original_name text NULL,
   mime_type text NOT NULL,
   size integer NOT NULL,
   visibility text NOT NULL CHECK (visibility IN ('private', 'public')),
+  collection text NULL,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -186,6 +188,8 @@ CREATE TABLE IF NOT EXISTS complaint_sensitive (
 
 ALTER TABLE attachments
   ADD COLUMN IF NOT EXISTS complaint_id uuid REFERENCES complaints(id);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_collection ON attachments (collection);
 
 CREATE INDEX IF NOT EXISTS idx_map_points_geog ON map_points USING GIST (geog);
 CREATE INDEX IF NOT EXISTS idx_map_points_status ON map_points (status);

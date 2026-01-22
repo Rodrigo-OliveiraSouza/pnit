@@ -128,6 +128,13 @@ export type CommunityInfo = {
   state?: string | null;
 };
 
+export type NewsImage = {
+  id: string;
+  url: string;
+  name?: string | null;
+  created_at?: string;
+};
+
 export type ReportFilters = {
   city?: string;
   state?: string;
@@ -443,6 +450,33 @@ export async function createCommunity(payload: CommunityInfo) {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchNewsImages(): Promise<{ items: NewsImage[] }> {
+  return apiFetch<{ items: NewsImage[] }>("/media/news");
+}
+
+export async function uploadNewsImage(file: File): Promise<{ item: NewsImage }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const token = getAuthToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const response = await fetch(`${API_BASE_URL}/media/news`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function deleteNewsImage(id: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/media/news/${id}`, { method: "DELETE" });
 }
 
 export async function createResident(

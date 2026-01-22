@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-
-const imageModules = import.meta.glob("../assets/news/*.{png,jpg,jpeg,webp,avif,svg}", {
-  eager: true,
-  as: "url",
-});
+import { fetchNewsImages } from "../services/api";
 
 const fallbackItems = Array.from({ length: 4 }, (_, index) => ({
   id: `placeholder-${index + 1}`,
@@ -11,28 +7,17 @@ const fallbackItems = Array.from({ length: 4 }, (_, index) => ({
   title: `Imagem ${index + 1}`,
 }));
 
-const buildItems = () =>
-  Object.entries(imageModules)
-    .map(([path, src]) => {
-      const rawName = path.split("/").pop() ?? "";
-      const title = rawName
-        .replace(/\.[^.]+$/, "")
-        .replace(/[-_]+/g, " ")
-        .trim();
-      return {
-        id: rawName || path,
-        src: src as string,
-        title: title || "Imagem",
-      };
-    })
-    .sort((a, b) => a.title.localeCompare(b.title));
-
 type NewsCarouselProps = {
   className?: string;
   intervalMs?: number;
   showDots?: boolean;
   showArrows?: boolean;
   imageOnly?: boolean;
+  items?: Array<{
+    id: string;
+    src: string;
+    title?: string;
+  }>;
 };
 
 export default function NewsCarousel({
@@ -41,11 +26,55 @@ export default function NewsCarousel({
   showDots = true,
   showArrows = true,
   imageOnly = false,
+  items: itemsProp,
 }: NewsCarouselProps) {
+  const [remoteItems, setRemoteItems] = useState<typeof fallbackItems>([]);
+  const [remoteLoaded, setRemoteLoaded] = useState(false);
+
+  useEffect(() => {
+    if (itemsProp) {
+      return undefined;
+    }
+    let active = true;
+    const load = async () => {
+      try {
+        const response = await fetchNewsImages();
+        if (!active) return;
+        const mapped = response.items.map((item, index) => ({
+          id: item.id,
+          src: item.url,
+          title: item.name ?? `Imagem ${index + 1}`,
+        }));
+        setRemoteItems(mapped);
+      } catch {
+        if (active) {
+          setRemoteItems([]);
+        }
+      } finally {
+        if (active) {
+          setRemoteLoaded(true);
+        }
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [itemsProp]);
+
   const items = useMemo(() => {
-    const list = buildItems();
-    return list.length > 0 ? list : fallbackItems;
-  }, []);
+    if (itemsProp && itemsProp.length > 0) {
+      return itemsProp.map((item, index) => ({
+        id: item.id,
+        src: item.src,
+        title: item.title ?? `Imagem ${index + 1}`,
+      }));
+    }
+    if (remoteLoaded && remoteItems.length > 0) {
+      return remoteItems;
+    }
+    return fallbackItems;
+  }, [itemsProp, remoteItems, remoteLoaded]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const active = items[activeIndex];

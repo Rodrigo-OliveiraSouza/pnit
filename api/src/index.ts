@@ -2400,11 +2400,19 @@ app.post("/attachments", async (c) => {
   });
   const rows = await sql(
     `
-    INSERT INTO attachments (resident_id, point_id, s3_key, mime_type, size, visibility)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO attachments (resident_id, point_id, s3_key, original_name, mime_type, size, visibility)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING id
     `,
-    [residentId, pointId, key, file.type || "application/octet-stream", file.size, visibility]
+    [
+      residentId,
+      pointId,
+      key,
+      file.name,
+      file.type || "application/octet-stream",
+      file.size,
+      visibility,
+    ]
   );
   await logAudit(sql, claims.sub, "attachment_create", "attachments", rows[0].id, {
     point_id: pointId,
@@ -2435,6 +2443,100 @@ app.get("/attachments/:id", async (c) => {
   c.header("Content-Type", mime);
   c.header("Cache-Control", "public, max-age=86400");
   return c.body(object.body);
+});
+
+app.get("/media/news", async (c) => {
+  const sql = getSql(c.env);
+  const rows = await sql(
+    `
+    SELECT id, original_name, created_at
+    FROM attachments
+    WHERE collection = 'news'
+    ORDER BY created_at DESC
+    `
+  );
+  const baseUrl = getPublicBaseUrl(c, c.env);
+  const items = rows.map((row) => ({
+    id: row.id as string,
+    name: (row.original_name as string | null) ?? null,
+    url: `${baseUrl}/attachments/${row.id}`,
+    created_at: row.created_at,
+  }));
+  return c.json({ items });
+});
+
+app.post("/media/news", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  if (!c.env.R2_BUCKET) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+  }
+  const body = await c.req.parseBody();
+  const file = body.file;
+  if (!(file instanceof File)) {
+    return jsonError(c, 400, "file is required");
+  }
+  const key = `news/${crypto.randomUUID()}-${file.name}`;
+  await c.env.R2_BUCKET.put(key, await file.arrayBuffer(), {
+    httpMetadata: { contentType: file.type || "application/octet-stream" },
+  });
+  const rows = await sql(
+    `
+    INSERT INTO attachments (s3_key, original_name, mime_type, size, visibility, collection)
+    VALUES ($1, $2, $3, $4, 'public', 'news')
+    RETURNING id, created_at
+    `,
+    [key, file.name, file.type || "application/octet-stream", file.size]
+  );
+  const item = rows[0];
+  await logAudit(sql, claims.sub, "news_image_create", "attachments", item.id, {
+    collection: "news",
+    key,
+  });
+  const baseUrl = getPublicBaseUrl(c, c.env);
+  return c.json({
+    item: {
+      id: item.id as string,
+      name: file.name,
+      url: `${baseUrl}/attachments/${item.id}`,
+      created_at: item.created_at,
+    },
+  });
+});
+
+app.delete("/media/news/:id", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  if (!c.env.R2_BUCKET) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+  }
+  const id = c.req.param("id");
+  const rows = await sql(
+    "SELECT s3_key FROM attachments WHERE id = $1 AND collection = 'news'",
+    [id]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Media not found", "NOT_FOUND");
+  }
+  const key = rows[0].s3_key as string;
+  await c.env.R2_BUCKET.delete(key);
+  await sql("DELETE FROM attachments WHERE id = $1", [id]);
+  await logAudit(sql, claims.sub, "news_image_delete", "attachments", id, {
+    collection: "news",
+  });
+  return c.json({ ok: true });
 });
 
 app.post("/public/complaints", async (c) => {
@@ -2515,11 +2617,17 @@ app.post("/public/complaints", async (c) => {
     });
     const attachmentRows = await sql(
       `
-      INSERT INTO attachments (complaint_id, s3_key, mime_type, size, visibility)
-      VALUES ($1, $2, $3, $4, 'public')
+      INSERT INTO attachments (complaint_id, s3_key, original_name, mime_type, size, visibility)
+      VALUES ($1, $2, $3, $4, $5, 'public')
       RETURNING id
       `,
-      [complaintId, key, file.type || "application/octet-stream", file.size]
+      [
+        complaintId,
+        key,
+        file.name,
+        file.type || "application/octet-stream",
+        file.size,
+      ]
     );
     attachmentId = attachmentRows[0].id as string;
     await sql(
