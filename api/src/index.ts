@@ -1193,6 +1193,104 @@ app.post("/reports/preview", async (c) => {
     `,
     params
   );
+  const includeIndicators = Boolean(body?.include?.indicators);
+  let indicatorSummary: {
+    total_residents: number;
+    health_avg: number | null;
+    education_avg: number | null;
+    income_avg: number | null;
+    housing_avg: number | null;
+    security_avg: number | null;
+  } | null = null;
+  let scoreBuckets: Record<string, number[]> | null = null;
+
+  if (includeIndicators) {
+    const summaryRows = await sql(
+      `
+      WITH filtered_points AS (
+        SELECT point_id
+        FROM public_map_cache
+        WHERE ${where}
+      ),
+      area_residents AS (
+        SELECT rp.health_score, rp.education_score, rp.income_score, rp.housing_score, rp.security_score
+        FROM resident_point_assignments rpa
+        JOIN filtered_points fp ON fp.point_id = rpa.point_id
+        JOIN residents r ON r.id = rpa.resident_id AND r.deleted_at IS NULL
+        LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+        WHERE rpa.active = true
+      )
+      SELECT
+        COUNT(*)::int AS total_residents,
+        AVG(health_score)::numeric(10,2) AS health_avg,
+        AVG(education_score)::numeric(10,2) AS education_avg,
+        AVG(income_score)::numeric(10,2) AS income_avg,
+        AVG(housing_score)::numeric(10,2) AS housing_avg,
+        AVG(security_score)::numeric(10,2) AS security_avg
+      FROM area_residents
+      `,
+      params
+    );
+    indicatorSummary = summaryRows[0] ?? null;
+
+    const scoreRows = await sql(
+      `
+      WITH filtered_points AS (
+        SELECT point_id
+        FROM public_map_cache
+        WHERE ${where}
+      ),
+      area_residents AS (
+        SELECT rp.health_score, rp.education_score, rp.income_score, rp.housing_score, rp.security_score
+        FROM resident_point_assignments rpa
+        JOIN filtered_points fp ON fp.point_id = rpa.point_id
+        JOIN residents r ON r.id = rpa.resident_id AND r.deleted_at IS NULL
+        LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+        WHERE rpa.active = true
+      )
+      SELECT 'health' AS metric, health_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE health_score IS NOT NULL
+      GROUP BY health_score
+      UNION ALL
+      SELECT 'education' AS metric, education_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE education_score IS NOT NULL
+      GROUP BY education_score
+      UNION ALL
+      SELECT 'income' AS metric, income_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE income_score IS NOT NULL
+      GROUP BY income_score
+      UNION ALL
+      SELECT 'housing' AS metric, housing_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE housing_score IS NOT NULL
+      GROUP BY housing_score
+      UNION ALL
+      SELECT 'security' AS metric, security_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE security_score IS NOT NULL
+      GROUP BY security_score
+      ORDER BY metric, score
+      `,
+      params
+    );
+
+    scoreBuckets = {
+      health: Array.from({ length: 10 }, () => 0),
+      education: Array.from({ length: 10 }, () => 0),
+      income: Array.from({ length: 10 }, () => 0),
+      housing: Array.from({ length: 10 }, () => 0),
+      security: Array.from({ length: 10 }, () => 0),
+    };
+    for (const row of scoreRows as Array<{ metric: string; score: number; count: number }>) {
+      const score = Number(row.score);
+      if (!Number.isFinite(score) || score < 1 || score > 10) continue;
+      if (!scoreBuckets[row.metric]) continue;
+      scoreBuckets[row.metric][score - 1] = Number(row.count ?? 0);
+    }
+  }
   return c.json({
     report_id: `rep_${crypto.randomUUID()}`,
     summary: summaryRows[0] ?? null,
@@ -1202,6 +1300,8 @@ app.post("/reports/preview", async (c) => {
       by_city: cityRows,
       by_state: stateRows,
     },
+    indicators: indicatorSummary,
+    indicator_scores: scoreBuckets,
   });
 });
 
@@ -1260,6 +1360,105 @@ app.post("/reports/export", async (c) => {
     params
   );
   const boundaryGeojson = boundaryRows[0]?.boundary_geojson ?? null;
+  const includeIndicators = Boolean(body?.include?.indicators);
+  const includePoints = Boolean(body?.include?.points);
+  let indicatorSummary: {
+    total_residents: number;
+    health_avg: number | null;
+    education_avg: number | null;
+    income_avg: number | null;
+    housing_avg: number | null;
+    security_avg: number | null;
+  } | null = null;
+  let scoreBuckets: Record<string, number[]> | null = null;
+
+  if (includeIndicators) {
+    const summaryRows = await sql(
+      `
+      WITH filtered_points AS (
+        SELECT point_id
+        FROM public_map_cache
+        WHERE ${where}
+      ),
+      area_residents AS (
+        SELECT rp.health_score, rp.education_score, rp.income_score, rp.housing_score, rp.security_score
+        FROM resident_point_assignments rpa
+        JOIN filtered_points fp ON fp.point_id = rpa.point_id
+        JOIN residents r ON r.id = rpa.resident_id AND r.deleted_at IS NULL
+        LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+        WHERE rpa.active = true
+      )
+      SELECT
+        COUNT(*)::int AS total_residents,
+        AVG(health_score)::numeric(10,2) AS health_avg,
+        AVG(education_score)::numeric(10,2) AS education_avg,
+        AVG(income_score)::numeric(10,2) AS income_avg,
+        AVG(housing_score)::numeric(10,2) AS housing_avg,
+        AVG(security_score)::numeric(10,2) AS security_avg
+      FROM area_residents
+      `,
+      params
+    );
+    indicatorSummary = summaryRows[0] ?? null;
+
+    const scoreRows = await sql(
+      `
+      WITH filtered_points AS (
+        SELECT point_id
+        FROM public_map_cache
+        WHERE ${where}
+      ),
+      area_residents AS (
+        SELECT rp.health_score, rp.education_score, rp.income_score, rp.housing_score, rp.security_score
+        FROM resident_point_assignments rpa
+        JOIN filtered_points fp ON fp.point_id = rpa.point_id
+        JOIN residents r ON r.id = rpa.resident_id AND r.deleted_at IS NULL
+        LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+        WHERE rpa.active = true
+      )
+      SELECT 'health' AS metric, health_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE health_score IS NOT NULL
+      GROUP BY health_score
+      UNION ALL
+      SELECT 'education' AS metric, education_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE education_score IS NOT NULL
+      GROUP BY education_score
+      UNION ALL
+      SELECT 'income' AS metric, income_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE income_score IS NOT NULL
+      GROUP BY income_score
+      UNION ALL
+      SELECT 'housing' AS metric, housing_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE housing_score IS NOT NULL
+      GROUP BY housing_score
+      UNION ALL
+      SELECT 'security' AS metric, security_score AS score, COUNT(*)::int AS count
+      FROM area_residents
+      WHERE security_score IS NOT NULL
+      GROUP BY security_score
+      ORDER BY metric, score
+      `,
+      params
+    );
+
+    scoreBuckets = {
+      health: Array.from({ length: 10 }, () => 0),
+      education: Array.from({ length: 10 }, () => 0),
+      income: Array.from({ length: 10 }, () => 0),
+      housing: Array.from({ length: 10 }, () => 0),
+      security: Array.from({ length: 10 }, () => 0),
+    };
+    for (const row of scoreRows as Array<{ metric: string; score: number; count: number }>) {
+      const score = Number(row.score);
+      if (!Number.isFinite(score) || score < 1 || score > 10) continue;
+      if (!scoreBuckets[row.metric]) continue;
+      scoreBuckets[row.metric][score - 1] = Number(row.count ?? 0);
+    }
+  }
 
   if (body.format === "JSON") {
     const content = JSON.stringify(
@@ -1359,6 +1558,173 @@ app.post("/reports/export", async (c) => {
     font,
     color: rgb(0.1, 0.1, 0.1),
   });
+
+  if (includePoints) {
+    const pointsTitleY = height - 150;
+    page.drawText("Pontos (amostra)", {
+      x: 50,
+      y: pointsTitleY,
+      size: 12,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    let lineY = pointsTitleY - 16;
+    const maxLines = 10;
+    rows.slice(0, maxLines).forEach((row, index) => {
+      if (lineY < 80) return;
+      const label = `${index + 1}. ${row.community_name ?? "-"} | ${row.city ?? "-"} / ${
+        row.state ?? "-"
+      } | residentes: ${row.residents ?? 0}`;
+      page.drawText(label, {
+        x: 50,
+        y: lineY,
+        size: 9,
+        font,
+        color: rgb(0.15, 0.15, 0.15),
+      });
+      lineY -= 12;
+    });
+  }
+
+  if (includeIndicators && indicatorSummary && scoreBuckets) {
+    const indicatorPage = pdf.addPage();
+    const { width: chartWidth, height: chartHeight } = indicatorPage.getSize();
+    indicatorPage.drawText("Indicadores sociais (pontuacao 1-10)", {
+      x: 50,
+      y: chartHeight - 60,
+      size: 16,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    indicatorPage.drawText(
+      `Total de pessoas avaliadas: ${indicatorSummary.total_residents ?? 0}`,
+      {
+        x: 50,
+        y: chartHeight - 82,
+        size: 10,
+        font,
+        color: rgb(0.1, 0.1, 0.1),
+      }
+    );
+
+    const metrics = [
+      { key: "health", label: "Saude", color: rgb(0.18, 0.55, 0.35), avg: indicatorSummary.health_avg },
+      { key: "education", label: "Educacao", color: rgb(0.2, 0.36, 0.72), avg: indicatorSummary.education_avg },
+      { key: "income", label: "Renda", color: rgb(0.85, 0.5, 0.18), avg: indicatorSummary.income_avg },
+      { key: "housing", label: "Moradia", color: rgb(0.6, 0.4, 0.2), avg: indicatorSummary.housing_avg },
+      { key: "security", label: "Seguranca", color: rgb(0.75, 0.2, 0.2), avg: indicatorSummary.security_avg },
+    ];
+
+    const chartAreaWidth = chartWidth - 100;
+    const chartAreaHeight = 70;
+    let chartY = chartHeight - 140;
+    const gap = 16;
+
+    const drawBarChart = (
+      label: string,
+      counts: number[],
+      color: ReturnType<typeof rgb>,
+      avg: number | null
+    ) => {
+      const maxCount = Math.max(...counts, 1);
+      const barGap = 4;
+      const barWidth = (chartAreaWidth - barGap * 9) / 10;
+      indicatorPage.drawText(
+        `${label} (media: ${avg ?? "-"} )`,
+        {
+          x: 50,
+          y: chartY + chartAreaHeight + 8,
+          size: 10,
+          font,
+          color: rgb(0.1, 0.1, 0.1),
+        }
+      );
+      counts.forEach((count, index) => {
+        const barHeight = (count / maxCount) * (chartAreaHeight - 12);
+        const barX = 50 + index * (barWidth + barGap);
+        indicatorPage.drawRectangle({
+          x: barX,
+          y: chartY,
+          width: barWidth,
+          height: barHeight,
+          color,
+          opacity: 0.85,
+        });
+        indicatorPage.drawText(String(index + 1), {
+          x: barX + 2,
+          y: chartY - 10,
+          size: 7,
+          font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+      });
+      chartY -= chartAreaHeight + gap;
+    };
+
+    metrics.forEach((metric) => {
+      const counts = scoreBuckets[metric.key] ?? Array.from({ length: 10 }, () => 0);
+      if (chartY < 140) return;
+      drawBarChart(metric.label, counts, metric.color, metric.avg);
+    });
+
+    const pieData = metrics
+      .map((metric) => ({
+        label: metric.label,
+        value: Number(metric.avg ?? 0),
+        color: metric.color,
+      }))
+      .filter((item) => item.value > 0);
+    const pieTotal = pieData.reduce((sum, item) => sum + item.value, 0);
+    if (pieTotal > 0) {
+      const centerX = chartWidth / 2;
+      const centerY = 90;
+      const radius = 60;
+      let startAngle = 0;
+      const polar = (angle: number) => ({
+        x: centerX + radius * Math.cos(angle),
+        y: centerY + radius * Math.sin(angle),
+      });
+      pieData.forEach((item) => {
+        const sliceAngle = (item.value / pieTotal) * Math.PI * 2;
+        const endAngle = startAngle + sliceAngle;
+        const start = polar(startAngle);
+        const end = polar(endAngle);
+        const largeArc = sliceAngle > Math.PI ? 1 : 0;
+        const path = `M ${centerX} ${centerY} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+        indicatorPage.drawSvgPath(path, {
+          color: item.color,
+          opacity: 0.85,
+        });
+        startAngle = endAngle;
+      });
+      let legendX = 50;
+      let legendY = 30;
+      pieData.forEach((item) => {
+        indicatorPage.drawRectangle({
+          x: legendX,
+          y: legendY,
+          width: 10,
+          height: 10,
+          color: item.color,
+        });
+        indicatorPage.drawText(item.label, {
+          x: legendX + 14,
+          y: legendY + 2,
+          size: 8,
+          font,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        legendX += 90;
+      });
+      indicatorPage.drawText("Distribuicao media por indicador", {
+        x: 50,
+        y: 120,
+        size: 9,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+    }
+  }
 
   if (pointsForMap.length > 0 && c.env.GOOGLE_MAPS_API_KEY) {
     try {

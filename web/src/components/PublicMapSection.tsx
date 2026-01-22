@@ -104,6 +104,21 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   const [reportSummary, setReportSummary] = useState<ReportSummary | null>(null);
   const [reportBreakdown, setReportBreakdown] =
     useState<ReportBreakdown | null>(null);
+  const [reportIndicators, setReportIndicators] = useState<{
+    total_residents?: number | string | null;
+    health_avg?: number | string | null;
+    education_avg?: number | string | null;
+    income_avg?: number | string | null;
+    housing_avg?: number | string | null;
+    security_avg?: number | string | null;
+  } | null>(null);
+  const [reportIndicatorScores, setReportIndicatorScores] = useState<{
+    health?: number[];
+    education?: number[];
+    income?: number[];
+    housing?: number[];
+    security?: number[];
+  } | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportInclude, setReportInclude] = useState({
@@ -289,6 +304,8 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
       });
       setReportSummary(response.summary ?? null);
       setReportBreakdown(response.breakdown ?? null);
+      setReportIndicators(response.indicators ?? null);
+      setReportIndicatorScores(response.indicator_scores ?? null);
       setReportStatus("ready");
       return true;
     } catch (error) {
@@ -684,6 +701,95 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
     };
   }, [reportBreakdown]);
 
+  const scoreLabels = useMemo(
+    () => Array.from({ length: 10 }, (_, index) => `${index + 1}`),
+    []
+  );
+  const parseMetricValue = (value?: number | string | null) => {
+    if (value === null || value === undefined) return 0;
+    const parsed = typeof value === "string" ? Number(value) : value;
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const buildScoreChart = useCallback(
+    (label: string, data?: number[], color = "#4a2d1b") => ({
+      labels: scoreLabels,
+      datasets: [
+        {
+          label,
+          data: data && data.length === scoreLabels.length ? data : scoreLabels.map(() => 0),
+          backgroundColor: color,
+        },
+      ],
+    }),
+    [scoreLabels]
+  );
+
+  const healthChart = useMemo(
+    () =>
+      buildScoreChart(
+        "Saude",
+        reportIndicatorScores?.health,
+        "#3f7f5a"
+      ),
+    [buildScoreChart, reportIndicatorScores]
+  );
+  const educationChart = useMemo(
+    () =>
+      buildScoreChart(
+        "Educacao",
+        reportIndicatorScores?.education,
+        "#395fa3"
+      ),
+    [buildScoreChart, reportIndicatorScores]
+  );
+  const securityChart = useMemo(
+    () =>
+      buildScoreChart(
+        "Seguranca",
+        reportIndicatorScores?.security,
+        "#a33a3a"
+      ),
+    [buildScoreChart, reportIndicatorScores]
+  );
+  const indicatorsPie = useMemo(() => {
+    if (!reportIndicators) return null;
+    const values = [
+      parseMetricValue(reportIndicators.health_avg),
+      parseMetricValue(reportIndicators.education_avg),
+      parseMetricValue(reportIndicators.income_avg),
+      parseMetricValue(reportIndicators.housing_avg),
+      parseMetricValue(reportIndicators.security_avg),
+    ];
+    const total = values.reduce((sum, value) => sum + value, 0);
+    if (!total) return null;
+    return {
+      labels: ["Saude", "Educacao", "Renda", "Moradia", "Seguranca"],
+      datasets: [
+        {
+          label: "Media",
+          data: values,
+          backgroundColor: [
+            "#3f7f5a",
+            "#395fa3",
+            "#c9783a",
+            "#8b5a2b",
+            "#a33a3a",
+          ],
+        },
+      ],
+    };
+  }, [reportIndicators]);
+  const hasScoreData = useMemo(() => {
+    const health = reportIndicatorScores?.health ?? [];
+    const education = reportIndicatorScores?.education ?? [];
+    const security = reportIndicatorScores?.security ?? [];
+    return (
+      health.some((value) => value > 0) ||
+      education.some((value) => value > 0) ||
+      security.some((value) => value > 0)
+    );
+  }, [reportIndicatorScores]);
+
   const canGenerateReport = Boolean(
     selectedBounds ||
       appliedFilters.city.trim() ||
@@ -914,6 +1020,46 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                     <p className="muted">Gere o relatorio para visualizar.</p>
                   )}
                 </div>
+                {reportInclude.indicators && (
+                  <>
+                    <div className="info-card">
+                      <span className="eyebrow">Grafico</span>
+                      <h3>Saude (1-10)</h3>
+                      {hasScoreData ? (
+                        <Bar data={healthChart} />
+                      ) : (
+                        <p className="muted">Gere o relatorio para visualizar.</p>
+                      )}
+                    </div>
+                    <div className="info-card">
+                      <span className="eyebrow">Grafico</span>
+                      <h3>Educacao (1-10)</h3>
+                      {hasScoreData ? (
+                        <Bar data={educationChart} />
+                      ) : (
+                        <p className="muted">Gere o relatorio para visualizar.</p>
+                      )}
+                    </div>
+                    <div className="info-card">
+                      <span className="eyebrow">Grafico</span>
+                      <h3>Seguranca (1-10)</h3>
+                      {hasScoreData ? (
+                        <Bar data={securityChart} />
+                      ) : (
+                        <p className="muted">Gere o relatorio para visualizar.</p>
+                      )}
+                    </div>
+                    <div className="info-card">
+                      <span className="eyebrow">Grafico</span>
+                      <h3>Condicao media</h3>
+                      {indicatorsPie ? (
+                        <Pie data={indicatorsPie} />
+                      ) : (
+                        <p className="muted">Gere o relatorio para visualizar.</p>
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             )}
           </div>

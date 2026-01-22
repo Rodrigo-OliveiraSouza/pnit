@@ -401,10 +401,13 @@ img {
 
 .news-card-media .news-media {
   height: 100%;
+  background: var(--color-white);
 }
 
 .news-card-media .news-media img {
   object-position: center;
+  object-fit: contain;
+  background: var(--color-white);
 }
 
 .news-media {

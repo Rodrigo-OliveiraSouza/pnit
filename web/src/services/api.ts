@@ -162,6 +162,21 @@ export type ReportPreviewResponse = {
     by_city?: Array<{ city: string; count: number }>;
     by_state?: Array<{ state: string; count: number }>;
   };
+  indicators?: {
+    total_residents?: number | string | null;
+    health_avg?: number | string | null;
+    education_avg?: number | string | null;
+    income_avg?: number | string | null;
+    housing_avg?: number | string | null;
+    security_avg?: number | string | null;
+  } | null;
+  indicator_scores?: {
+    health?: number[];
+    education?: number[];
+    income?: number[];
+    housing?: number[];
+    security?: number[];
+  } | null;
 };
 
 export type ReportExportResponse = {
