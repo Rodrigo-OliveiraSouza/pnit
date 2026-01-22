@@ -86,14 +86,17 @@ img {
 }
 
 .header-top {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.6rem 6vw;
+  padding: 0.9rem 6vw;
   background: linear-gradient(90deg, var(--color-forest), var(--color-teal));
   color: var(--color-white);
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+}
+
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
 }
 
 .header-top-logos {
@@ -103,10 +106,26 @@ img {
   letter-spacing: 0;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+}
+
 .header-logos {
   display: flex;
   align-items: center;
   gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .logo {
@@ -114,6 +133,7 @@ img {
   max-width: 100%;
   height: auto;
   width: auto;
+  object-fit: contain;
 }
 
 .logo-governo {
@@ -153,6 +173,14 @@ img {
   height: 100px;
 }
 
+.site-header .brand {
+  color: var(--color-white);
+}
+
+.site-header .brand-sub {
+  color: rgba(255, 255, 255, 0.75);
+}
+
 .brand-mark {
   font-family: "Newsreader", serif;
   font-size: 1.8rem;
@@ -170,6 +198,10 @@ img {
   gap: 1rem;
 }
 
+.site-header .nav-link {
+  color: var(--color-white);
+}
+
 .nav-link {
   font-weight: 600;
   padding: 0.5rem 0.8rem;
@@ -180,6 +212,11 @@ img {
 .nav-link:hover,
 .nav-link.active {
   background: rgba(var(--color-forest-rgb), 0.1);
+}
+
+.site-header .nav-link:hover,
+.site-header .nav-link.active {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .btn {
@@ -231,6 +268,15 @@ img {
 
 .btn-ghost:hover {
   background: rgba(var(--color-forest-rgb), 0.08);
+}
+
+.site-header .btn-ghost {
+  color: var(--color-white);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.site-header .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .btn-sm {
@@ -1515,10 +1561,15 @@ th {
 }
 
 @media (max-width: 720px) {
-  .header-main {
+  .header-bar {
     flex-direction: column;
     align-items: flex-start;
     gap: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .nav {
