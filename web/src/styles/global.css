@@ -3,20 +3,23 @@
 :root {
   --color-ink: #4b2416;
   --color-forest: #4b2416;
-  --color-emerald: #8aa342;
-  --color-teal: #2e4b9b;
-  --color-sun: #e87034;
-  --color-clay: #e53d2f;
-  --color-sky: #f9e8c3;
-  --color-ivory: #f9e8c3;
+  --color-emerald: #4b9b2f;
+  --color-teal: #3b5bb0;
+  --color-sun: #f3c318;
+  --color-amber: #f08b34;
+  --color-clay: #e23c2c;
+  --color-sky: #f9dcc6;
+  --color-ivory: #f6a6c1;
   --color-white: #ffffff;
   --color-ink-rgb: 75, 36, 22;
   --color-forest-rgb: 75, 36, 22;
-  --color-emerald-rgb: 138, 163, 66;
-  --color-teal-rgb: 46, 75, 155;
-  --color-sun-rgb: 232, 112, 52;
-  --color-clay-rgb: 229, 61, 47;
-  --color-sky-rgb: 249, 232, 195;
+  --color-emerald-rgb: 75, 155, 47;
+  --color-teal-rgb: 59, 91, 176;
+  --color-sun-rgb: 243, 195, 24;
+  --color-amber-rgb: 240, 139, 52;
+  --color-clay-rgb: 226, 60, 44;
+  --color-sky-rgb: 249, 220, 198;
+  --color-ivory-rgb: 246, 166, 193;
   --shadow-soft: 0 18px 40px rgba(var(--color-ink-rgb), 0.14);
   --shadow-card: 0 12px 24px rgba(var(--color-ink-rgb), 0.1);
   --radius-lg: 20px;
@@ -50,7 +53,7 @@ a {
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
-  background: rgba(var(--color-sun-rgb), 0.2);
+  background: rgba(var(--color-amber-rgb), 0.2);
   padding: 0.1rem 0.3rem;
   border-radius: 6px;
 }
@@ -273,7 +276,7 @@ img {
   width: 220px;
   height: 220px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(var(--color-sun-rgb), 0.35), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--color-amber-rgb), 0.35), transparent 70%);
 }
 
 .landing-badges {
