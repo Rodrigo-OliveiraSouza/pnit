@@ -24,15 +24,27 @@ export default function Header() {
 
   return (
     <header className="site-header">
-      <div className="header-top">
-        <span className="header-kicker">
-          Sistema Nacional de Promocao da Igualdade Racial
-        </span>
-        <span className="header-tag">SINAPIR</span>
+      <div className="header-top header-top-logos">
+        <div className="header-logos">
+          <img
+            src="/logos/governo-brasil.png"
+            alt="Governo do Brasil"
+            className="logo logo-governo"
+          />
+          <img
+            src="/logos/diversifica.png"
+            alt="Diversifica Inclusao e Diversidade"
+            className="logo logo-diversifica"
+          />
+        </div>
       </div>
       <div className="header-main">
-        <div className="brand">
-          <span className="brand-mark">GTERF</span>
+        <div className="brand brand-logos">
+          <img
+            src="/logos/mir.png"
+            alt="MIR - Ministerio da Igualdade Racial"
+            className="logo logo-mir"
+          />
           <span className="brand-sub">Mapa publico de residentes</span>
         </div>
         <nav className="nav">

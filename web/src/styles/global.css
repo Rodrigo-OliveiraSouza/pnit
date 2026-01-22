@@ -96,6 +96,32 @@ img {
   letter-spacing: 0.08em;
 }
 
+.header-top-logos {
+  align-items: center;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.header-logos {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.logo {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.logo-governo {
+  height: 30px;
+}
+
+.logo-diversifica {
+  height: 26px;
+}
+
 .header-tag {
   font-weight: 700;
   background: var(--color-sun);
@@ -115,6 +141,16 @@ img {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+}
+
+.brand-logos {
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo-mir {
+  height: 56px;
 }
 
 .brand-mark {
@@ -1422,6 +1458,13 @@ th {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 2rem;
+}
+
+.footer-logos {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
 }
 
 .footer-grid ul {
