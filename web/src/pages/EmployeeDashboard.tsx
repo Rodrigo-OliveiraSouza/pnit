@@ -7,11 +7,12 @@ import citiesData from "../data/brazil-cities.json";
 import { BRAZIL_STATES } from "../data/brazil-states";
 import {
   assignResidentPoint,
+  createCommunity,
   createPoint,
   createResident,
   createResidentProfile,
+  fetchCommunities,
   fetchResidentDetail,
-  fetchPublicCommunities,
   getAuthRole,
   listResidents,
   updatePoint,
@@ -19,6 +20,7 @@ import {
   uploadAttachment,
   type CreatePointPayload,
   type CreateResidentPayload,
+  type CommunityInfo,
 } from "../services/api";
 import { formatStatus } from "../utils/format";
 
@@ -44,6 +46,8 @@ function parseLatLng(input: string) {
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
   return { lat, lng };
 }
+
+const normalizeCommunityName = (value: string) => value.trim().toLowerCase();
 
 const initialFormState = {
   fullName: "",
@@ -114,6 +118,13 @@ type EditResidentForm = {
   state: string;
   communityName: string;
   status: "active" | "inactive";
+  notes: string;
+};
+
+type CommunityDraft = {
+  name: string;
+  activity: string;
+  focusSocial: string;
   notes: string;
 };
 
@@ -267,10 +278,20 @@ export default function EmployeeDashboard() {
     "register" | "people" | "admin"
   >("register");
   const [formState, setFormState] = useState(initialFormState);
+  const [communityCatalog, setCommunityCatalog] = useState<CommunityInfo[]>([]);
   const [communityOptions, setCommunityOptions] = useState<string[]>([]);
   const [communityOptionsError, setCommunityOptionsError] = useState<string | null>(
     null
   );
+  const [showCommunityForm, setShowCommunityForm] = useState(false);
+  const [communityDraft, setCommunityDraft] = useState<CommunityDraft>({
+    name: "",
+    activity: "",
+    focusSocial: "",
+    notes: "",
+  });
+  const [communitySaving, setCommunitySaving] = useState(false);
+  const [communityFeedback, setCommunityFeedback] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{
     type: "success" | "error";
@@ -292,6 +313,17 @@ export default function EmployeeDashboard() {
   }, [editForm?.state]);
   const editSelectedCityValue =
     editForm?.city && editForm.state ? `${editForm.city}__${editForm.state}` : "";
+  const selectedCommunity = useMemo(() => {
+    const key = normalizeCommunityName(formState.communityName);
+    if (!key) {
+      return null;
+    }
+    return (
+      communityCatalog.find(
+        (item) => normalizeCommunityName(item.name) === key
+      ) ?? null
+    );
+  }, [formState.communityName, communityCatalog]);
 
   const loadResidents = async () => {
     try {
@@ -309,9 +341,10 @@ export default function EmployeeDashboard() {
   const loadCommunityOptions = async () => {
     setCommunityOptionsError(null);
     try {
-      const response = await fetchPublicCommunities();
+      const response = await fetchCommunities();
+      setCommunityCatalog(response.items);
       const names = response.items
-        .map((item) => item.community_name)
+        .map((item) => item.name)
         .filter(Boolean);
       const unique = Array.from(new Set(names)).sort((a, b) =>
         a.localeCompare(b)
@@ -359,6 +392,77 @@ export default function EmployeeDashboard() {
       city: cityName,
       state: stateCode,
     }));
+  };
+
+  const handleCommunityDraftChange = (
+    field: keyof CommunityDraft,
+    value: string
+  ) => {
+    setCommunityDraft((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const openCommunityForm = () => {
+    setCommunityFeedback(null);
+    setCommunityDraft({
+      name: formState.communityName,
+      activity: selectedCommunity?.activity ?? "",
+      focusSocial: selectedCommunity?.focus_social ?? "",
+      notes: selectedCommunity?.notes ?? "",
+    });
+    setShowCommunityForm(true);
+  };
+
+  const handleCommunitySave = async () => {
+    const name = communityDraft.name.trim();
+    if (!name) {
+      setCommunityFeedback("Informe o nome da comunidade.");
+      return;
+    }
+    setCommunitySaving(true);
+    setCommunityFeedback(null);
+    try {
+      const response = await createCommunity({
+        name,
+        activity: communityDraft.activity.trim() || undefined,
+        focus_social: communityDraft.focusSocial.trim() || undefined,
+        notes: communityDraft.notes.trim() || undefined,
+        city: formState.city || undefined,
+        state: formState.state || undefined,
+      });
+      const item = response.item;
+      setCommunityCatalog((current) => {
+        const key = normalizeCommunityName(item.name);
+        const next = current.filter(
+          (entry) => normalizeCommunityName(entry.name) !== key
+        );
+        return [...next, item].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setCommunityOptions((current) =>
+        Array.from(new Set([...current, item.name])).sort((a, b) =>
+          a.localeCompare(b)
+        )
+      );
+      setFormState((current) => ({
+        ...current,
+        communityName: item.name,
+      }));
+      setShowCommunityForm(false);
+      setCommunityDraft({
+        name: "",
+        activity: "",
+        focusSocial: "",
+        notes: "",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao salvar comunidade.";
+      setCommunityFeedback(message);
+    } finally {
+      setCommunitySaving(false);
+    }
   };
 
   const handleEditFieldChange = (
@@ -416,6 +520,14 @@ export default function EmployeeDashboard() {
     setPhotoFile(null);
     setSelectedLocation(null);
     setResetKey((current) => current + 1);
+    setShowCommunityForm(false);
+    setCommunityDraft({
+      name: "",
+      activity: "",
+      focusSocial: "",
+      notes: "",
+    });
+    setCommunityFeedback(null);
   };
 
   const resolvedLocation = useMemo(() => {
@@ -793,16 +905,26 @@ export default function EmployeeDashboard() {
               </label>
               <label>
                 Comunidade quilombola
-                <input
-                  type="text"
-                  list="quilombo-options"
-                  placeholder="Selecione ou informe o quilombo"
-                  value={formState.communityName}
-                  onChange={(event) =>
-                    handleFieldChange("communityName", event.target.value)
-                  }
-                  required
-                />
+                <div className="community-input-row">
+                  <input
+                    type="text"
+                    list="quilombo-options"
+                    placeholder="Selecione ou informe o quilombo"
+                    value={formState.communityName}
+                    onChange={(event) =>
+                      handleFieldChange("communityName", event.target.value)
+                    }
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-icon"
+                    onClick={openCommunityForm}
+                    aria-label="Adicionar comunidade"
+                  >
+                    +
+                  </button>
+                </div>
               </label>
               <datalist id="quilombo-options">
                 {communityOptions.map((name) => (
@@ -811,6 +933,118 @@ export default function EmployeeDashboard() {
               </datalist>
               {communityOptionsError && (
                 <div className="alert">{communityOptionsError}</div>
+              )}
+              {formState.communityName.trim() && (
+                <div className="community-panel">
+                  <div className="community-panel-header">
+                    <strong>Detalhes da comunidade</strong>
+                    <span className={`status ${selectedCommunity ? "active" : "pending"}`}>
+                      {selectedCommunity ? "Cadastrada" : "Sem cadastro"}
+                    </span>
+                  </div>
+                  <div className="community-panel-grid">
+                    <div>
+                      <span>Nome</span>
+                      <strong>
+                        {selectedCommunity?.name ?? formState.communityName}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Atividade</span>
+                      <strong>{selectedCommunity?.activity || "Nao informado"}</strong>
+                    </div>
+                    <div>
+                      <span>Foco social</span>
+                      <strong>
+                        {selectedCommunity?.focus_social || "Nao informado"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Cidade/UF</span>
+                      <strong>
+                        {(selectedCommunity?.city || formState.city || "-")}{" "}
+                        {(selectedCommunity?.state || formState.state || "")}
+                      </strong>
+                    </div>
+                  </div>
+                  {selectedCommunity?.notes && (
+                    <p className="muted">{selectedCommunity.notes}</p>
+                  )}
+                </div>
+              )}
+              {showCommunityForm && (
+                <div className="community-panel">
+                  <div className="community-panel-header">
+                    <strong>Cadastro da comunidade</strong>
+                    <span className="status">Novo registro</span>
+                  </div>
+                  <div className="form-grid">
+                    <label>
+                      Nome
+                      <input
+                        type="text"
+                        value={communityDraft.name}
+                        onChange={(event) =>
+                          handleCommunityDraftChange("name", event.target.value)
+                        }
+                        required
+                      />
+                    </label>
+                    <label>
+                      Atividade
+                      <input
+                        type="text"
+                        value={communityDraft.activity}
+                        onChange={(event) =>
+                          handleCommunityDraftChange("activity", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      Foco social
+                      <input
+                        type="text"
+                        value={communityDraft.focusSocial}
+                        onChange={(event) =>
+                          handleCommunityDraftChange(
+                            "focusSocial",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Observacoes
+                      <textarea
+                        rows={3}
+                        value={communityDraft.notes}
+                        onChange={(event) =>
+                          handleCommunityDraftChange("notes", event.target.value)
+                        }
+                      />
+                    </label>
+                  </div>
+                  {communityFeedback && (
+                    <div className="alert">{communityFeedback}</div>
+                  )}
+                  <div className="form-actions">
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={handleCommunitySave}
+                      disabled={communitySaving}
+                    >
+                      {communitySaving ? "Salvando..." : "Salvar comunidade"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline"
+                      onClick={() => setShowCommunityForm(false)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
               )}
               <div className="form-row">
                 <label>

@@ -1070,6 +1070,54 @@ textarea {
   gap: 1rem;
 }
 
+.community-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.community-input-row input {
+  flex: 1;
+}
+
+.btn-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.community-panel {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem 1.2rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.14);
+  background: rgba(var(--color-sky-rgb), 0.35);
+}
+
+.community-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.community-panel-grid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.community-panel-grid span {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(var(--color-ink-rgb), 0.6);
+}
+
 .form-actions {
   display: flex;
   gap: 1rem;

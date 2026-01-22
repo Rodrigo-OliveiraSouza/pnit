@@ -119,6 +119,15 @@ export type PublicPointsResponse = {
   last_sync_at?: string;
 };
 
+export type CommunityInfo = {
+  name: string;
+  activity?: string | null;
+  focus_social?: string | null;
+  notes?: string | null;
+  city?: string | null;
+  state?: string | null;
+};
+
 export type ReportFilters = {
   city?: string;
   state?: string;
@@ -414,6 +423,26 @@ export async function fetchPublicCommunities(params?: {
       count?: number;
     }>;
   }>(`/map/communities${suffix ? `?${suffix}` : ""}`);
+}
+
+export async function fetchCommunities(params?: {
+  city?: string;
+  state?: string;
+}): Promise<{ items: CommunityInfo[] }> {
+  const query = new URLSearchParams();
+  if (params?.city) query.set("city", params.city);
+  if (params?.state) query.set("state", params.state);
+  const suffix = query.toString();
+  return apiFetch<{ items: CommunityInfo[] }>(
+    `/communities${suffix ? `?${suffix}` : ""}`
+  );
+}
+
+export async function createCommunity(payload: CommunityInfo) {
+  return apiFetch<{ item: CommunityInfo }>("/communities", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function createResident(

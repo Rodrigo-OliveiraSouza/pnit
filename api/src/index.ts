@@ -33,6 +33,15 @@ type ReportFilters = {
   to?: string;
 };
 
+type CommunityPayload = {
+  name: string;
+  activity?: string | null;
+  focus_social?: string | null;
+  notes?: string | null;
+  city?: string | null;
+  state?: string | null;
+};
+
 type UserClaims = {
   sub: string;
   role: "admin" | "employee" | "user";
@@ -828,6 +837,98 @@ app.get("/map/communities", async (c) => {
     params
   );
   return c.json({ items: rows });
+});
+
+app.get("/communities", async (c) => {
+  const sql = getSql(c.env);
+  const city = c.req.query("city") ?? null;
+  const state = c.req.query("state") ?? null;
+  const rows = await sql(
+    `
+    WITH catalog AS (
+      SELECT name, activity, focus_social, notes, city, state
+      FROM communities
+    ),
+    inferred AS (
+      SELECT DISTINCT
+        community_name as name,
+        NULL::text as activity,
+        NULL::text as focus_social,
+        NULL::text as notes,
+        city,
+        state
+      FROM public_map_cache
+      WHERE community_name IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM communities c
+          WHERE lower(c.name) = lower(public_map_cache.community_name)
+        )
+    )
+    SELECT name, activity, focus_social, notes, city, state
+    FROM (
+      SELECT * FROM catalog
+      UNION ALL
+      SELECT * FROM inferred
+    ) merged
+    WHERE ($1::text IS NULL OR city = $1)
+      AND ($2::text IS NULL OR state = $2)
+    ORDER BY name
+    `,
+    [city, state]
+  );
+  return c.json({ items: rows });
+});
+
+app.post("/communities", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  const body = (await c.req.json().catch(() => null)) as
+    | CommunityPayload
+    | null;
+  if (!body) {
+    return jsonError(c, 400, "Invalid payload");
+  }
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!name) {
+    return jsonError(c, 400, "name is required");
+  }
+  const activity =
+    typeof body.activity === "string" ? body.activity.trim() : null;
+  const focusSocial =
+    typeof body.focus_social === "string" ? body.focus_social.trim() : null;
+  const notes =
+    typeof body.notes === "string" ? body.notes.trim() : null;
+  const city = typeof body.city === "string" ? body.city.trim() : null;
+  const state = typeof body.state === "string" ? body.state.trim() : null;
+
+  const rows = await sql(
+    `
+    INSERT INTO communities (name, activity, focus_social, notes, city, state, created_by)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT (name) DO UPDATE SET
+      activity = COALESCE(EXCLUDED.activity, communities.activity),
+      focus_social = COALESCE(EXCLUDED.focus_social, communities.focus_social),
+      notes = COALESCE(EXCLUDED.notes, communities.notes),
+      city = COALESCE(EXCLUDED.city, communities.city),
+      state = COALESCE(EXCLUDED.state, communities.state),
+      updated_at = now()
+    RETURNING id, name, activity, focus_social, notes, city, state
+    `,
+    [name, activity, focusSocial, notes, city, state, claims.sub]
+  );
+
+  const item = rows[0] as { id: string; name: string };
+  await logAudit(sql, claims.sub, "community_create", "communities", item.id, {
+    name,
+    city,
+    state,
+  });
+
+  return c.json({ item: rows[0] });
 });
 
 app.get("/map/points/:id", async (c) => {
