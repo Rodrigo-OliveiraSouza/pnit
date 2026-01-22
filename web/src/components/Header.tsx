@@ -11,6 +11,7 @@ export default function Header() {
   const navigate = useNavigate();
   const isLoggedIn = Boolean(getAuthToken());
   const role = getAuthRole();
+  const isAdmin = role === "admin";
   const panelLink = "/painel";
   const panelLabel = role === "admin" ? "Painel" : "Painel";
 
@@ -53,14 +54,16 @@ export default function Header() {
               Relatorios
             </NavLink>
           )}
-          <NavLink
-            to="/imagens-noticias"
-            className={({ isActive }) =>
-              `nav-link${isActive ? " active" : ""}`
-            }
-          >
-            Imagens
-          </NavLink>
+          {isAdmin && (
+            <NavLink
+              to="/imagens-noticias"
+              className={({ isActive }) =>
+                `nav-link${isActive ? " active" : ""}`
+              }
+            >
+              Imagens
+            </NavLink>
+          )}
           <NavLink
             to="/denuncias"
             className={({ isActive }) =>
