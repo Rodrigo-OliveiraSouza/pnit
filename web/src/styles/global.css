@@ -285,6 +285,11 @@ img {
   justify-content: flex-end;
 }
 
+.news-carousel-media {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 .news-card {
   width: min(320px, 90vw);
   background: var(--color-white);
@@ -292,6 +297,22 @@ img {
   box-shadow: var(--shadow-card);
   overflow: hidden;
   animation: newsFloat 12s ease-in-out infinite, newsEnter 480ms ease;
+}
+
+.news-card-media {
+  width: 100%;
+  min-height: clamp(320px, 60vh, 540px);
+  border-radius: var(--radius-lg);
+  position: relative;
+  animation: newsEnter 480ms ease;
+}
+
+.news-card-media .news-media {
+  height: 100%;
+}
+
+.news-card-media .news-media img {
+  object-position: center;
 }
 
 .news-media {
@@ -354,6 +375,16 @@ img {
   padding: 0 1.4rem 1.2rem;
 }
 
+.news-controls-overlay {
+  position: absolute;
+  right: 1.2rem;
+  bottom: 1.2rem;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  padding: 0.4rem 0.6rem;
+  box-shadow: 0 10px 24px rgba(var(--color-forest-rgb), 0.18);
+}
+
 .news-arrows {
   display: flex;
   gap: 0.4rem;
@@ -412,6 +443,18 @@ img {
 .hero-gallery {
   position: relative;
   z-index: 2;
+}
+
+.landing-hero-media {
+  grid-template-columns: 1fr;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.landing-hero-media::before,
+.landing-hero-media::after {
+  display: none;
 }
 
 .landing-badges {
@@ -1064,6 +1107,32 @@ textarea {
   gap: 1.2rem;
 }
 
+.form-block {
+  padding: 1.8rem;
+}
+
+.form-block-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.form-block-section {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.form-block-map {
+  align-content: start;
+}
+
+@media (max-width: 1024px) {
+  .form-block-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -1372,6 +1441,10 @@ th {
 
   .landing-hero {
     padding: 2rem;
+  }
+
+  .landing-hero-media {
+    padding: 0;
   }
 
   .gallery-grid {

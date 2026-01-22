@@ -32,6 +32,7 @@ type NewsCarouselProps = {
   intervalMs?: number;
   showDots?: boolean;
   showArrows?: boolean;
+  imageOnly?: boolean;
 };
 
 export default function NewsCarousel({
@@ -39,6 +40,7 @@ export default function NewsCarousel({
   intervalMs = 5200,
   showDots = true,
   showArrows = true,
+  imageOnly = false,
 }: NewsCarouselProps) {
   const items = useMemo(() => {
     const list = buildItems();
@@ -70,7 +72,10 @@ export default function NewsCarousel({
 
   return (
     <div className={`news-carousel${className ? ` ${className}` : ""}`}>
-      <article key={active.id} className="news-card">
+      <article
+        key={active.id}
+        className={`news-card${imageOnly ? " news-card-media" : ""}`}
+      >
         <div className={`news-media${active.src ? "" : " is-placeholder"}`}>
           {active.src ? (
             <img src={active.src} alt={active.title} />
@@ -78,12 +83,14 @@ export default function NewsCarousel({
             <div className="news-media-placeholder" aria-hidden="true" />
           )}
         </div>
-        <div className="news-body">
-          <h2>{active.title}</h2>
-          <p>Registro visual com rotacao automatica de imagens.</p>
-        </div>
+        {!imageOnly && (
+          <div className="news-body">
+            <h2>{active.title}</h2>
+            <p>Registro visual com rotacao automatica de imagens.</p>
+          </div>
+        )}
         {(showDots || showArrows) && (
-          <div className="news-controls">
+          <div className={`news-controls${imageOnly ? " news-controls-overlay" : ""}`}>
             {showArrows && (
               <div className="news-arrows">
                 <button

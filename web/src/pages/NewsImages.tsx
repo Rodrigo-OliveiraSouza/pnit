@@ -13,7 +13,7 @@ export default function NewsImages() {
             entram no giro sem alterar o layout.
           </p>
         </div>
-        <NewsCarousel />
+        <NewsCarousel showDots={false} imageOnly />
       </section>
     </div>
   );

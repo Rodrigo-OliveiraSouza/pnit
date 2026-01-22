@@ -843,9 +843,10 @@ export default function EmployeeDashboard() {
                 </p>
               </div>
             </div>
-            <div className="form-grid">
-              <div className="form-card">
-                <form className="form">
+            <div className="form-card form-block">
+              <div className="form-block-grid">
+                <div className="form-block-section">
+                  <form className="form">
               <label>
                 Nome completo
                 <input
@@ -1641,18 +1642,19 @@ export default function EmployeeDashboard() {
                   Limpar formulario
                 </button>
               </div>
-            </form>
-          </div>
-          <div className="form-card">
-            <MapEditor
-              onLocationChange={setSelectedLocation}
-              resetKey={resetKey}
-            />
-            <div className="form-note">
-              <strong>Dica:</strong> clique no mapa para definir o ponto e
-              adicionar informacoes do territorio.
-            </div>
-          </div>
+                  </form>
+                </div>
+                <div className="form-block-section form-block-map">
+                  <MapEditor
+                    onLocationChange={setSelectedLocation}
+                    resetKey={resetKey}
+                  />
+                  <div className="form-note">
+                    <strong>Dica:</strong> clique no mapa para definir o ponto e
+                    adicionar informacoes do territorio.
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         </>
