@@ -38,6 +38,12 @@ type CommunityPayload = {
   activity?: string | null;
   focus_social?: string | null;
   notes?: string | null;
+  families_count?: number | null;
+  organization_type?: string | null;
+  leader_name?: string | null;
+  leader_contact?: string | null;
+  activities?: string | null;
+  meeting_frequency?: string | null;
   city?: string | null;
   state?: string | null;
 };
@@ -846,7 +852,18 @@ app.get("/communities", async (c) => {
   const rows = await sql(
     `
     WITH catalog AS (
-      SELECT name, activity, focus_social, notes, city, state
+      SELECT name,
+             activity,
+             focus_social,
+             notes,
+             families_count,
+             organization_type,
+             leader_name,
+             leader_contact,
+             activities,
+             meeting_frequency,
+             city,
+             state
       FROM communities
     ),
     inferred AS (
@@ -855,6 +872,12 @@ app.get("/communities", async (c) => {
         NULL::text as activity,
         NULL::text as focus_social,
         NULL::text as notes,
+        NULL::int as families_count,
+        NULL::text as organization_type,
+        NULL::text as leader_name,
+        NULL::text as leader_contact,
+        NULL::text as activities,
+        NULL::text as meeting_frequency,
         city,
         state
       FROM public_map_cache
@@ -865,7 +888,18 @@ app.get("/communities", async (c) => {
           WHERE lower(c.name) = lower(public_map_cache.community_name)
         )
     )
-    SELECT name, activity, focus_social, notes, city, state
+    SELECT name,
+           activity,
+           focus_social,
+           notes,
+           families_count,
+           organization_type,
+           leader_name,
+           leader_contact,
+           activities,
+           meeting_frequency,
+           city,
+           state
     FROM (
       SELECT * FROM catalog
       UNION ALL
@@ -902,23 +936,77 @@ app.post("/communities", async (c) => {
     typeof body.focus_social === "string" ? body.focus_social.trim() : null;
   const notes =
     typeof body.notes === "string" ? body.notes.trim() : null;
+  const familiesCount =
+    typeof body.families_count === "number" ? body.families_count : null;
+  const organizationType =
+    typeof body.organization_type === "string"
+      ? body.organization_type.trim()
+      : null;
+  const leaderName =
+    typeof body.leader_name === "string" ? body.leader_name.trim() : null;
+  const leaderContact =
+    typeof body.leader_contact === "string"
+      ? body.leader_contact.trim()
+      : null;
+  const activities =
+    typeof body.activities === "string" ? body.activities.trim() : null;
+  const meetingFrequency =
+    typeof body.meeting_frequency === "string"
+      ? body.meeting_frequency.trim()
+      : null;
   const city = typeof body.city === "string" ? body.city.trim() : null;
   const state = typeof body.state === "string" ? body.state.trim() : null;
 
   const rows = await sql(
     `
-    INSERT INTO communities (name, activity, focus_social, notes, city, state, created_by)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO communities (
+      name,
+      activity,
+      focus_social,
+      notes,
+      families_count,
+      organization_type,
+      leader_name,
+      leader_contact,
+      activities,
+      meeting_frequency,
+      city,
+      state,
+      created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
     ON CONFLICT (name) DO UPDATE SET
       activity = COALESCE(EXCLUDED.activity, communities.activity),
       focus_social = COALESCE(EXCLUDED.focus_social, communities.focus_social),
       notes = COALESCE(EXCLUDED.notes, communities.notes),
+      families_count = COALESCE(EXCLUDED.families_count, communities.families_count),
+      organization_type = COALESCE(EXCLUDED.organization_type, communities.organization_type),
+      leader_name = COALESCE(EXCLUDED.leader_name, communities.leader_name),
+      leader_contact = COALESCE(EXCLUDED.leader_contact, communities.leader_contact),
+      activities = COALESCE(EXCLUDED.activities, communities.activities),
+      meeting_frequency = COALESCE(EXCLUDED.meeting_frequency, communities.meeting_frequency),
       city = COALESCE(EXCLUDED.city, communities.city),
       state = COALESCE(EXCLUDED.state, communities.state),
       updated_at = now()
-    RETURNING id, name, activity, focus_social, notes, city, state
+    RETURNING id, name, activity, focus_social, notes, families_count,
+              organization_type, leader_name, leader_contact, activities,
+              meeting_frequency, city, state
     `,
-    [name, activity, focusSocial, notes, city, state, claims.sub]
+    [
+      name,
+      activity,
+      focusSocial,
+      notes,
+      familiesCount,
+      organizationType,
+      leaderName,
+      leaderContact,
+      activities,
+      meetingFrequency,
+      city,
+      state,
+      claims.sub,
+    ]
   );
 
   const item = rows[0] as { id: string; name: string };
@@ -1367,10 +1455,88 @@ app.get("/reports/user-summary", async (c) => {
   );
   const residents = await sql(
     `
-    SELECT id, full_name, city, state, community_name, status, created_at
-    FROM residents
-    WHERE created_by = $1 AND deleted_at IS NULL
-    ORDER BY created_at DESC
+    SELECT
+      r.id,
+      r.full_name,
+      r.doc_id,
+      r.birth_date,
+      r.sex,
+      r.phone,
+      r.email,
+      r.address,
+      r.city,
+      r.state,
+      r.neighborhood,
+      r.community_name,
+      r.household_size,
+      r.children_count,
+      r.elderly_count,
+      r.pcd_count,
+      r.status,
+      r.created_at,
+      rp.health_score,
+      rp.education_score,
+      rp.income_score,
+      rp.housing_score,
+      rp.security_score,
+      rp.energy_access,
+      rp.water_supply,
+      rp.water_treatment,
+      rp.sewage_type,
+      rp.garbage_collection,
+      rp.internet_access,
+      rp.transport_access,
+      rp.health_unit_distance_km,
+      rp.health_travel_time,
+      rp.health_has_regular_service,
+      rp.health_has_clinic,
+      rp.health_has_emergency,
+      rp.health_has_community_agent,
+      rp.health_has_ambulance,
+      rp.health_difficulties,
+      rp.education_level,
+      rp.education_has_school,
+      rp.education_has_transport,
+      rp.education_material_support,
+      rp.education_has_internet,
+      rp.income_monthly,
+      rp.income_contributors,
+      rp.income_occupation_type,
+      rp.income_has_social_program,
+      rp.income_social_program,
+      rp.housing_rooms,
+      rp.housing_area_m2,
+      rp.housing_land_m2,
+      rp.housing_type,
+      rp.housing_material,
+      rp.housing_has_bathroom,
+      rp.housing_has_water_treated,
+      rp.housing_condition,
+      rp.housing_risks,
+      rp.security_has_police_station,
+      rp.security_has_patrol,
+      rp.security_has_guard,
+      rp.security_occurrences,
+      rp.participation_types,
+      rp.participation_events,
+      rp.participation_engagement,
+      rp.demand_priorities,
+      rp.photo_types,
+      rp.vulnerability_level,
+      rp.technical_issues,
+      rp.referrals,
+      rp.agencies_contacted,
+      rp.consent_accepted,
+      mp.area_type AS point_area_type,
+      mp.reference_point AS point_reference_point,
+      mp.precision AS point_precision
+    FROM residents r
+    LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+    LEFT JOIN resident_point_assignments rpa
+      ON rpa.resident_id = r.id AND rpa.active = true
+    LEFT JOIN map_points mp ON mp.id = rpa.point_id
+    WHERE r.created_by = $1 AND r.deleted_at IS NULL
+    ORDER BY r.created_at DESC
     LIMIT 500
     `,
     [userId]
@@ -1828,12 +1994,19 @@ app.post("/residents", async (c) => {
     | {
         full_name?: string;
         doc_id?: string;
+        birth_date?: string;
+        sex?: string;
         phone?: string;
         email?: string;
         address?: string;
         city?: string;
         state?: string;
+        neighborhood?: string;
         community_name?: string;
+        household_size?: number;
+        children_count?: number;
+        elderly_count?: number;
+        pcd_count?: number;
         status?: "active" | "inactive";
         notes?: string;
       }
@@ -1845,20 +2018,47 @@ app.post("/residents", async (c) => {
   const rows = await sql(
     `
     INSERT INTO residents (
-      full_name, doc_id, phone, email, address, city, state, community_name, notes, status, created_by
+      full_name,
+      doc_id,
+      birth_date,
+      sex,
+      phone,
+      email,
+      address,
+      city,
+      state,
+      neighborhood,
+      community_name,
+      household_size,
+      children_count,
+      elderly_count,
+      pcd_count,
+      notes,
+      status,
+      created_by
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+      $16, $17, $18
+    )
     RETURNING id
     `,
     [
       body.full_name,
       body.doc_id ?? null,
+      body.birth_date ?? null,
+      body.sex ?? null,
       body.phone ?? null,
       body.email ?? null,
       body.address ?? null,
       body.city ?? null,
       body.state ?? null,
+      body.neighborhood ?? null,
       body.community_name ?? null,
+      body.household_size ?? null,
+      body.children_count ?? null,
+      body.elderly_count ?? null,
+      body.pcd_count ?? null,
       body.notes ?? null,
       body.status,
       actorId,
@@ -1893,12 +2093,19 @@ app.get("/residents/:id", async (c) => {
       r.id,
       r.full_name,
       r.doc_id,
+      r.birth_date,
+      r.sex,
       r.phone,
       r.email,
       r.address,
       r.city,
       r.state,
+      r.neighborhood,
       r.community_name,
+      r.household_size,
+      r.children_count,
+      r.elderly_count,
+      r.pcd_count,
       r.status,
       r.notes,
       r.created_at,
@@ -1907,16 +2114,26 @@ app.get("/residents/:id", async (c) => {
       rp.health_has_clinic,
       rp.health_has_emergency,
       rp.health_has_community_agent,
+      rp.health_unit_distance_km,
+      rp.health_travel_time,
+      rp.health_has_regular_service,
+      rp.health_has_ambulance,
+      rp.health_difficulties,
       rp.health_notes,
       rp.education_score,
       rp.education_level,
       rp.education_has_school,
       rp.education_has_transport,
       rp.education_material_support,
+      rp.education_has_internet,
       rp.education_notes,
       rp.income_score,
       rp.income_monthly,
       rp.income_source,
+      rp.income_contributors,
+      rp.income_occupation_type,
+      rp.income_has_social_program,
+      rp.income_social_program,
       rp.assets_has_car,
       rp.assets_has_fridge,
       rp.assets_has_furniture,
@@ -1926,20 +2143,46 @@ app.get("/residents/:id", async (c) => {
       rp.housing_area_m2,
       rp.housing_land_m2,
       rp.housing_type,
+      rp.housing_material,
+      rp.housing_has_bathroom,
+      rp.housing_has_water_treated,
+      rp.housing_condition,
+      rp.housing_risks,
       rp.security_score,
       rp.security_has_police_station,
       rp.security_has_patrol,
+      rp.security_has_guard,
+      rp.security_occurrences,
       rp.security_notes,
       rp.race_identity,
       rp.territory_narrative,
       rp.territory_memories,
       rp.territory_conflicts,
       rp.territory_culture,
+      rp.energy_access,
+      rp.water_supply,
+      rp.water_treatment,
+      rp.sewage_type,
+      rp.garbage_collection,
+      rp.internet_access,
+      rp.transport_access,
+      rp.participation_types,
+      rp.participation_events,
+      rp.participation_engagement,
+      rp.demand_priorities,
+      rp.photo_types,
+      rp.vulnerability_level,
+      rp.technical_issues,
+      rp.referrals,
+      rp.agencies_contacted,
+      rp.consent_accepted,
       mp.id AS point_id,
       mp.status AS point_status,
       mp.precision AS point_precision,
       mp.category AS point_category,
       mp.public_note AS point_public_note,
+      mp.area_type AS point_area_type,
+      mp.reference_point AS point_reference_point,
       mp.city AS point_city,
       mp.state AS point_state,
       mp.community_name AS point_community_name,
@@ -1965,12 +2208,19 @@ app.get("/residents/:id", async (c) => {
       id: row.id,
       full_name: row.full_name,
       doc_id: row.doc_id,
+      birth_date: row.birth_date,
+      sex: row.sex,
       phone: row.phone,
       email: row.email,
       address: row.address,
       city: row.city,
       state: row.state,
+      neighborhood: row.neighborhood,
       community_name: row.community_name,
+      household_size: row.household_size,
+      children_count: row.children_count,
+      elderly_count: row.elderly_count,
+      pcd_count: row.pcd_count,
       status: row.status,
       notes: row.notes,
       created_at: row.created_at,
@@ -1981,16 +2231,26 @@ app.get("/residents/:id", async (c) => {
       health_has_clinic: row.health_has_clinic,
       health_has_emergency: row.health_has_emergency,
       health_has_community_agent: row.health_has_community_agent,
+      health_unit_distance_km: row.health_unit_distance_km,
+      health_travel_time: row.health_travel_time,
+      health_has_regular_service: row.health_has_regular_service,
+      health_has_ambulance: row.health_has_ambulance,
+      health_difficulties: row.health_difficulties,
       health_notes: row.health_notes,
       education_score: row.education_score,
       education_level: row.education_level,
       education_has_school: row.education_has_school,
       education_has_transport: row.education_has_transport,
       education_material_support: row.education_material_support,
+      education_has_internet: row.education_has_internet,
       education_notes: row.education_notes,
       income_score: row.income_score,
       income_monthly: row.income_monthly,
       income_source: row.income_source,
+      income_contributors: row.income_contributors,
+      income_occupation_type: row.income_occupation_type,
+      income_has_social_program: row.income_has_social_program,
+      income_social_program: row.income_social_program,
       assets_has_car: row.assets_has_car,
       assets_has_fridge: row.assets_has_fridge,
       assets_has_furniture: row.assets_has_furniture,
@@ -2000,15 +2260,39 @@ app.get("/residents/:id", async (c) => {
       housing_area_m2: row.housing_area_m2,
       housing_land_m2: row.housing_land_m2,
       housing_type: row.housing_type,
+      housing_material: row.housing_material,
+      housing_has_bathroom: row.housing_has_bathroom,
+      housing_has_water_treated: row.housing_has_water_treated,
+      housing_condition: row.housing_condition,
+      housing_risks: row.housing_risks,
       security_score: row.security_score,
       security_has_police_station: row.security_has_police_station,
       security_has_patrol: row.security_has_patrol,
+      security_has_guard: row.security_has_guard,
+      security_occurrences: row.security_occurrences,
       security_notes: row.security_notes,
       race_identity: row.race_identity,
       territory_narrative: row.territory_narrative,
       territory_memories: row.territory_memories,
       territory_conflicts: row.territory_conflicts,
       territory_culture: row.territory_culture,
+      energy_access: row.energy_access,
+      water_supply: row.water_supply,
+      water_treatment: row.water_treatment,
+      sewage_type: row.sewage_type,
+      garbage_collection: row.garbage_collection,
+      internet_access: row.internet_access,
+      transport_access: row.transport_access,
+      participation_types: row.participation_types,
+      participation_events: row.participation_events,
+      participation_engagement: row.participation_engagement,
+      demand_priorities: row.demand_priorities,
+      photo_types: row.photo_types,
+      vulnerability_level: row.vulnerability_level,
+      technical_issues: row.technical_issues,
+      referrals: row.referrals,
+      agencies_contacted: row.agencies_contacted,
+      consent_accepted: row.consent_accepted,
     } : null,
     point: pointId
       ? {
@@ -2017,6 +2301,8 @@ app.get("/residents/:id", async (c) => {
           precision: row.point_precision,
           category: row.point_category,
           public_note: row.point_public_note,
+          area_type: row.point_area_type,
+          reference_point: row.point_reference_point,
           city: row.point_city,
           state: row.point_state,
           community_name: row.point_community_name,
@@ -2051,12 +2337,19 @@ app.put("/residents/:id", async (c) => {
   const allowed = [
     "full_name",
     "doc_id",
+    "birth_date",
+    "sex",
     "phone",
     "email",
     "address",
     "city",
     "state",
+    "neighborhood",
     "community_name",
+    "household_size",
+    "children_count",
+    "elderly_count",
+    "pcd_count",
     "notes",
     "status",
   ];
@@ -2145,16 +2438,26 @@ app.post("/residents/:id/profile", async (c) => {
     "health_has_clinic",
     "health_has_emergency",
     "health_has_community_agent",
+    "health_unit_distance_km",
+    "health_travel_time",
+    "health_has_regular_service",
+    "health_has_ambulance",
+    "health_difficulties",
     "health_notes",
     "education_score",
     "education_level",
     "education_has_school",
     "education_has_transport",
     "education_material_support",
+    "education_has_internet",
     "education_notes",
     "income_score",
     "income_monthly",
     "income_source",
+    "income_contributors",
+    "income_occupation_type",
+    "income_has_social_program",
+    "income_social_program",
     "assets_has_car",
     "assets_has_fridge",
     "assets_has_furniture",
@@ -2164,15 +2467,39 @@ app.post("/residents/:id/profile", async (c) => {
     "housing_area_m2",
     "housing_land_m2",
     "housing_type",
+    "housing_material",
+    "housing_has_bathroom",
+    "housing_has_water_treated",
+    "housing_condition",
+    "housing_risks",
     "security_score",
     "security_has_police_station",
     "security_has_patrol",
+    "security_has_guard",
+    "security_occurrences",
     "security_notes",
     "race_identity",
     "territory_narrative",
     "territory_memories",
     "territory_conflicts",
     "territory_culture",
+    "energy_access",
+    "water_supply",
+    "water_treatment",
+    "sewage_type",
+    "garbage_collection",
+    "internet_access",
+    "transport_access",
+    "participation_types",
+    "participation_events",
+    "participation_engagement",
+    "demand_priorities",
+    "photo_types",
+    "vulnerability_level",
+    "technical_issues",
+    "referrals",
+    "agencies_contacted",
+    "consent_accepted",
   ];
   const values = fields.map((field) => body[field] ?? null);
   const placeholders = values.map((_, idx) => `$${idx + 2}`);
@@ -2211,6 +2538,8 @@ app.post("/points", async (c) => {
         precision?: "approx" | "exact";
         category?: string;
         public_note?: string;
+        area_type?: string;
+        reference_point?: string;
         city?: string;
         state?: string;
         community_name?: string;
@@ -2242,12 +2571,12 @@ app.post("/points", async (c) => {
     `
     INSERT INTO map_points (
       lat, lng, public_lat, public_lng, accuracy_m, precision, status, category, public_note,
-      city, state, community_name, source_location, geog, created_by
+      area_type, reference_point, city, state, community_name, source_location, geog, created_by
     )
     VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
       ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
-      $14
+      $15
     )
     RETURNING id, public_lat, public_lng, precision
     `,
@@ -2261,6 +2590,8 @@ app.post("/points", async (c) => {
       body.status,
       body.category ?? null,
       body.public_note ?? null,
+      body.area_type ?? null,
+      body.reference_point ?? null,
       body.city ?? null,
       body.state ?? null,
       body.community_name ?? null,
@@ -2303,10 +2634,12 @@ app.put("/points/:id", async (c) => {
         precision?: "approx" | "exact";
         category?: string;
         public_note?: string;
+        area_type?: string;
+        reference_point?: string;
         city?: string;
         state?: string;
         community_name?: string;
-        source_location?: string;
+        location_text?: string;
       }
     | null;
   if (!body) {
@@ -2322,12 +2655,15 @@ app.put("/points/:id", async (c) => {
   if (body.category !== undefined) fields.push(["category", body.category]);
   if (body.public_note !== undefined)
     fields.push(["public_note", body.public_note]);
+  if (body.area_type !== undefined) fields.push(["area_type", body.area_type]);
+  if (body.reference_point !== undefined)
+    fields.push(["reference_point", body.reference_point]);
   if (body.city !== undefined) fields.push(["city", body.city]);
   if (body.state !== undefined) fields.push(["state", body.state]);
   if (body.community_name !== undefined)
     fields.push(["community_name", body.community_name]);
-  if (body.source_location !== undefined)
-    fields.push(["source_location", body.source_location]);
+  if (body.location_text !== undefined)
+    fields.push(["source_location", body.location_text]);
   if (fields.length === 0) {
     return jsonError(c, 400, "No valid fields to update");
   }

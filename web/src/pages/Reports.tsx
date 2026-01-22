@@ -3,37 +3,26 @@ import { Link } from "react-router-dom";
 import PublicMapSection from "../components/PublicMapSection";
 import citiesData from "../data/brazil-cities.json";
 import { BRAZIL_STATES } from "../data/brazil-states";
-import { exportReport, fetchUserSummary, getAuthToken } from "../services/api";
+import {
+  exportReport,
+  fetchUserSummary,
+  getAuthToken,
+  type UserSummaryResponse,
+} from "../services/api";
 
 export default function Reports() {
   const isLoggedIn = Boolean(getAuthToken());
+  const formatBool = (value?: boolean | null) =>
+    value === null || value === undefined ? "-" : value ? "Sim" : "Nao";
   const [filterState, setFilterState] = useState("");
   const [filterCity, setFilterCity] = useState("");
   const [exportFormat, setExportFormat] = useState<"PDF" | "CSV" | "JSON">("PDF");
   const [exportName, setExportName] = useState("");
   const [exportLoading, setExportLoading] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
-  const [userSummary, setUserSummary] = useState<{
-    summary?: { total_residents?: number };
-    averages?: {
-      health_score?: string;
-      education_score?: string;
-      income_score?: string;
-      income_monthly?: string;
-      housing_score?: string;
-      security_score?: string;
-    };
-    monthly?: Array<{ month: string; total: number }>;
-    residents?: Array<{
-      id: string;
-      full_name: string;
-      city?: string | null;
-      state?: string | null;
-      status: string;
-      created_at: string;
-    }>;
-    active_users?: number | null;
-  } | null>(null);
+  const [userSummary, setUserSummary] = useState<UserSummaryResponse | null>(
+    null
+  );
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
   type BrazilCity = { name: string; state: string };
@@ -322,10 +311,14 @@ export default function Reports() {
                   <tr>
                     <th>ID</th>
                     <th>Nome</th>
+                    <th>Comunidade</th>
                     <th>Cidade</th>
                     <th>Estado</th>
+                    <th>Bairro</th>
+                    <th>Moradores</th>
                     <th>Status</th>
                     <th>Criado em</th>
+                    <th>Detalhes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -334,17 +327,110 @@ export default function Reports() {
                       <tr key={resident.id}>
                         <td>{resident.id}</td>
                         <td>{resident.full_name}</td>
+                        <td>{resident.community_name ?? "-"}</td>
                         <td>{resident.city ?? "-"}</td>
                         <td>{resident.state ?? "-"}</td>
+                        <td>{resident.neighborhood ?? "-"}</td>
+                        <td>{resident.household_size ?? "-"}</td>
                         <td>{resident.status}</td>
                         <td>
                           {new Date(resident.created_at).toLocaleDateString()}
+                        </td>
+                        <td>
+                          <details>
+                            <summary>Ver detalhes</summary>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Identificacao</strong>
+                                <p>CPF/RG: {resident.doc_id ?? "-"}</p>
+                                <p>Nascimento: {resident.birth_date ?? "-"}</p>
+                                <p>Sexo: {resident.sex ?? "-"}</p>
+                                <p>Telefone: {resident.phone ?? "-"}</p>
+                                <p>Email: {resident.email ?? "-"}</p>
+                                <p>Endereco: {resident.address ?? "-"}</p>
+                                <p>Criancas: {resident.children_count ?? "-"}</p>
+                                <p>Idosos: {resident.elderly_count ?? "-"}</p>
+                                <p>PCD: {resident.pcd_count ?? "-"}</p>
+                              </div>
+                              <div>
+                                <strong>Localizacao</strong>
+                                <p>Cidade: {resident.city ?? "-"}</p>
+                                <p>Estado: {resident.state ?? "-"}</p>
+                                <p>Bairro: {resident.neighborhood ?? "-"}</p>
+                                <p>Area: {resident.point_area_type ?? "-"}</p>
+                                <p>Referencia: {resident.point_reference_point ?? "-"}</p>
+                                <p>Precisao: {resident.point_precision ?? "-"}</p>
+                              </div>
+                              <div>
+                                <strong>Infraestrutura</strong>
+                                <p>Energia: {resident.energy_access ?? "-"}</p>
+                                <p>Agua: {resident.water_supply ?? "-"}</p>
+                                <p>Tratamento: {resident.water_treatment ?? "-"}</p>
+                                <p>Esgoto: {resident.sewage_type ?? "-"}</p>
+                                <p>Lixo: {resident.garbage_collection ?? "-"}</p>
+                                <p>Internet: {formatBool(resident.internet_access)}</p>
+                                <p>Transporte: {formatBool(resident.transport_access)}</p>
+                              </div>
+                              <div>
+                                <strong>Saude e educacao</strong>
+                                <p>Posto: {formatBool(resident.health_has_clinic)}</p>
+                                <p>Emergencia: {formatBool(resident.health_has_emergency)}</p>
+                                <p>Agente: {formatBool(resident.health_has_community_agent)}</p>
+                                <p>Unidade (km): {resident.health_unit_distance_km ?? "-"}</p>
+                                <p>Tempo: {resident.health_travel_time ?? "-"}</p>
+                                <p>Regular: {formatBool(resident.health_has_regular_service)}</p>
+                                <p>Ambulancia: {formatBool(resident.health_has_ambulance)}</p>
+                                <p>Dificuldades: {resident.health_difficulties ?? "-"}</p>
+                                <p>Escolaridade: {resident.education_level ?? "-"}</p>
+                                <p>Escola: {formatBool(resident.education_has_school)}</p>
+                                <p>Transporte: {formatBool(resident.education_has_transport)}</p>
+                                <p>Material: {formatBool(resident.education_material_support)}</p>
+                                <p>Internet estudo: {formatBool(resident.education_has_internet)}</p>
+                              </div>
+                              <div>
+                                <strong>Renda e moradia</strong>
+                                <p>Renda: {resident.income_monthly ?? "-"}</p>
+                                <p>Contribuintes: {resident.income_contributors ?? "-"}</p>
+                                <p>Ocupacao: {resident.income_occupation_type ?? "-"}</p>
+                                <p>Programa social: {formatBool(resident.income_has_social_program)}</p>
+                                <p>Qual: {resident.income_social_program ?? "-"}</p>
+                                <p>Moradia: {resident.housing_type ?? "-"}</p>
+                                <p>Quartos: {resident.housing_rooms ?? "-"}</p>
+                                <p>Area (m2): {resident.housing_area_m2 ?? "-"}</p>
+                                <p>Terreno (m2): {resident.housing_land_m2 ?? "-"}</p>
+                                <p>Material: {resident.housing_material ?? "-"}</p>
+                                <p>Banheiro: {formatBool(resident.housing_has_bathroom)}</p>
+                                <p>Agua tratada: {formatBool(resident.housing_has_water_treated)}</p>
+                                <p>Condicao: {resident.housing_condition ?? "-"}</p>
+                                <p>Riscos: {resident.housing_risks ?? "-"}</p>
+                              </div>
+                              <div>
+                                <strong>Seguranca e participacao</strong>
+                                <p>Delegacia: {formatBool(resident.security_has_police_station)}</p>
+                                <p>Patrulhamento: {formatBool(resident.security_has_patrol)}</p>
+                                <p>Guarda: {formatBool(resident.security_has_guard)}</p>
+                                <p>Ocorrencias: {resident.security_occurrences ?? "-"}</p>
+                                <p>Participacao: {resident.participation_types ?? "-"}</p>
+                                <p>Eventos: {resident.participation_events ?? "-"}</p>
+                                <p>Engajamento: {resident.participation_engagement ?? "-"}</p>
+                              </div>
+                              <div>
+                                <strong>Demandas e avaliacao</strong>
+                                <p>Demandas: {resident.demand_priorities ?? "-"}</p>
+                                <p>Registros visuais: {resident.photo_types ?? "-"}</p>
+                                <p>Vulnerabilidade: {resident.vulnerability_level ?? "-"}</p>
+                                <p>Problemas: {resident.technical_issues ?? "-"}</p>
+                                <p>Encaminhamentos: {resident.referrals ?? "-"}</p>
+                                <p>Orgaos: {resident.agencies_contacted ?? "-"}</p>
+                              </div>
+                            </div>
+                          </details>
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6}>
+                      <td colSpan={10}>
                         <div className="table-empty">
                           Nenhum cadastro registrado ainda.
                         </div>

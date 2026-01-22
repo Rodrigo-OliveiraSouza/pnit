@@ -882,6 +882,14 @@ textarea {
   align-items: center;
 }
 
+.checkbox-inline {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.9rem;
+  color: rgba(var(--color-ink-rgb), 0.7);
+}
+
 .report-ready {
   margin-top: 0.8rem;
   background: rgba(var(--color-sun-rgb), 0.2);
@@ -1387,6 +1395,23 @@ table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.95rem;
+}
+
+details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.details-grid p {
+  margin: 0.2rem 0;
+  font-size: 0.9rem;
 }
 
 th,

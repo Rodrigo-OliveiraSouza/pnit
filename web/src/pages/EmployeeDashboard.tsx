@@ -52,15 +52,24 @@ const normalizeCommunityName = (value: string) => value.trim().toLowerCase();
 const initialFormState = {
   fullName: "",
   docId: "",
+  birthDate: "",
+  sex: "",
   phone: "",
   email: "",
   address: "",
   city: "",
   state: "",
+  neighborhood: "",
   communityName: "",
+  householdSize: "",
+  childrenCount: "",
+  elderlyCount: "",
+  pcdCount: "",
   status: "active" as "active" | "inactive",
   category: "Residencia",
   precision: "approx" as "approx" | "exact",
+  areaType: "",
+  referencePoint: "",
   publicNote: "",
   notes: "",
   locationText: "",
@@ -69,17 +78,34 @@ const initialFormState = {
   territoryMemories: "",
   territoryConflicts: "",
   territoryCulture: "",
+  energyAccess: "",
+  waterSupply: "",
+  waterTreatment: "",
+  sewageType: "",
+  garbageCollection: "",
+  internetAccess: false,
+  transportAccess: false,
   healthHasClinic: false,
   healthHasEmergency: false,
   healthHasCommunityAgent: false,
+  healthUnitDistanceKm: "",
+  healthTravelTime: "",
+  healthHasRegularService: false,
+  healthHasAmbulance: false,
+  healthDifficulties: "",
   healthNotes: "",
   educationLevel: "",
   educationHasSchool: false,
   educationHasTransport: false,
   educationMaterialSupport: false,
+  educationHasInternet: false,
   educationNotes: "",
   incomeMonthly: "",
   incomeSource: "",
+  incomeContributors: "",
+  incomeOccupationType: "",
+  incomeHasSocialProgram: false,
+  incomeSocialProgram: "",
   assetsHasCar: false,
   assetsHasFridge: false,
   assetsHasFurniture: false,
@@ -88,9 +114,26 @@ const initialFormState = {
   housingAreaM2: "",
   housingLandM2: "",
   housingType: "",
+  housingMaterial: "",
+  housingHasBathroom: false,
+  housingHasWaterTreated: false,
+  housingCondition: "",
+  housingRisks: "",
   securityHasPoliceStation: false,
   securityHasPatrol: false,
+  securityHasGuard: false,
+  securityOccurrences: "",
   securityNotes: "",
+  participationTypes: "",
+  participationEvents: "",
+  participationEngagement: "",
+  demandPriorities: "",
+  photoTypes: "",
+  vulnerabilityLevel: "",
+  technicalIssues: "",
+  referrals: "",
+  agenciesContacted: "",
+  consentAccepted: false,
 };
 
 type IndicatorSummary = {
@@ -126,6 +169,12 @@ type CommunityDraft = {
   activity: string;
   focusSocial: string;
   notes: string;
+  familiesCount: string;
+  organizationType: string;
+  leaderName: string;
+  leaderContact: string;
+  activities: string;
+  meetingFrequency: string;
 };
 
 function clampScore(value: number) {
@@ -289,6 +338,12 @@ export default function EmployeeDashboard() {
     activity: "",
     focusSocial: "",
     notes: "",
+    familiesCount: "",
+    organizationType: "",
+    leaderName: "",
+    leaderContact: "",
+    activities: "",
+    meetingFrequency: "",
   });
   const [communitySaving, setCommunitySaving] = useState(false);
   const [communityFeedback, setCommunityFeedback] = useState<string | null>(null);
@@ -411,6 +466,14 @@ export default function EmployeeDashboard() {
       activity: selectedCommunity?.activity ?? "",
       focusSocial: selectedCommunity?.focus_social ?? "",
       notes: selectedCommunity?.notes ?? "",
+      familiesCount: selectedCommunity?.families_count
+        ? String(selectedCommunity.families_count)
+        : "",
+      organizationType: selectedCommunity?.organization_type ?? "",
+      leaderName: selectedCommunity?.leader_name ?? "",
+      leaderContact: selectedCommunity?.leader_contact ?? "",
+      activities: selectedCommunity?.activities ?? "",
+      meetingFrequency: selectedCommunity?.meeting_frequency ?? "",
     });
     setShowCommunityForm(true);
   };
@@ -421,6 +484,16 @@ export default function EmployeeDashboard() {
       setCommunityFeedback("Informe o nome da comunidade.");
       return;
     }
+    const familiesCountValue = communityDraft.familiesCount.trim()
+      ? Number(communityDraft.familiesCount)
+      : null;
+    if (
+      communityDraft.familiesCount.trim() &&
+      !Number.isFinite(familiesCountValue)
+    ) {
+      setCommunityFeedback("Informe a quantidade de familias.");
+      return;
+    }
     setCommunitySaving(true);
     setCommunityFeedback(null);
     try {
@@ -429,6 +502,12 @@ export default function EmployeeDashboard() {
         activity: communityDraft.activity.trim() || undefined,
         focus_social: communityDraft.focusSocial.trim() || undefined,
         notes: communityDraft.notes.trim() || undefined,
+        families_count: familiesCountValue ?? undefined,
+        organization_type: communityDraft.organizationType.trim() || undefined,
+        leader_name: communityDraft.leaderName.trim() || undefined,
+        leader_contact: communityDraft.leaderContact.trim() || undefined,
+        activities: communityDraft.activities.trim() || undefined,
+        meeting_frequency: communityDraft.meetingFrequency.trim() || undefined,
         city: formState.city || undefined,
         state: formState.state || undefined,
       });
@@ -455,6 +534,12 @@ export default function EmployeeDashboard() {
         activity: "",
         focusSocial: "",
         notes: "",
+        familiesCount: "",
+        organizationType: "",
+        leaderName: "",
+        leaderContact: "",
+        activities: "",
+        meetingFrequency: "",
       });
     } catch (error) {
       const message =
@@ -526,6 +611,12 @@ export default function EmployeeDashboard() {
       activity: "",
       focusSocial: "",
       notes: "",
+      familiesCount: "",
+      organizationType: "",
+      leaderName: "",
+      leaderContact: "",
+      activities: "",
+      meetingFrequency: "",
     });
     setCommunityFeedback(null);
   };
@@ -561,6 +652,13 @@ export default function EmployeeDashboard() {
       });
       return;
     }
+    if (!formState.consentAccepted) {
+      setSaveFeedback({
+        type: "error",
+        message: "Aceite o termo de consentimento para continuar.",
+      });
+      return;
+    }
     if (!photoFile) {
       setSaveFeedback({
         type: "error",
@@ -572,15 +670,31 @@ export default function EmployeeDashboard() {
     setSaving(true);
     setSaveFeedback(null);
     try {
+      const householdSize = parseNumber(formState.householdSize);
+      const childrenCount = parseNumber(formState.childrenCount);
+      const elderlyCount = parseNumber(formState.elderlyCount);
+      const pcdCount = parseNumber(formState.pcdCount);
+      const healthDistance = parseNumber(formState.healthUnitDistanceKm);
+      const incomeContributors = parseNumber(formState.incomeContributors);
+      const rooms = parseNumber(formState.housingRooms);
+      const houseArea = parseNumber(formState.housingAreaM2);
+      const landArea = parseNumber(formState.housingLandM2);
       const residentPayload: CreateResidentPayload = {
         full_name: formState.fullName,
         doc_id: formState.docId || undefined,
+        birth_date: formState.birthDate || undefined,
+        sex: formState.sex || undefined,
         phone: formState.phone || undefined,
         email: formState.email || undefined,
         address: formState.address || undefined,
         city: formState.city || undefined,
         state: formState.state || undefined,
+        neighborhood: formState.neighborhood || undefined,
         community_name: formState.communityName || undefined,
+        household_size: householdSize ?? undefined,
+        children_count: childrenCount ?? undefined,
+        elderly_count: elderlyCount ?? undefined,
+        pcd_count: pcdCount ?? undefined,
         status: formState.status,
         notes: formState.notes || undefined,
       };
@@ -593,6 +707,8 @@ export default function EmployeeDashboard() {
         precision: formState.precision,
         category: formState.category,
         public_note: formState.publicNote || undefined,
+        area_type: formState.areaType || undefined,
+        reference_point: formState.referencePoint || undefined,
         city: formState.city || undefined,
         state: formState.state || undefined,
         community_name: formState.communityName || undefined,
@@ -610,42 +726,70 @@ export default function EmployeeDashboard() {
         health_has_clinic: formState.healthHasClinic,
         health_has_emergency: formState.healthHasEmergency,
         health_has_community_agent: formState.healthHasCommunityAgent,
+        health_unit_distance_km: healthDistance ?? null,
+        health_travel_time: formState.healthTravelTime || null,
+        health_has_regular_service: formState.healthHasRegularService,
+        health_has_ambulance: formState.healthHasAmbulance,
+        health_difficulties: formState.healthDifficulties || null,
         health_notes: formState.healthNotes || null,
         education_score: indicators.education.score,
         education_level: formState.educationLevel || null,
         education_has_school: formState.educationHasSchool,
         education_has_transport: formState.educationHasTransport,
         education_material_support: formState.educationMaterialSupport,
+        education_has_internet: formState.educationHasInternet,
         education_notes: formState.educationNotes || null,
         income_score: indicators.income.score,
         income_monthly: formState.incomeMonthly
           ? Number(formState.incomeMonthly)
           : null,
         income_source: formState.incomeSource || null,
+        income_contributors: incomeContributors ?? null,
+        income_occupation_type: formState.incomeOccupationType || null,
+        income_has_social_program: formState.incomeHasSocialProgram,
+        income_social_program: formState.incomeSocialProgram || null,
         assets_has_car: formState.assetsHasCar,
         assets_has_fridge: formState.assetsHasFridge,
         assets_has_furniture: formState.assetsHasFurniture,
         assets_has_land: formState.assetsHasLand,
         housing_score: indicators.housing.score,
-        housing_rooms: formState.housingRooms
-          ? Number(formState.housingRooms)
-          : null,
-        housing_area_m2: formState.housingAreaM2
-          ? Number(formState.housingAreaM2)
-          : null,
-        housing_land_m2: formState.housingLandM2
-          ? Number(formState.housingLandM2)
-          : null,
+        housing_rooms: rooms ?? null,
+        housing_area_m2: houseArea ?? null,
+        housing_land_m2: landArea ?? null,
         housing_type: formState.housingType || null,
+        housing_material: formState.housingMaterial || null,
+        housing_has_bathroom: formState.housingHasBathroom,
+        housing_has_water_treated: formState.housingHasWaterTreated,
+        housing_condition: formState.housingCondition || null,
+        housing_risks: formState.housingRisks || null,
         security_score: indicators.security.score,
         security_has_police_station: formState.securityHasPoliceStation,
         security_has_patrol: formState.securityHasPatrol,
+        security_has_guard: formState.securityHasGuard,
+        security_occurrences: formState.securityOccurrences || null,
         security_notes: formState.securityNotes || null,
         race_identity: formState.raceIdentity || null,
         territory_narrative: formState.territoryNarrative || null,
         territory_memories: formState.territoryMemories || null,
         territory_conflicts: formState.territoryConflicts || null,
         territory_culture: formState.territoryCulture || null,
+        energy_access: formState.energyAccess || null,
+        water_supply: formState.waterSupply || null,
+        water_treatment: formState.waterTreatment || null,
+        sewage_type: formState.sewageType || null,
+        garbage_collection: formState.garbageCollection || null,
+        internet_access: formState.internetAccess,
+        transport_access: formState.transportAccess,
+        participation_types: formState.participationTypes || null,
+        participation_events: formState.participationEvents || null,
+        participation_engagement: formState.participationEngagement || null,
+        demand_priorities: formState.demandPriorities || null,
+        photo_types: formState.photoTypes || null,
+        vulnerability_level: formState.vulnerabilityLevel || null,
+        technical_issues: formState.technicalIssues || null,
+        referrals: formState.referrals || null,
+        agencies_contacted: formState.agenciesContacted || null,
+        consent_accepted: formState.consentAccepted,
       });
 
       const formData = new FormData();
@@ -882,6 +1026,33 @@ export default function EmployeeDashboard() {
                   />
                 </label>
               </div>
+              <div className="form-row">
+                <label>
+                  Data de nascimento
+                  <input
+                    type="date"
+                    value={formState.birthDate}
+                    onChange={(event) =>
+                      handleFieldChange("birthDate", event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  Sexo (opcional)
+                  <select
+                    className="select"
+                    value={formState.sex}
+                    onChange={(event) =>
+                      handleFieldChange("sex", event.target.value)
+                    }
+                  >
+                    <option value="">Nao informado</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="feminino">Feminino</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </label>
+              </div>
               <label>
                 Email
                 <input
@@ -904,6 +1075,76 @@ export default function EmployeeDashboard() {
                   }
                 />
               </label>
+              <div className="form-row">
+                <label>
+                  Bairro ou zona rural
+                  <input
+                    type="text"
+                    placeholder="Bairro ou zona rural"
+                    value={formState.neighborhood}
+                    onChange={(event) =>
+                      handleFieldChange("neighborhood", event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  Ponto de referencia
+                  <input
+                    type="text"
+                    placeholder="Referencia local"
+                    value={formState.referencePoint}
+                    onChange={(event) =>
+                      handleFieldChange("referencePoint", event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  Moradores no domicilio
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formState.householdSize}
+                    onChange={(event) =>
+                      handleFieldChange("householdSize", event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  Quantas criancas
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formState.childrenCount}
+                    onChange={(event) =>
+                      handleFieldChange("childrenCount", event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  Quantos idosos
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formState.elderlyCount}
+                    onChange={(event) =>
+                      handleFieldChange("elderlyCount", event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  Pessoas com deficiencia (PCD)
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formState.pcdCount}
+                    onChange={(event) =>
+                      handleFieldChange("pcdCount", event.target.value)
+                    }
+                  />
+                </label>
+              </div>
               <label>
                 Comunidade quilombola
                 <div className="community-input-row">
@@ -967,6 +1208,42 @@ export default function EmployeeDashboard() {
                         {(selectedCommunity?.state || formState.state || "")}
                       </strong>
                     </div>
+                    <div>
+                      <span>Familias</span>
+                      <strong>
+                        {selectedCommunity?.families_count ?? "Nao informado"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Organizacao</span>
+                      <strong>
+                        {selectedCommunity?.organization_type || "Nao informado"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Lideranca</span>
+                      <strong>
+                        {selectedCommunity?.leader_name || "Nao informado"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Contato lideranca</span>
+                      <strong>
+                        {selectedCommunity?.leader_contact || "Nao informado"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Atividades coletivas</span>
+                      <strong>
+                        {selectedCommunity?.activities || "Nao informado"}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Reunioes</span>
+                      <strong>
+                        {selectedCommunity?.meeting_frequency || "Nao informado"}
+                      </strong>
+                    </div>
                   </div>
                   {selectedCommunity?.notes && (
                     <p className="muted">{selectedCommunity.notes}</p>
@@ -1013,6 +1290,92 @@ export default function EmployeeDashboard() {
                           )
                         }
                       />
+                    </label>
+                    <label>
+                      Familias (aprox.)
+                      <input
+                        type="number"
+                        value={communityDraft.familiesCount}
+                        onChange={(event) =>
+                          handleCommunityDraftChange(
+                            "familiesCount",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Organizacao social
+                      <input
+                        type="text"
+                        placeholder="Associacao, cooperativa, grupo..."
+                        value={communityDraft.organizationType}
+                        onChange={(event) =>
+                          handleCommunityDraftChange(
+                            "organizationType",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Lideranca (nome)
+                      <input
+                        type="text"
+                        value={communityDraft.leaderName}
+                        onChange={(event) =>
+                          handleCommunityDraftChange(
+                            "leaderName",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Lideranca (contato)
+                      <input
+                        type="text"
+                        value={communityDraft.leaderContact}
+                        onChange={(event) =>
+                          handleCommunityDraftChange(
+                            "leaderContact",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Atividades coletivas
+                      <input
+                        type="text"
+                        placeholder="Agricultura, artesanato, projetos..."
+                        value={communityDraft.activities}
+                        onChange={(event) =>
+                          handleCommunityDraftChange(
+                            "activities",
+                            event.target.value
+                          )
+                        }
+                      />
+                    </label>
+                    <label>
+                      Frequencia de reunioes
+                      <select
+                        className="select"
+                        value={communityDraft.meetingFrequency}
+                        onChange={(event) =>
+                          handleCommunityDraftChange(
+                            "meetingFrequency",
+                            event.target.value
+                          )
+                        }
+                      >
+                        <option value="">Selecione</option>
+                        <option value="semanal">Semanal</option>
+                        <option value="mensal">Mensal</option>
+                        <option value="eventual">Eventual</option>
+                        <option value="inexistente">Inexistente</option>
+                      </select>
                     </label>
                     <label>
                       Observacoes
@@ -1084,6 +1447,39 @@ export default function EmployeeDashboard() {
                   </select>
                 </label>
               </div>
+              <div className="form-row">
+                <label>
+                  Tipo de area
+                  <select
+                    className="select"
+                    value={formState.areaType}
+                    onChange={(event) =>
+                      handleFieldChange("areaType", event.target.value)
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="urbana">Urbana</option>
+                    <option value="rural">Rural</option>
+                    <option value="periurbana">Periurbana</option>
+                  </select>
+                </label>
+                <label>
+                  Precisao da localizacao
+                  <select
+                    className="select"
+                    value={formState.precision}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "precision",
+                        event.target.value === "exact" ? "exact" : "approx"
+                      )
+                    }
+                  >
+                    <option value="approx">Aproximada</option>
+                    <option value="exact">Exata</option>
+                  </select>
+                </label>
+              </div>
               <label>
                 Localizacao do WhatsApp (link ou coordenada)
                 <input
@@ -1135,22 +1531,6 @@ export default function EmployeeDashboard() {
                     <option>Outro</option>
                   </select>
                 </label>
-                <label>
-                  Precisao publica
-                  <select
-                    className="select"
-                    value={formState.precision}
-                    onChange={(event) =>
-                      handleFieldChange(
-                        "precision",
-                        event.target.value === "exact" ? "exact" : "approx"
-                      )
-                    }
-                  >
-                    <option value="approx">Aproximado</option>
-                    <option value="exact">Exato (restrito)</option>
-                  </select>
-                </label>
               </div>
               <label>
                 Informacao publica no mapa
@@ -1200,6 +1580,119 @@ export default function EmployeeDashboard() {
                   }
                 />
               </label>
+
+              <div className="form-note">
+                <strong>Infraestrutura basica</strong>
+              </div>
+              <div className="form-row">
+                <label>
+                  Energia eletrica
+                  <select
+                    className="select"
+                    value={formState.energyAccess}
+                    onChange={(event) =>
+                      handleFieldChange("energyAccess", event.target.value)
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="regular">Regular</option>
+                    <option value="irregular">Irregular</option>
+                    <option value="inexistente">Inexistente</option>
+                  </select>
+                </label>
+                <label>
+                  Abastecimento de agua
+                  <select
+                    className="select"
+                    value={formState.waterSupply}
+                    onChange={(event) =>
+                      handleFieldChange("waterSupply", event.target.value)
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="rede_publica">Rede publica</option>
+                    <option value="poco">Poco</option>
+                    <option value="rio">Rio</option>
+                    <option value="carro_pipa">Carro-pipa</option>
+                  </select>
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  Tratamento da agua
+                  <select
+                    className="select"
+                    value={formState.waterTreatment}
+                    onChange={(event) =>
+                      handleFieldChange("waterTreatment", event.target.value)
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="sim">Sim</option>
+                    <option value="nao">Nao</option>
+                  </select>
+                </label>
+                <label>
+                  Esgotamento sanitario
+                  <select
+                    className="select"
+                    value={formState.sewageType}
+                    onChange={(event) =>
+                      handleFieldChange("sewageType", event.target.value)
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="rede">Rede</option>
+                    <option value="fossa">Fossa</option>
+                    <option value="inexistente">Inexistente</option>
+                  </select>
+                </label>
+              </div>
+              <div className="form-row">
+                <label>
+                  Coleta de lixo
+                  <select
+                    className="select"
+                    value={formState.garbageCollection}
+                    onChange={(event) =>
+                      handleFieldChange("garbageCollection", event.target.value)
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="regular">Regular</option>
+                    <option value="irregular">Irregular</option>
+                    <option value="nao_existe">Nao existe</option>
+                  </select>
+                </label>
+                <label>
+                  Acesso a internet
+                  <select
+                    className="select"
+                    value={formState.internetAccess ? "sim" : formState.internetAccess === false ? "nao" : ""}
+                    onChange={(event) =>
+                      handleFieldChange("internetAccess", event.target.value === "sim")
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="sim">Sim</option>
+                    <option value="nao">Nao</option>
+                  </select>
+                </label>
+                <label>
+                  Transporte publico
+                  <select
+                    className="select"
+                    value={formState.transportAccess ? "sim" : formState.transportAccess === false ? "nao" : ""}
+                    onChange={(event) =>
+                      handleFieldChange("transportAccess", event.target.value === "sim")
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="sim">Sim</option>
+                    <option value="nao">Nao</option>
+                  </select>
+                </label>
+              </div>
 
               <div className="form-note">
                 <strong>Indicadores sociais (escala 1-10)</strong>
@@ -1311,7 +1804,71 @@ export default function EmployeeDashboard() {
                   />
                   Acesso a agente comunitario?
                 </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formState.healthHasRegularService}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "healthHasRegularService",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Possui atendimento regular?
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formState.healthHasAmbulance}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "healthHasAmbulance",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Possui ambulancia?
+                </label>
               </div>
+              <div className="form-row">
+                <label>
+                  Unidade de saude mais proxima (km)
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formState.healthUnitDistanceKm}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "healthUnitDistanceKm",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  Tempo medio de deslocamento
+                  <input
+                    type="text"
+                    placeholder="Ex: 30 min"
+                    value={formState.healthTravelTime}
+                    onChange={(event) =>
+                      handleFieldChange("healthTravelTime", event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+              <label>
+                Principais dificuldades
+                <input
+                  type="text"
+                  placeholder="Transporte, profissionais, medicamentos..."
+                  value={formState.healthDifficulties}
+                  onChange={(event) =>
+                    handleFieldChange("healthDifficulties", event.target.value)
+                  }
+                />
+              </label>
               <label>
                 Observacoes de saude
                 <textarea
@@ -1375,6 +1932,19 @@ export default function EmployeeDashboard() {
                   />
                   A escola fornece materiais?
                 </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formState.educationHasInternet}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "educationHasInternet",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Acesso a internet para estudo?
+                </label>
               </div>
               <label>
                 Observacoes de educacao
@@ -1415,6 +1985,64 @@ export default function EmployeeDashboard() {
                   />
                 </label>
               </div>
+              <div className="form-row">
+                <label>
+                  Pessoas que contribuem com renda
+                  <input
+                    type="number"
+                    placeholder="0"
+                    value={formState.incomeContributors}
+                    onChange={(event) =>
+                      handleFieldChange("incomeContributors", event.target.value)
+                    }
+                  />
+                </label>
+                <label>
+                  Tipo de ocupacao
+                  <select
+                    className="select"
+                    value={formState.incomeOccupationType}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "incomeOccupationType",
+                        event.target.value
+                      )
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="formal">Formal</option>
+                    <option value="informal">Informal</option>
+                    <option value="autonomo">Autonomo</option>
+                    <option value="rural">Rural</option>
+                  </select>
+                </label>
+              </div>
+              <div className="checkbox-list">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formState.incomeHasSocialProgram}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "incomeHasSocialProgram",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Participa de programas sociais?
+                </label>
+              </div>
+              <label>
+                Qual programa social
+                <input
+                  type="text"
+                  placeholder="Bolsa familia, BPC, etc."
+                  value={formState.incomeSocialProgram}
+                  onChange={(event) =>
+                    handleFieldChange("incomeSocialProgram", event.target.value)
+                  }
+                />
+              </label>
               <div className="checkbox-list">
                 <label>
                   <input
@@ -1510,6 +2138,77 @@ export default function EmployeeDashboard() {
                   }
                 />
               </label>
+              <div className="form-row">
+                <label>
+                  Material predominante
+                  <select
+                    className="select"
+                    value={formState.housingMaterial}
+                    onChange={(event) =>
+                      handleFieldChange("housingMaterial", event.target.value)
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="alvenaria">Alvenaria</option>
+                    <option value="madeira">Madeira</option>
+                    <option value="mista">Mista</option>
+                  </select>
+                </label>
+                <label>
+                  Condicao da moradia
+                  <select
+                    className="select"
+                    value={formState.housingCondition}
+                    onChange={(event) =>
+                      handleFieldChange("housingCondition", event.target.value)
+                    }
+                  >
+                    <option value="">Selecione</option>
+                    <option value="boa">Boa</option>
+                    <option value="regular">Regular</option>
+                    <option value="precaria">Precaria</option>
+                  </select>
+                </label>
+              </div>
+              <div className="checkbox-list">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formState.housingHasBathroom}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "housingHasBathroom",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Possui banheiro interno?
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formState.housingHasWaterTreated}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "housingHasWaterTreated",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Possui agua tratada?
+                </label>
+              </div>
+              <label>
+                Riscos ambientais
+                <input
+                  type="text"
+                  placeholder="Enchente, deslizamento, seca, nenhum"
+                  value={formState.housingRisks}
+                  onChange={(event) =>
+                    handleFieldChange("housingRisks", event.target.value)
+                  }
+                />
+              </label>
 
               <div className="form-note">
                 <strong>Seguranca</strong>
@@ -1541,7 +2240,31 @@ export default function EmployeeDashboard() {
                   />
                   Ha patrulhamento regular?
                 </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={formState.securityHasGuard}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "securityHasGuard",
+                        event.target.checked
+                      )
+                    }
+                  />
+                  Ha guarda municipal?
+                </label>
               </div>
+              <label>
+                Ocorrencias frequentes
+                <input
+                  type="text"
+                  placeholder="Furto, violencia, conflitos..."
+                  value={formState.securityOccurrences}
+                  onChange={(event) =>
+                    handleFieldChange("securityOccurrences", event.target.value)
+                  }
+                />
+              </label>
               <label>
                 Observacoes de seguranca
                 <textarea
@@ -1611,6 +2334,145 @@ export default function EmployeeDashboard() {
                     handleFieldChange("territoryCulture", event.target.value)
                   }
                 />
+              </label>
+
+              <div className="form-note">
+                <strong>Participacao social</strong>
+              </div>
+              <label>
+                Participa de
+                <input
+                  type="text"
+                  placeholder="Associacao, conselho, projetos sociais..."
+                  value={formState.participationTypes}
+                  onChange={(event) =>
+                    handleFieldChange("participationTypes", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Ja participou de
+                <input
+                  type="text"
+                  placeholder="Audiencias, conferencias, capacitacoes..."
+                  value={formState.participationEvents}
+                  onChange={(event) =>
+                    handleFieldChange("participationEvents", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Grau de engajamento comunitario
+                <select
+                  className="select"
+                  value={formState.participationEngagement}
+                  onChange={(event) =>
+                    handleFieldChange(
+                      "participationEngagement",
+                      event.target.value
+                    )
+                  }
+                >
+                  <option value="">Selecione</option>
+                  <option value="alto">Alto</option>
+                  <option value="medio">Medio</option>
+                  <option value="baixo">Baixo</option>
+                </select>
+              </label>
+
+              <div className="form-note">
+                <strong>Demandas prioritarias</strong>
+              </div>
+              <label>
+                Demandas
+                <input
+                  type="text"
+                  placeholder="Infraestrutura, saude, educacao, emprego..."
+                  value={formState.demandPriorities}
+                  onChange={(event) =>
+                    handleFieldChange("demandPriorities", event.target.value)
+                  }
+                />
+              </label>
+
+              <div className="form-note">
+                <strong>Registros visuais</strong>
+              </div>
+              <label>
+                Tipos de foto
+                <input
+                  type="text"
+                  placeholder="Local, residencia, equipamentos, documentos"
+                  value={formState.photoTypes}
+                  onChange={(event) =>
+                    handleFieldChange("photoTypes", event.target.value)
+                  }
+                />
+              </label>
+
+              <div className="form-note">
+                <strong>Avaliacao tecnica do agente</strong>
+              </div>
+              <label>
+                Nivel de vulnerabilidade
+                <select
+                  className="select"
+                  value={formState.vulnerabilityLevel}
+                  onChange={(event) =>
+                    handleFieldChange("vulnerabilityLevel", event.target.value)
+                  }
+                >
+                  <option value="">Selecione</option>
+                  <option value="baixo">Baixo</option>
+                  <option value="medio">Medio</option>
+                  <option value="alto">Alto</option>
+                </select>
+              </label>
+              <label>
+                Principais problemas identificados
+                <textarea
+                  rows={3}
+                  value={formState.technicalIssues}
+                  onChange={(event) =>
+                    handleFieldChange("technicalIssues", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Encaminhamentos realizados
+                <textarea
+                  rows={3}
+                  value={formState.referrals}
+                  onChange={(event) =>
+                    handleFieldChange("referrals", event.target.value)
+                  }
+                />
+              </label>
+              <label>
+                Orgaos acionados
+                <textarea
+                  rows={3}
+                  value={formState.agenciesContacted}
+                  onChange={(event) =>
+                    handleFieldChange("agenciesContacted", event.target.value)
+                  }
+                />
+              </label>
+
+              <div className="form-note">
+                <strong>Consentimento institucional</strong>
+              </div>
+              <label className="checkbox-inline">
+                <input
+                  type="checkbox"
+                  checked={formState.consentAccepted}
+                  onChange={(event) =>
+                    handleFieldChange("consentAccepted", event.target.checked)
+                  }
+                />
+                Autorizo a utilizacao dos dados coletados exclusivamente para fins
+                de diagnostico territorial, planejamento de politicas publicas e
+                relatorios institucionais, conforme a LGPD.
               </label>
 
               {saveFeedback && (
