@@ -1100,20 +1100,22 @@ textarea {
 }
 
 .tab {
-  border: 1px solid rgba(var(--color-forest-rgb), 0.2);
-  background: transparent;
-  color: var(--color-forest);
+  border: 1px solid rgba(var(--color-ink-rgb), 0.15);
+  background: var(--color-white);
+  color: rgba(var(--color-ink-rgb), 0.85);
   border-radius: 999px;
   padding: 0.45rem 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
+  box-shadow: 0 6px 14px rgba(var(--color-ink-rgb), 0.08);
 }
 
 .tab.active {
-  background: var(--color-forest);
-  color: var(--color-white);
-  border-color: var(--color-forest);
+  background: var(--color-white);
+  color: var(--color-ink);
+  border-color: var(--color-sun);
+  box-shadow: 0 8px 18px rgba(var(--color-ink-rgb), 0.12);
 }
 
 .info-grid {
