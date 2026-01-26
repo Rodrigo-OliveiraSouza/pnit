@@ -40,12 +40,7 @@ body {
   margin: 0;
   font-family: "Source Sans 3", "Segoe UI", sans-serif;
   color: var(--color-ink);
-  background: radial-gradient(
-    circle at top,
-    rgba(var(--color-earth-rgb), 0.95) 0%,
-    rgba(var(--color-earth-rgb), 0.75) 55%,
-    rgba(var(--color-earth-rgb), 0.95) 100%
-  );
+  background: #c8651e;
   min-height: 100vh;
 }
 
@@ -779,7 +774,7 @@ img {
 }
 
 .map-section {
-  background: var(--color-white);
+  background: var(--color-sun);
   border-radius: var(--radius-lg);
   padding: 2rem;
   box-shadow: var(--shadow-soft);
