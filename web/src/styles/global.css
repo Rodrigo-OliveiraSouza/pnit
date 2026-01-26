@@ -13,6 +13,7 @@
   --color-white: #ffffff;
   --color-header-start: #1f2a4a;
   --color-header-end: #2b3a66;
+  --color-earth: #d2a483;
   --color-ink-rgb: 43, 26, 18;
   --color-forest-rgb: 200, 101, 30;
   --color-emerald-rgb: 184, 90, 22;
@@ -22,6 +23,7 @@
   --color-clay-rgb: 184, 90, 22;
   --color-sky-rgb: 244, 244, 244;
   --color-ivory-rgb: 214, 214, 214;
+  --color-earth-rgb: 210, 164, 131;
   --shadow-soft: 0 18px 40px rgba(var(--color-ink-rgb), 0.14);
   --shadow-card: 0 12px 24px rgba(var(--color-ink-rgb), 0.1);
   --radius-lg: 20px;
@@ -40,9 +42,9 @@ body {
   color: var(--color-ink);
   background: radial-gradient(
     circle at top,
-    var(--color-sky) 0%,
-    var(--color-white) 55%,
-    var(--color-sky) 100%
+    rgba(var(--color-earth-rgb), 0.95) 0%,
+    rgba(var(--color-earth-rgb), 0.75) 55%,
+    rgba(var(--color-earth-rgb), 0.95) 100%
   );
   min-height: 100vh;
 }
