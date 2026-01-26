@@ -215,7 +215,7 @@ export default function AccessCodeRegister() {
                 <option value="">Selecione</option>
                 {BRAZIL_STATES.map((item) => (
                   <option key={item.code} value={item.code}>
-                    {item.label}
+                    {item.name}
                   </option>
                 ))}
               </select>
