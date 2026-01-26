@@ -13,6 +13,7 @@ import MapShell from "./MapShell";
 import MapFilters from "./MapFilters";
 import type { MapPoint } from "../types/models";
 import citiesData from "../data/brazil-cities.json";
+import { BRAZIL_STATES } from "../data/brazil-states";
 import {
   exportReport,
   fetchPublicPoints,
@@ -497,9 +498,25 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
     }));
   };
 
+  const handlePublicStateChange = (value: string) => {
+    setPublicFilters((current) => ({
+      ...current,
+      state: value,
+      city: "",
+      community: "",
+    }));
+  };
+
   const handlePublicCommunityChange = (value: string) => {
     setPublicFilters((current) => ({ ...current, community: value }));
   };
+
+  const filteredCities = useMemo(() => {
+    if (!publicFilters.state) {
+      return BRAZIL_CITIES;
+    }
+    return BRAZIL_CITIES.filter((city) => city.state === publicFilters.state);
+  }, [publicFilters.state]);
 
   useEffect(() => {
     if (!isPublicMode || !mapRef.current) {
@@ -806,13 +823,26 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
               <span className="eyebrow">Navegacao</span>
               <h3>Mapa publico</h3>
               <p>
-                Navegue pelos pontos cadastrados e filtre por cidade ou
+                Navegue pelos pontos cadastrados e filtre por estado, cidade ou
                 comunidade.
               </p>
             </div>
 
             <div className="filter-block">
               <span className="eyebrow">Filtros</span>
+              <label className="filter-label">Estado</label>
+              <select
+                className="select"
+                value={publicFilters.state}
+                onChange={(event) => handlePublicStateChange(event.target.value)}
+              >
+                <option value="">Selecione um estado</option>
+                {BRAZIL_STATES.map((item) => (
+                  <option key={item.code} value={item.code}>
+                    {item.code} - {item.name}
+                  </option>
+                ))}
+              </select>
               <label className="filter-label">Cidade</label>
               <select
                 className="select"
@@ -820,7 +850,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                 onChange={(event) => handlePublicCityChange(event.target.value)}
               >
                 <option value="">Selecione uma cidade</option>
-                {BRAZIL_CITIES.map((city) => (
+                {filteredCities.map((city) => (
                   <option
                     key={`${city.name}-${city.state}`}
                     value={`${city.name}__${city.state}`}
