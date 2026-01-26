@@ -1,25 +1,27 @@
 @import url("https://fonts.googleapis.com/css2?family=Newsreader:wght@300;500;700&family=Source+Sans+3:wght@300;400;600;700&display=swap");
 
 :root {
-  --color-ink: #4b2416;
-  --color-forest: #4b2416;
-  --color-emerald: #4b9b2f;
-  --color-teal: #3b5bb0;
-  --color-sun: #f3c318;
-  --color-amber: #f08b34;
-  --color-clay: #e23c2c;
-  --color-sky: #f9dcc6;
-  --color-ivory: #f6a6c1;
+  --color-ink: #2b1a12;
+  --color-forest: #c8651e;
+  --color-emerald: #b85a16;
+  --color-teal: #2b3a66;
+  --color-sun: #f0a23a;
+  --color-amber: #c8651e;
+  --color-clay: #b85a16;
+  --color-sky: #f4f4f4;
+  --color-ivory: #d6d6d6;
   --color-white: #ffffff;
-  --color-ink-rgb: 75, 36, 22;
-  --color-forest-rgb: 75, 36, 22;
-  --color-emerald-rgb: 75, 155, 47;
-  --color-teal-rgb: 59, 91, 176;
-  --color-sun-rgb: 243, 195, 24;
-  --color-amber-rgb: 240, 139, 52;
-  --color-clay-rgb: 226, 60, 44;
-  --color-sky-rgb: 249, 220, 198;
-  --color-ivory-rgb: 246, 166, 193;
+  --color-header-start: #1f2a4a;
+  --color-header-end: #2b3a66;
+  --color-ink-rgb: 43, 26, 18;
+  --color-forest-rgb: 200, 101, 30;
+  --color-emerald-rgb: 184, 90, 22;
+  --color-teal-rgb: 43, 58, 102;
+  --color-sun-rgb: 240, 162, 58;
+  --color-amber-rgb: 200, 101, 30;
+  --color-clay-rgb: 184, 90, 22;
+  --color-sky-rgb: 244, 244, 244;
+  --color-ivory-rgb: 214, 214, 214;
   --shadow-soft: 0 18px 40px rgba(var(--color-ink-rgb), 0.14);
   --shadow-card: 0 12px 24px rgba(var(--color-ink-rgb), 0.1);
   --radius-lg: 20px;
@@ -87,7 +89,11 @@ img {
 
 .header-top {
   padding: 0.9rem 6vw;
-  background: linear-gradient(90deg, var(--color-forest), var(--color-teal));
+  background: linear-gradient(
+    90deg,
+    var(--color-header-start),
+    var(--color-header-end)
+  );
   color: var(--color-white);
 }
 
@@ -240,13 +246,13 @@ img {
 }
 
 .btn-primary {
-  background: var(--color-forest);
-  color: var(--color-white);
+  background: var(--color-sun);
+  color: var(--color-ink);
   box-shadow: var(--shadow-card);
 }
 
 .btn-primary:hover {
-  background: var(--color-forest);
+  background: var(--color-sun);
 }
 
 .btn-outline {
