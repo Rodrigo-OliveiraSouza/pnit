@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
 import {
@@ -339,6 +340,12 @@ export function AdminPanel() {
             >
               {refreshLoading ? "Atualizando..." : "Atualizar mapa geral"}
             </button>
+            <Link className="btn btn-outline" to="/painel?tab=register">
+              Cadastro de pessoas
+            </Link>
+            <Link className="btn btn-outline" to="/painel?tab=people">
+              Gerenciar pessoas
+            </Link>
             <button className="btn btn-outline" type="button">
               Exportar auditoria
             </button>

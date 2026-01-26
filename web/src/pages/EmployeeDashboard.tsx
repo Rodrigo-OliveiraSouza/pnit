@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import MapEditor, { type SelectedLocation } from "../components/MapEditor";
 import { AdminPanel } from "./Admin";
 import citiesData from "../data/brazil-cities.json";
@@ -347,6 +347,7 @@ export default function EmployeeDashboard() {
   const [pendingError, setPendingError] = useState<string | null>(null);
   const role = getAuthRole();
   const isAdmin = role === "admin";
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<
     "register" | "people" | "admin" | "pending"
   >("register");
@@ -416,12 +417,20 @@ export default function EmployeeDashboard() {
 
   const loadResidents = async () => {
     try {
-      const response = await listResidents("me");
+      const response = await listResidents(isAdmin ? undefined : "me");
       setResidents(response.items);
     } catch {
       setResidents([]);
     }
   };
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (!tab) return;
+    if (tab === "register" || tab === "people" || tab === "admin" || tab === "pending") {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const loadAccessCodes = async () => {
     setCodesError(null);
