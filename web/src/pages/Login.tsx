@@ -31,7 +31,7 @@ export default function Login() {
     <div className="page auth-page">
       <div className="auth-visual">
         <span className="eyebrow">Acesso restrito</span>
-        <h1>Entrar no painel GTERF</h1>
+        <h1>Entrar no painel</h1>
         <p>
           Credenciais de funcionario garantem acesso completo a cadastro,
           edicao, associacoes e auditoria.

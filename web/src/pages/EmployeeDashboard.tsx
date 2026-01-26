@@ -955,7 +955,7 @@ export default function EmployeeDashboard() {
 <html lang="pt-br">
   <head>
     <meta charset="utf-8" />
-    <title>Modelo de cadastro - GTERF</title>
+    <title>Modelo de cadastro - Painel territorial</title>
     <style>
       * { box-sizing: border-box; }
       body { font-family: "Times New Roman", serif; margin: 32px; color: #2c1a12; }

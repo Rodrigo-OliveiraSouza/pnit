@@ -42,7 +42,6 @@ export default function Header() {
             />
           </div>
           <div className="brand">
-            <span className="brand-mark">GTERF</span>
             <span className="brand-sub">Mapa publico de residentes</span>
           </div>
         </div>

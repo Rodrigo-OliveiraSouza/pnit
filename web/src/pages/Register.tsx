@@ -71,7 +71,7 @@ export default function Register() {
     <div className="page auth-page">
       <div className="auth-visual">
         <span className="eyebrow">Cadastro</span>
-        <h1>Criar acesso ao GTERF</h1>
+        <h1>Criar acesso ao painel</h1>
         <p>
           Crie seu acesso para registrar cadastros territoriais e pontos no
           mapa.
