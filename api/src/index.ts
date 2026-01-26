@@ -3865,30 +3865,36 @@ app.post("/public/complaints", async (c) => {
     );
   }
 
-  if (!c.env.COMPLAINTS_SECRET) {
-    return jsonError(c, 500, "COMPLAINTS_SECRET is not configured", "CONFIG");
+  const complaintsSecret = c.env.COMPLAINTS_SECRET ?? c.env.AUTH_JWT_SECRET ?? null;
+  if (complaintsSecret) {
+    try {
+      const sensitivePayload = await encryptSensitivePayload(complaintsSecret, {
+        ip_address: getClientIp(c),
+        user_agent: c.req.header("User-Agent") ?? null,
+      });
+      await sql(
+        `
+        INSERT INTO complaint_sensitive (
+          complaint_id,
+          payload_ciphertext,
+          payload_iv,
+          payload_salt
+        )
+        VALUES ($1, $2, $3, $4)
+        `,
+        [
+          complaintId,
+          sensitivePayload.payload_ciphertext,
+          sensitivePayload.payload_iv,
+          sensitivePayload.payload_salt,
+        ]
+      );
+    } catch (error) {
+      console.error("Failed to store complaint sensitive payload", error);
+    }
+  } else {
+    console.warn("COMPLAINTS_SECRET is not configured; sensitive payload skipped");
   }
-  const sensitivePayload = await encryptSensitivePayload(c.env.COMPLAINTS_SECRET, {
-    ip_address: getClientIp(c),
-    user_agent: c.req.header("User-Agent") ?? null,
-  });
-  await sql(
-    `
-    INSERT INTO complaint_sensitive (
-      complaint_id,
-      payload_ciphertext,
-      payload_iv,
-      payload_salt
-    )
-    VALUES ($1, $2, $3, $4)
-    `,
-    [
-      complaintId,
-      sensitivePayload.payload_ciphertext,
-      sensitivePayload.payload_iv,
-      sensitivePayload.payload_salt,
-    ]
-  );
 
   return c.json({
     ok: true,
