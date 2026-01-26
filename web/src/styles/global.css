@@ -1569,7 +1569,11 @@ th {
 }
 
 .site-footer {
-  background: var(--color-forest);
+  background: linear-gradient(
+    90deg,
+    var(--color-header-start),
+    var(--color-header-end)
+  );
   color: var(--color-white);
   padding: 3rem 6vw 2rem;
 }
