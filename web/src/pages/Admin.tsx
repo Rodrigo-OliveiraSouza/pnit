@@ -116,6 +116,11 @@ export function AdminPanel() {
     await loadUsers();
   };
 
+  const handleEnable = async (id: string) => {
+    await updateAdminUser(id, { status: "active" });
+    await loadUsers();
+  };
+
   const loadComplaints = async () => {
     setComplaintLoading(true);
     try {
@@ -498,13 +503,31 @@ export function AdminPanel() {
                         </span>
                       </td>
                       <td>
-                        <button
-                          className="btn btn-ghost"
-                          type="button"
-                          onClick={() => void handleDisable(user.id)}
-                        >
-                          Desativar
-                        </button>
+                        {user.status === "disabled" ? (
+                          <button
+                            className="btn btn-ghost"
+                            type="button"
+                            onClick={() => void handleEnable(user.id)}
+                          >
+                            Ativar
+                          </button>
+                        ) : user.status === "pending" ? (
+                          <button
+                            className="btn btn-ghost"
+                            type="button"
+                            onClick={() => void handleApprove(user.id)}
+                          >
+                            Aprovar
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-ghost"
+                            type="button"
+                            onClick={() => void handleDisable(user.id)}
+                          >
+                            Desativar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
