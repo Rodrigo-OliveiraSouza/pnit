@@ -4,7 +4,7 @@ const AUTH_TOKEN_KEY = "pnit_auth_token";
 const AUTH_ROLE_KEY = "pnit_auth_role";
 const AUTH_USER_ID_KEY = "pnit_auth_user_id";
 
-export type UserRole = "admin" | "employee" | "user";
+export type UserRole = "admin" | "employee" | "user" | "teacher";
 
 export function setAuthToken(token: string | null) {
   if (token) {
@@ -583,6 +583,88 @@ export async function uploadNewsImage(file: File): Promise<{ item: NewsImage }> 
 
 export async function deleteNewsImage(id: string): Promise<{ ok: boolean }> {
   return apiFetch<{ ok: boolean }>(`/media/news/${id}`, { method: "DELETE" });
+}
+
+export type AccessCode = {
+  id: string;
+  code: string;
+  status: "active" | "used" | "revoked";
+  created_at: string;
+  used_at?: string | null;
+};
+
+export async function createAccessCode(): Promise<{ item: AccessCode }> {
+  return apiFetch<{ item: AccessCode }>("/access-codes", { method: "POST" });
+}
+
+export async function listAccessCodes(params?: {
+  status?: string;
+}): Promise<{ items: AccessCode[] }> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  const suffix = query.toString();
+  return apiFetch<{ items: AccessCode[] }>(
+    `/access-codes${suffix ? `?${suffix}` : ""}`
+  );
+}
+
+export type AccessCodeSubmissionPayload = {
+  code: string;
+  resident: Record<string, unknown>;
+  profile: Record<string, unknown>;
+  point: Record<string, unknown>;
+};
+
+export async function submitAccessCodeRegistration(
+  payload: AccessCodeSubmissionPayload
+): Promise<{ ok: boolean; resident_id: string; point_id: string; status: string }> {
+  return apiFetch<{ ok: boolean; resident_id: string; point_id: string; status: string }>(
+    "/public/access-code/submit",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export async function listPendingSubmissions(): Promise<{
+  items: Array<{
+    id: string;
+    full_name: string;
+    city?: string | null;
+    state?: string | null;
+    community_name?: string | null;
+    created_at: string;
+    point_id?: string | null;
+    public_lat?: number | null;
+    public_lng?: number | null;
+  }>;
+}> {
+  return apiFetch<{
+    items: Array<{
+      id: string;
+      full_name: string;
+      city?: string | null;
+      state?: string | null;
+      community_name?: string | null;
+      created_at: string;
+      point_id?: string | null;
+      public_lat?: number | null;
+      public_lng?: number | null;
+    }>;
+  }>("/user/pending-submissions");
+}
+
+export async function approvePendingSubmission(id: string) {
+  return apiFetch<{ ok: boolean }>(`/user/pending-submissions/${id}/approve`, {
+    method: "POST",
+  });
+}
+
+export async function rejectPendingSubmission(id: string) {
+  return apiFetch<{ ok: boolean }>(`/user/pending-submissions/${id}/reject`, {
+    method: "POST",
+  });
 }
 
 export async function createResident(

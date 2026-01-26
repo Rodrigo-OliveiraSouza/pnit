@@ -13,7 +13,9 @@ export default function Header() {
   const isLoggedIn = Boolean(getAuthToken());
   const role = getAuthRole();
   const isAdmin = role === "admin";
-  const panelLink = "/painel";
+  const isTeacher = role === "teacher";
+  const isSupervisor = isAdmin || isTeacher;
+  const panelLink = isSupervisor ? "/admin" : "/painel";
   const panelLabel = role === "admin" ? "Painel" : "Painel";
 
   const handleLogout = () => {
@@ -54,6 +56,16 @@ export default function Header() {
             >
               Mapa
             </NavLink>
+            {!isLoggedIn && (
+              <NavLink
+                to="/acesso"
+                className={({ isActive }) =>
+                  `nav-link${isActive ? " active" : ""}`
+                }
+              >
+                Cadastro com codigo
+              </NavLink>
+            )}
             {isLoggedIn && (
               <NavLink
                 to="/relatorios"

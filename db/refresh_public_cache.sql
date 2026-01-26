@@ -5,10 +5,12 @@ DELETE FROM public_map_cache
 WHERE snapshot_date = CURRENT_DATE;
 
 WITH active_assignments AS (
-  SELECT point_id, COUNT(*) AS residents
-  FROM resident_point_assignments
-  WHERE active = true
-  GROUP BY point_id
+  SELECT rpa.point_id, COUNT(*) AS residents
+  FROM resident_point_assignments rpa
+  JOIN residents r ON r.id = rpa.resident_id
+  WHERE rpa.active = true
+    AND r.approval_status = 'approved'
+  GROUP BY rpa.point_id
 ),
 latest_photo AS (
   SELECT DISTINCT ON (point_id)
@@ -54,6 +56,7 @@ SELECT
 FROM map_points mp
 LEFT JOIN active_assignments a ON a.point_id = mp.id
 LEFT JOIN latest_photo lp ON lp.point_id = mp.id
-WHERE mp.deleted_at IS NULL;
+WHERE mp.deleted_at IS NULL
+  AND mp.approval_status = 'approved';
 
 COMMIT;

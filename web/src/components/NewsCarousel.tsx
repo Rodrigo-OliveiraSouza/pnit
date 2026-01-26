@@ -13,6 +13,7 @@ type NewsCarouselProps = {
   showDots?: boolean;
   showArrows?: boolean;
   imageOnly?: boolean;
+  splitView?: boolean;
   items?: Array<{
     id: string;
     src: string;
@@ -26,6 +27,7 @@ export default function NewsCarousel({
   showDots = true,
   showArrows = true,
   imageOnly = false,
+  splitView = false,
   items: itemsProp,
 }: NewsCarouselProps) {
   const [remoteItems, setRemoteItems] = useState<typeof fallbackItems>([]);
@@ -78,6 +80,7 @@ export default function NewsCarousel({
 
   const [activeIndex, setActiveIndex] = useState(0);
   const active = items[activeIndex] ?? items[0];
+  const useSplitView = imageOnly && splitView;
 
   useEffect(() => {
     if (activeIndex >= items.length) {
@@ -111,9 +114,28 @@ export default function NewsCarousel({
         key={active.id}
         className={`news-card${imageOnly ? " news-card-media" : ""}`}
       >
-        <div className={`news-media${active.src ? "" : " is-placeholder"}`}>
+        <div
+          className={`news-media${active.src ? "" : " is-placeholder"}${
+            useSplitView ? " news-media-split" : ""
+          }`}
+          role={useSplitView ? "img" : undefined}
+          aria-label={useSplitView ? active.title : undefined}
+        >
           {active.src ? (
-            <img src={active.src} alt={active.title} />
+            useSplitView ? (
+              <>
+                <div
+                  className="news-media-slice left"
+                  style={{ backgroundImage: `url(${active.src})` }}
+                />
+                <div
+                  className="news-media-slice right"
+                  style={{ backgroundImage: `url(${active.src})` }}
+                />
+              </>
+            ) : (
+              <img src={active.src} alt={active.title} />
+            )
           ) : (
             <div className="news-media-placeholder" aria-hidden="true" />
           )}

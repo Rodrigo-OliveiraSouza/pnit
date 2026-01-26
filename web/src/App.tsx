@@ -10,6 +10,7 @@ import PointDetail from "./pages/PointDetail";
 import Complaints from "./pages/Complaints";
 import NewsImages from "./pages/NewsImages";
 import NotFound from "./pages/NotFound";
+import AccessCodeRegister from "./pages/AccessCodeRegister";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/relatorios" element={<Reports />} />
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Register />} />
+        <Route path="/acesso" element={<AccessCodeRegister />} />
         <Route path="/painel" element={<EmployeeDashboard />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/denuncias" element={<Complaints />} />

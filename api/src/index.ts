@@ -50,7 +50,7 @@ type CommunityPayload = {
 
 type UserClaims = {
   sub: string;
-  role: "admin" | "employee" | "user";
+  role: "admin" | "employee" | "user" | "teacher";
   email: string;
   exp: number;
 };
@@ -316,7 +316,17 @@ async function requireAuth(c: Context, env: Env) {
 
 function requireStaff(claims: UserClaims | null) {
   if (!claims) return false;
-  return claims.role === "admin" || claims.role === "employee";
+  return (
+    claims.role === "admin" ||
+    claims.role === "employee" ||
+    claims.role === "user" ||
+    claims.role === "teacher"
+  );
+}
+
+function requireSupervisor(claims: UserClaims | null) {
+  if (!claims) return false;
+  return claims.role === "admin" || claims.role === "teacher";
 }
 
 function getPublicBaseUrl(c: Context, env: Env) {
@@ -381,6 +391,15 @@ function hasComplaintSecret(c: Context, env: Env) {
 
 function normalizeQuery(query: string) {
   return query.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function generateAccessCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i += 1) {
+    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return code;
 }
 
 function encodeCursor(offset: number) {
@@ -518,10 +537,12 @@ async function refreshPublicCache(
     await sql(
       `
       WITH active_assignments AS (
-        SELECT point_id, COUNT(*) AS residents
-        FROM resident_point_assignments
-        WHERE active = true
-        GROUP BY point_id
+        SELECT rpa.point_id, COUNT(*) AS residents
+        FROM resident_point_assignments rpa
+        JOIN residents r ON r.id = rpa.resident_id
+        WHERE rpa.active = true
+          AND r.approval_status = 'approved'
+        GROUP BY rpa.point_id
       ),
       latest_photo AS (
         SELECT DISTINCT ON (point_id)
@@ -568,6 +589,7 @@ async function refreshPublicCache(
       LEFT JOIN active_assignments a ON a.point_id = mp.id
       LEFT JOIN latest_photo lp ON lp.point_id = mp.id
       WHERE mp.deleted_at IS NULL
+        AND mp.approval_status = 'approved'
       `
     );
     await sql("COMMIT");
@@ -704,6 +726,432 @@ app.get("/auth/me", async (c) => {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
   return c.json({ user: { id: claims.sub, email: claims.email, role: claims.role } });
+});
+
+app.post("/access-codes", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  let created: { id: string; code: string; created_at: string } | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generateAccessCode();
+    try {
+      const rows = await sql(
+        `
+        INSERT INTO access_codes (code, created_by)
+        VALUES ($1, $2)
+        RETURNING id, code, created_at
+        `,
+        [code, claims.sub]
+      );
+      created = rows[0] as { id: string; code: string; created_at: string };
+      break;
+    } catch (error) {
+      const message = String(error).toLowerCase();
+      if (message.includes("duplicate") || message.includes("unique")) {
+        continue;
+      }
+      throw error;
+    }
+  }
+  if (!created) {
+    return jsonError(c, 500, "Falha ao gerar codigo", "INTERNAL");
+  }
+  await logAudit(sql, claims.sub, "access_code_create", "access_codes", created.id);
+  return c.json({ item: created });
+});
+
+app.get("/access-codes", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  const status = c.req.query("status");
+  const params: (string | number)[] = [claims.sub];
+  const filters = ["created_by = $1"];
+  if (status) {
+    params.push(status);
+    filters.push(`status = $${params.length}`);
+  }
+  const rows = await sql(
+    `
+    SELECT id, code, status, created_at, used_at
+    FROM access_codes
+    WHERE ${filters.join(" AND ")}
+    ORDER BY created_at DESC
+    LIMIT 50
+    `,
+    params
+  );
+  return c.json({ items: rows });
+});
+
+app.post("/public/access-code/submit", async (c) => {
+  const sql = getSql(c.env);
+  const body = (await c.req.json().catch(() => null)) as
+    | {
+        code?: string;
+        resident?: Record<string, unknown>;
+        profile?: Record<string, unknown>;
+        point?: Record<string, unknown>;
+      }
+    | null;
+  if (!body?.code) {
+    return jsonError(c, 400, "code is required");
+  }
+  const codeValue = body.code.trim().toUpperCase();
+  const codeRows = await sql(
+    `
+    SELECT id, created_by, status, used_at
+    FROM access_codes
+    WHERE code = $1
+    `,
+    [codeValue]
+  );
+  if (codeRows.length === 0) {
+    return jsonError(c, 404, "Codigo invalido", "NOT_FOUND");
+  }
+  const accessCode = codeRows[0] as {
+    id: string;
+    created_by: string;
+    status: "active" | "used" | "revoked";
+    used_at?: string | null;
+  };
+  if (accessCode.status !== "active" || accessCode.used_at) {
+    return jsonError(c, 409, "Codigo ja utilizado", "CONFLICT");
+  }
+
+  const resident = body.resident ?? {};
+  const profile = body.profile ?? {};
+  const point = body.point ?? {};
+  const fullName =
+    typeof resident.full_name === "string" ? resident.full_name.trim() : "";
+  if (!fullName) {
+    return jsonError(c, 400, "full_name is required");
+  }
+  const status =
+    typeof point.status === "string" ? point.status : "active";
+  const precision =
+    typeof point.precision === "string" ? point.precision : null;
+  if (!precision) {
+    return jsonError(c, 400, "precision is required");
+  }
+  let lat =
+    typeof point.lat === "number"
+      ? point.lat
+      : typeof point.lat === "string"
+        ? Number(point.lat)
+        : undefined;
+  let lng =
+    typeof point.lng === "number"
+      ? point.lng
+      : typeof point.lng === "string"
+        ? Number(point.lng)
+        : undefined;
+  const locationText =
+    typeof point.location_text === "string" ? point.location_text : null;
+  if ((lat === undefined || lng === undefined) && locationText) {
+    const parsed = extractLatLng(locationText);
+    if (parsed) {
+      lat = parsed.lat;
+      lng = parsed.lng;
+    }
+  }
+  if (lat === undefined || lng === undefined) {
+    return jsonError(c, 400, "lat and lng are required");
+  }
+
+  const scores = {
+    health_score: Number(profile.health_score),
+    education_score: Number(profile.education_score),
+    income_score: Number(profile.income_score),
+    housing_score: Number(profile.housing_score),
+    security_score: Number(profile.security_score),
+  };
+  const scoreValues = Object.values(scores);
+  if (scoreValues.some((value) => !Number.isFinite(value))) {
+    return jsonError(c, 400, "scores 1-10 are required");
+  }
+
+  const actorId = accessCode.created_by;
+  const publicCoords =
+    precision === "approx"
+      ? jitterPoint(lat, lng, Number(point.accuracy_m) || 0)
+      : { lat, lng };
+
+  await sql("BEGIN");
+  try {
+    const pointRows = await sql(
+      `
+      INSERT INTO map_points (
+        lat, lng, public_lat, public_lng, accuracy_m, precision, status, category, public_note,
+        area_type, reference_point, city, state, community_name, source_location, geog, created_by,
+        approval_status, access_code_id, submitted_via_code
+      )
+      VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+        ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+        $16, 'pending', $17, true
+      )
+      RETURNING id
+      `,
+      [
+        lat,
+        lng,
+        publicCoords.lat,
+        publicCoords.lng,
+        typeof point.accuracy_m === "number" ? point.accuracy_m : null,
+        precision,
+        status,
+        typeof point.category === "string" ? point.category : null,
+        typeof point.public_note === "string" ? point.public_note : null,
+        typeof point.area_type === "string" ? point.area_type : null,
+        typeof point.reference_point === "string" ? point.reference_point : null,
+        typeof point.city === "string" ? point.city : null,
+        typeof point.state === "string" ? point.state : null,
+        typeof point.community_name === "string" ? point.community_name : null,
+        locationText,
+        actorId,
+        accessCode.id,
+      ]
+    );
+
+    const residentRows = await sql(
+      `
+      INSERT INTO residents (
+        full_name,
+        doc_id,
+        birth_date,
+        sex,
+        phone,
+        email,
+        address,
+        city,
+        state,
+        neighborhood,
+        community_name,
+        household_size,
+        children_count,
+        elderly_count,
+        pcd_count,
+        notes,
+        status,
+        created_by,
+        approval_status,
+        access_code_id,
+        submitted_via_code
+      )
+      VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+        $16, $17, $18, 'pending', $19, true
+      )
+      RETURNING id
+      `,
+      [
+        fullName,
+        typeof resident.doc_id === "string" ? resident.doc_id : null,
+        typeof resident.birth_date === "string" ? resident.birth_date : null,
+        typeof resident.sex === "string" ? resident.sex : null,
+        typeof resident.phone === "string" ? resident.phone : null,
+        typeof resident.email === "string" ? resident.email : null,
+        typeof resident.address === "string" ? resident.address : null,
+        typeof resident.city === "string" ? resident.city : null,
+        typeof resident.state === "string" ? resident.state : null,
+        typeof resident.neighborhood === "string" ? resident.neighborhood : null,
+        typeof resident.community_name === "string" ? resident.community_name : null,
+        typeof resident.household_size === "number"
+          ? resident.household_size
+          : null,
+        typeof resident.children_count === "number"
+          ? resident.children_count
+          : null,
+        typeof resident.elderly_count === "number"
+          ? resident.elderly_count
+          : null,
+        typeof resident.pcd_count === "number" ? resident.pcd_count : null,
+        typeof resident.notes === "string" ? resident.notes : null,
+        typeof resident.status === "string" ? resident.status : "active",
+        actorId,
+        accessCode.id,
+      ]
+    );
+
+    const residentId = residentRows[0].id as string;
+    const pointId = pointRows[0].id as string;
+
+    await sql(
+      `
+      INSERT INTO resident_profiles (
+        resident_id,
+        health_score,
+        education_score,
+        income_score,
+        housing_score,
+        security_score
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      `,
+      [
+        residentId,
+        scores.health_score,
+        scores.education_score,
+        scores.income_score,
+        scores.housing_score,
+        scores.security_score,
+      ]
+    );
+
+    await sql(
+      `
+      INSERT INTO resident_point_assignments (resident_id, point_id, active)
+      VALUES ($1, $2, true)
+      `,
+      [residentId, pointId]
+    );
+
+    await sql(
+      `
+      UPDATE access_codes
+      SET status = 'used', used_at = now()
+      WHERE id = $1
+      `,
+      [accessCode.id]
+    );
+
+    await sql("COMMIT");
+    await logAudit(sql, actorId, "access_code_submission", "residents", residentId, {
+      point_id: pointId,
+    });
+    return c.json({
+      ok: true,
+      resident_id: residentId,
+      point_id: pointId,
+      status: "pending",
+    });
+  } catch (error) {
+    await sql("ROLLBACK");
+    throw error;
+  }
+});
+
+app.get("/user/pending-submissions", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  const rows = await sql(
+    `
+    SELECT
+      r.id,
+      r.full_name,
+      r.city,
+      r.state,
+      r.community_name,
+      r.created_at,
+      mp.id AS point_id,
+      mp.public_lat,
+      mp.public_lng
+    FROM residents r
+    LEFT JOIN resident_point_assignments rpa
+      ON rpa.resident_id = r.id AND rpa.active = true
+    LEFT JOIN map_points mp ON mp.id = rpa.point_id
+    WHERE r.created_by = $1
+      AND r.approval_status = 'pending'
+      AND r.deleted_at IS NULL
+    ORDER BY r.created_at DESC
+    LIMIT 200
+    `,
+    [claims.sub]
+  );
+  return c.json({ items: rows });
+});
+
+app.post("/user/pending-submissions/:id/approve", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  const residentId = c.req.param("id");
+  const rows = await sql(
+    `
+    SELECT id
+    FROM residents
+    WHERE id = $1 AND created_by = $2 AND approval_status = 'pending'
+    `,
+    [residentId, claims.sub]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Cadastro pendente nao encontrado", "NOT_FOUND");
+  }
+  await sql(
+    `
+    UPDATE residents
+    SET approval_status = 'approved', approved_by = $2, approved_at = now(), updated_at = now()
+    WHERE id = $1
+    `,
+    [residentId, claims.sub]
+  );
+  await sql(
+    `
+    UPDATE map_points
+    SET approval_status = 'approved', approved_by = $2, approved_at = now(), updated_at = now()
+    WHERE id IN (
+      SELECT point_id
+      FROM resident_point_assignments
+      WHERE resident_id = $1 AND active = true
+    )
+    `,
+    [residentId, claims.sub]
+  );
+  await logAudit(sql, claims.sub, "access_code_approve", "residents", residentId);
+  return c.json({ ok: true });
+});
+
+app.post("/user/pending-submissions/:id/reject", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  const residentId = c.req.param("id");
+  const rows = await sql(
+    `
+    SELECT id
+    FROM residents
+    WHERE id = $1 AND created_by = $2 AND approval_status = 'pending'
+    `,
+    [residentId, claims.sub]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Cadastro pendente nao encontrado", "NOT_FOUND");
+  }
+  await sql(
+    `
+    UPDATE residents
+    SET approval_status = 'rejected', approved_by = $2, approved_at = now(), updated_at = now()
+    WHERE id = $1
+    `,
+    [residentId, claims.sub]
+  );
+  await sql(
+    `
+    UPDATE map_points
+    SET approval_status = 'rejected', approved_by = $2, approved_at = now(), updated_at = now()
+    WHERE id IN (
+      SELECT point_id
+      FROM resident_point_assignments
+      WHERE resident_id = $1 AND active = true
+    )
+    `,
+    [residentId, claims.sub]
+  );
+  await logAudit(sql, claims.sub, "access_code_reject", "residents", residentId);
+  return c.json({ ok: true });
 });
 
 app.get("/map/points", async (c) => {
@@ -1782,7 +2230,18 @@ app.get("/reports/user-summary", async (c) => {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
   const requestedUser =
-    claims.role === "admin" ? c.req.query("user_id") : null;
+    claims.role === "admin" || claims.role === "teacher"
+      ? c.req.query("user_id")
+      : null;
+  if (claims.role === "teacher" && requestedUser) {
+    const allowed = await sql(
+      "SELECT 1 FROM app_users WHERE id = $1 AND approved_by = $2",
+      [requestedUser, claims.sub]
+    );
+    if (allowed.length === 0) {
+      return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
+  }
   const userId = requestedUser ?? claims.sub;
   const summaryRows = await sql(
     `
@@ -1928,9 +2387,10 @@ app.get("/admin/users", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!requireSupervisor(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
+  const isTeacher = claims.role === "teacher";
   const status = c.req.query("status");
   const role = c.req.query("role");
   const search = c.req.query("q");
@@ -1947,6 +2407,10 @@ app.get("/admin/users", async (c) => {
   if (search) {
     params.push(`%${search.toLowerCase()}%`);
     filters.push(`LOWER(email) LIKE $${params.length}`);
+  }
+  if (isTeacher && status !== "pending") {
+    params.push(claims.sub);
+    filters.push(`approved_by = $${params.length}`);
   }
   const rows = await sql(
     `
@@ -1968,14 +2432,15 @@ app.get("/admin/users/:id/details", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!requireSupervisor(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
+  const isTeacher = claims.role === "teacher";
   const userId = c.req.param("id");
   const users = await sql(
     `
     SELECT id, email, role, status, full_name, phone, organization, city, state,
-           territory, access_reason, created_at, last_login_at
+           territory, access_reason, created_at, last_login_at, approved_by
     FROM app_users
     WHERE id = $1
     `,
@@ -1983,6 +2448,16 @@ app.get("/admin/users/:id/details", async (c) => {
   );
   if (users.length === 0) {
     return jsonError(c, 404, "User not found", "NOT_FOUND");
+  }
+  const userRecord = users[0] as {
+    id: string;
+    status: "active" | "pending" | "disabled";
+    approved_by?: string | null;
+  };
+  if (isTeacher && userRecord.status !== "pending") {
+    if (userRecord.approved_by !== claims.sub) {
+      return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
   }
   const residents = await sql(
     `
@@ -2033,14 +2508,16 @@ app.post("/admin/users", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  const isAdmin = claims.role === "admin";
+  const isTeacher = claims.role === "teacher";
+  if (!isAdmin && !isTeacher) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as
     | {
         email?: string;
         password?: string;
-        role?: "admin" | "employee" | "user";
+        role?: "admin" | "employee" | "user" | "teacher";
         status?: "active" | "pending" | "disabled";
         full_name?: string;
         phone?: string;
@@ -2100,30 +2577,57 @@ app.put("/admin/users/:id", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  const isAdmin = claims.role === "admin";
+  const isTeacher = claims.role === "teacher";
+  if (!isAdmin && !isTeacher) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown>;
-  const allowed = [
-    "role",
-    "status",
-    "full_name",
-    "phone",
-    "organization",
-    "city",
-    "state",
-    "territory",
-    "access_reason",
-  ];
-  const updates = Object.entries(body ?? {}).filter(([key]) =>
+  const allowed = isTeacher
+    ? ["status"]
+    : [
+        "role",
+        "status",
+        "full_name",
+        "phone",
+        "organization",
+        "city",
+        "state",
+        "territory",
+        "access_reason",
+      ];
+  let updates = Object.entries(body ?? {}).filter(([key]) =>
     allowed.includes(key)
   );
   if (updates.length === 0) {
     return jsonError(c, 400, "No valid fields to update");
   }
-  const sets = updates.map(([key], index) => `${key} = $${index + 2}`);
-  const values = updates.map(([, value]) => value ?? null);
   const id = c.req.param("id");
+  if (isTeacher) {
+    const rows = await sql(
+      "SELECT status, approved_by FROM app_users WHERE id = $1",
+      [id]
+    );
+    if (rows.length === 0) {
+      return jsonError(c, 404, "User not found", "NOT_FOUND");
+    }
+    const target = rows[0] as { status: string; approved_by?: string | null };
+    if (target.status !== "pending" && target.approved_by !== claims.sub) {
+      return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
+  }
+  const statusUpdate = updates.find(([key]) => key === "status");
+  const extraSets: string[] = [];
+  const extraValues: (string | number)[] = [];
+  if (statusUpdate && String(statusUpdate[1]) === "active") {
+    extraValues.push(claims.sub);
+    extraSets.push(`approved_by = $${updates.length + extraValues.length + 1}`);
+    extraSets.push("approved_at = now()");
+  }
+  const sets = updates
+    .map(([key], index) => `${key} = $${index + 2}`)
+    .concat(extraSets);
+  const values = updates.map(([, value]) => value ?? null).concat(extraValues);
   await sql(
     `
     UPDATE app_users
@@ -2144,7 +2648,9 @@ app.get("/admin/productivity", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  const isAdmin = claims.role === "admin";
+  const isTeacher = claims.role === "teacher";
+  if (!isAdmin && !isTeacher) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const periodRaw = c.req.query("period") ?? "month";
@@ -2157,6 +2663,15 @@ app.get("/admin/productivity", async (c) => {
   const city = c.req.query("city");
   const state = c.req.query("state");
   const userId = c.req.query("user_id");
+  if (isTeacher && userId) {
+    const allowed = await sql(
+      "SELECT 1 FROM app_users WHERE id = $1 AND approved_by = $2",
+      [userId, claims.sub]
+    );
+    if (allowed.length === 0) {
+      return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
+  }
 
   const residentFilters: string[] = ["r.deleted_at IS NULL"];
   const residentParams: (string | number)[] = [];
@@ -2180,6 +2695,12 @@ app.get("/admin/productivity", async (c) => {
     residentParams.push(userId);
     residentFilters.push(`r.created_by = $${residentParams.length}`);
   }
+  if (isTeacher) {
+    residentParams.push(claims.sub);
+    residentFilters.push(
+      `r.created_by IN (SELECT id FROM app_users WHERE approved_by = $${residentParams.length})`
+    );
+  }
 
   const pointFilters: string[] = ["p.deleted_at IS NULL"];
   const pointParams: (string | number)[] = [];
@@ -2202,6 +2723,12 @@ app.get("/admin/productivity", async (c) => {
   if (userId) {
     pointParams.push(userId);
     pointFilters.push(`p.created_by = $${pointParams.length}`);
+  }
+  if (isTeacher) {
+    pointParams.push(claims.sub);
+    pointFilters.push(
+      `p.created_by IN (SELECT id FROM app_users WHERE approved_by = $${pointParams.length})`
+    );
   }
 
   const residentRows = await sql(

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS app_users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   cognito_sub text NOT NULL UNIQUE,
   email text NOT NULL,
-  role text NOT NULL CHECK (role IN ('admin', 'employee', 'user')),
+  role text NOT NULL CHECK (role IN ('admin', 'employee', 'user', 'teacher')),
   status text NOT NULL CHECK (status IN ('active', 'disabled', 'pending')),
   full_name text NULL,
   phone text NULL,
@@ -19,11 +19,27 @@ CREATE TABLE IF NOT EXISTS app_users (
   password_hash text NULL,
   password_salt text NULL,
   last_login_at timestamptz NULL,
+  approved_by uuid NULL REFERENCES app_users(id),
+  approved_at timestamptz NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_app_users_email ON app_users (email);
+
+CREATE TABLE IF NOT EXISTS access_codes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,
+  created_by uuid NOT NULL REFERENCES app_users(id),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'revoked')),
+  used_at timestamptz NULL,
+  used_by text NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_access_codes_created_by ON access_codes (created_by);
+CREATE INDEX IF NOT EXISTS idx_access_codes_status ON access_codes (status);
 
 CREATE TABLE IF NOT EXISTS employees (
   user_id uuid PRIMARY KEY REFERENCES app_users(id),
@@ -72,6 +88,12 @@ CREATE TABLE IF NOT EXISTS residents (
   pcd_count integer NULL,
   notes text NULL,
   status text NOT NULL CHECK (status IN ('active', 'inactive')),
+  approval_status text NOT NULL DEFAULT 'approved'
+    CHECK (approval_status IN ('approved', 'pending', 'rejected')),
+  approved_by uuid NULL REFERENCES app_users(id),
+  approved_at timestamptz NULL,
+  access_code_id uuid NULL REFERENCES access_codes(id),
+  submitted_via_code boolean NOT NULL DEFAULT false,
   public_code text NULL,
   created_by uuid NOT NULL REFERENCES app_users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -164,6 +186,8 @@ CREATE TABLE IF NOT EXISTS map_points (
   accuracy_m integer NULL,
   precision text NOT NULL CHECK (precision IN ('approx', 'exact')),
   status text NOT NULL CHECK (status IN ('active', 'inactive')),
+  approval_status text NOT NULL DEFAULT 'approved'
+    CHECK (approval_status IN ('approved', 'pending', 'rejected')),
   category text NULL,
   public_note text NULL,
   area_type text NULL,
@@ -172,6 +196,10 @@ CREATE TABLE IF NOT EXISTS map_points (
   state text NULL,
   community_name text NULL,
   source_location text NULL,
+  approved_by uuid NULL REFERENCES app_users(id),
+  approved_at timestamptz NULL,
+  access_code_id uuid NULL REFERENCES access_codes(id),
+  submitted_via_code boolean NOT NULL DEFAULT false,
   geog geography(Point, 4326) NOT NULL,
   created_by uuid NOT NULL REFERENCES app_users(id),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -244,10 +272,12 @@ CREATE INDEX IF NOT EXISTS idx_map_points_geog ON map_points USING GIST (geog);
 CREATE INDEX IF NOT EXISTS idx_map_points_status ON map_points (status);
 CREATE INDEX IF NOT EXISTS idx_map_points_updated_at ON map_points (updated_at);
 CREATE INDEX IF NOT EXISTS idx_map_points_deleted_at ON map_points (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_map_points_approval_status ON map_points (approval_status);
 
 CREATE INDEX IF NOT EXISTS idx_residents_status ON residents (status);
 CREATE INDEX IF NOT EXISTS idx_residents_updated_at ON residents (updated_at);
 CREATE INDEX IF NOT EXISTS idx_residents_deleted_at ON residents (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_residents_approval_status ON residents (approval_status);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_assignments_active_resident
   ON resident_point_assignments (resident_id)

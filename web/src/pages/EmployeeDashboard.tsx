@@ -7,17 +7,23 @@ import citiesData from "../data/brazil-cities.json";
 import { BRAZIL_STATES } from "../data/brazil-states";
 import {
   assignResidentPoint,
+  approvePendingSubmission,
   createCommunity,
+  createAccessCode,
   createPoint,
   createResident,
   createResidentProfile,
   fetchCommunities,
   fetchResidentDetail,
   getAuthRole,
+  listAccessCodes,
+  listPendingSubmissions,
   listResidents,
+  rejectPendingSubmission,
   updatePoint,
   updateResident,
   uploadAttachment,
+  type AccessCode,
   type CreatePointPayload,
   type CreateResidentPayload,
   type CommunityInfo,
@@ -32,6 +38,18 @@ type DashboardResident = {
   community_name?: string | null;
   status: string;
   created_at: string;
+};
+
+type PendingSubmission = {
+  id: string;
+  full_name: string;
+  city?: string | null;
+  state?: string | null;
+  community_name?: string | null;
+  created_at: string;
+  point_id?: string | null;
+  public_lat?: number | null;
+  public_lng?: number | null;
 };
 
 type BrazilCity = { name: string; state: string };
@@ -321,10 +339,16 @@ export default function EmployeeDashboard() {
   const [resetKey, setResetKey] = useState(0);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [residents, setResidents] = useState<DashboardResident[]>([]);
+  const [accessCodes, setAccessCodes] = useState<AccessCode[]>([]);
+  const [codesLoading, setCodesLoading] = useState(false);
+  const [codesError, setCodesError] = useState<string | null>(null);
+  const [pendingSubmissions, setPendingSubmissions] = useState<PendingSubmission[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingError, setPendingError] = useState<string | null>(null);
   const role = getAuthRole();
   const isAdmin = role === "admin";
   const [activeTab, setActiveTab] = useState<
-    "register" | "people" | "admin"
+    "register" | "people" | "admin" | "pending"
   >("register");
   const [formState, setFormState] = useState(initialFormState);
   const [communityCatalog, setCommunityCatalog] = useState<CommunityInfo[]>([]);
@@ -399,9 +423,70 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const loadAccessCodes = async () => {
+    setCodesError(null);
+    setCodesLoading(true);
+    try {
+      const response = await listAccessCodes({ status: "active" });
+      setAccessCodes(response.items);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao carregar codigos.";
+      setCodesError(message);
+    } finally {
+      setCodesLoading(false);
+    }
+  };
+
+  const handleCreateAccessCode = async () => {
+    setCodesError(null);
+    setCodesLoading(true);
+    try {
+      await createAccessCode();
+      await loadAccessCodes();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao gerar codigo.";
+      setCodesError(message);
+    } finally {
+      setCodesLoading(false);
+    }
+  };
+
+  const loadPendingSubmissions = async () => {
+    setPendingError(null);
+    setPendingLoading(true);
+    try {
+      const response = await listPendingSubmissions();
+      setPendingSubmissions(response.items);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Falha ao carregar pendencias.";
+      setPendingError(message);
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const handleApprovePending = async (id: string) => {
+    await approvePendingSubmission(id);
+    await loadPendingSubmissions();
+  };
+
+  const handleRejectPending = async (id: string) => {
+    await rejectPendingSubmission(id);
+    await loadPendingSubmissions();
+  };
+
   useEffect(() => {
     void loadResidents();
-  }, []);
+    if (!isAdmin) {
+      void loadAccessCodes();
+      void loadPendingSubmissions();
+    }
+  }, [isAdmin]);
 
   const loadCommunityOptions = async () => {
     setCommunityOptionsError(null);
@@ -1140,6 +1225,9 @@ export default function EmployeeDashboard() {
     if (!isAdmin && activeTab === "admin") {
       setActiveTab("register");
     }
+    if (isAdmin && activeTab === "pending") {
+      setActiveTab("register");
+    }
   }, [activeTab, isAdmin]);
 
   const panelTabs = (
@@ -1158,6 +1246,18 @@ export default function EmployeeDashboard() {
       >
         Minhas pessoas
       </button>
+      {!isAdmin && (
+        <button
+          className={`tab ${activeTab === "pending" ? "active" : ""}`}
+          type="button"
+          onClick={() => setActiveTab("pending")}
+        >
+          Cadastros pendentes
+          {pendingSubmissions.length > 0
+            ? ` (${pendingSubmissions.length})`
+            : ""}
+        </button>
+      )}
       {isAdmin && (
         <button
           className={`tab ${activeTab === "admin" ? "active" : ""}`}
@@ -1205,6 +1305,57 @@ export default function EmployeeDashboard() {
               </button>
             </div>
           </section>
+
+          {!isAdmin && (
+            <section className="module-section">
+              <div className="card">
+                <div className="card-header">
+                  <div>
+                    <span className="eyebrow">Codigo de acesso</span>
+                    <h2>Gerar codigo unico para cadastro externo</h2>
+                    <p>
+                      Compartilhe um codigo unico para que uma pessoa sem login
+                      registre um ponto. O cadastro entrara como pendente para
+                      sua aprovacao.
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => void handleCreateAccessCode()}
+                    disabled={codesLoading}
+                  >
+                    {codesLoading ? "Gerando..." : "Gerar codigo"}
+                  </button>
+                </div>
+                {codesError && <div className="alert">{codesError}</div>}
+                <div className="card-body">
+                  {accessCodes.length === 0 ? (
+                    <div className="empty-state">
+                      Nenhum codigo ativo no momento.
+                    </div>
+                  ) : (
+                    <div className="code-list">
+                      {accessCodes.map((code) => (
+                        <div key={code.id} className="code-item">
+                          <strong>{code.code}</strong>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() =>
+                              void navigator.clipboard.writeText(code.code)
+                            }
+                          >
+                            Copiar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="form-section">
             <div className="form-header">
@@ -2763,6 +2914,86 @@ export default function EmployeeDashboard() {
             </div>
           </section>
         </>
+      )}
+
+      {activeTab === "pending" && (
+        <section className="module-section">
+          <div className="card">
+            <div className="card-header">
+              <div>
+                <span className="eyebrow">Cadastros pendentes</span>
+                <h2>Registros enviados por codigo de acesso</h2>
+                <p>
+                  Verifique os dados enviados e aprove para liberar no mapa.
+                </p>
+              </div>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => void loadPendingSubmissions()}
+                disabled={pendingLoading}
+              >
+                {pendingLoading ? "Atualizando..." : "Atualizar lista"}
+              </button>
+            </div>
+            {pendingError && <div className="alert">{pendingError}</div>}
+            <div className="card-body">
+              {pendingSubmissions.length === 0 ? (
+                <div className="empty-state">
+                  Nenhum cadastro pendente no momento.
+                </div>
+              ) : (
+                <div className="table-card">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Nome</th>
+                        <th>Cidade</th>
+                        <th>Estado</th>
+                        <th>Comunidade</th>
+                        <th>Enviado em</th>
+                        <th>Acoes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingSubmissions.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.full_name}</td>
+                          <td>{item.city ?? "-"}</td>
+                          <td>{item.state ?? "-"}</td>
+                          <td>{item.community_name ?? "-"}</td>
+                          <td>
+                            {new Date(item.created_at).toLocaleDateString(
+                              "pt-BR"
+                            )}
+                          </td>
+                          <td>
+                            <div className="table-actions">
+                              <button
+                                className="btn btn-primary"
+                                type="button"
+                                onClick={() => void handleApprovePending(item.id)}
+                              >
+                                Aprovar
+                              </button>
+                              <button
+                                className="btn btn-ghost"
+                                type="button"
+                                onClick={() => void handleRejectPending(item.id)}
+                              >
+                                Rejeitar
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       )}
 
       {activeTab === "people" && (

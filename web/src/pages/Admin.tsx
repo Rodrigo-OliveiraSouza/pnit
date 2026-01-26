@@ -19,6 +19,9 @@ import {
 } from "../services/api";
 
 export function AdminPanel() {
+  const role = getAuthRole();
+  const isAdmin = role === "admin";
+  const isTeacher = role === "teacher";
   const [activeTab, setActiveTab] = useState<
     | "requests"
     | "users"
@@ -90,10 +93,18 @@ export function AdminPanel() {
 
   useEffect(() => {
     void loadUsers();
-    void loadComplaints();
+    if (isAdmin) {
+      void loadComplaints();
+    }
     void loadAudit();
     void loadProductivity();
-  }, []);
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin && (activeTab === "complaints" || activeTab === "settings" || activeTab === "management")) {
+      setActiveTab("requests");
+    }
+  }, [activeTab, isAdmin]);
 
   const handleApprove = async (id: string) => {
     await updateAdminUser(id, { status: "active" });
@@ -300,27 +311,34 @@ export function AdminPanel() {
     <>
       <section className="dashboard-hero">
         <div>
-          <span className="eyebrow">Admin</span>
-          <h1>Gestao de equipes e auditoria</h1>
+          <span className="eyebrow">{isAdmin ? "Admin" : "Professor"}</span>
+          <h1>
+            {isAdmin
+              ? "Gestao de equipes e auditoria"
+              : "Aprovacao de usuarios e relatorios"}
+          </h1>
           <p>
-            Acompanhe acessos, aprove solicitacoes e garanta a integridade dos
-            dados.
+            {isAdmin
+              ? "Acompanhe acessos, aprove solicitacoes e garanta a integridade dos dados."
+              : "Acompanhe solicitacoes pendentes, aprove usuarios e consulte relatorios."}
           </p>
           {refreshFeedback && <div className="alert">{refreshFeedback}</div>}
         </div>
-        <div className="dashboard-actions">
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={() => void handleForceRefresh()}
-            disabled={refreshLoading}
-          >
-            {refreshLoading ? "Atualizando..." : "Atualizar mapa geral"}
-          </button>
-          <button className="btn btn-outline" type="button">
-            Exportar auditoria
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="dashboard-actions">
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => void handleForceRefresh()}
+              disabled={refreshLoading}
+            >
+              {refreshLoading ? "Atualizando..." : "Atualizar mapa geral"}
+            </button>
+            <button className="btn btn-outline" type="button">
+              Exportar auditoria
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="module-section">
@@ -340,20 +358,24 @@ export function AdminPanel() {
           >
             Cadastros registrados
           </button>
-          <button
-            className={`tab ${activeTab === "management" ? "active" : ""}`}
-            type="button"
-            onClick={() => setActiveTab("management")}
-          >
-            Gerenciar usuarios
-          </button>
-          <button
-            className={`tab ${activeTab === "complaints" ? "active" : ""}`}
-            type="button"
-            onClick={() => setActiveTab("complaints")}
-          >
-            Denuncias
-          </button>
+          {isAdmin && (
+            <button
+              className={`tab ${activeTab === "management" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("management")}
+            >
+              Gerenciar usuarios
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className={`tab ${activeTab === "complaints" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("complaints")}
+            >
+              Denuncias
+            </button>
+          )}
           <button
             className={`tab ${activeTab === "productivity" ? "active" : ""}`}
             type="button"
@@ -361,13 +383,15 @@ export function AdminPanel() {
           >
             Relatorio de usuario
           </button>
-          <button
-            className={`tab ${activeTab === "settings" ? "active" : ""}`}
-            type="button"
-            onClick={() => setActiveTab("settings")}
-          >
-            Configuracoes
-          </button>
+          {isAdmin && (
+            <button
+              className={`tab ${activeTab === "settings" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("settings")}
+            >
+              Configuracoes
+            </button>
+          )}
           <button
             className={`tab ${activeTab === "audit" ? "active" : ""}`}
             type="button"
@@ -1011,7 +1035,7 @@ export function AdminPanel() {
 
 export default function Admin() {
   const role = getAuthRole();
-  if (role !== "admin") {
+  if (role !== "admin" && role !== "teacher") {
     return (
       <div className="page">
         <div className="alert">Acesso restrito ao painel admin.</div>
