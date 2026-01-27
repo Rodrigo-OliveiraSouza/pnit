@@ -4,7 +4,11 @@ import {
   submitAccessCodeRegistration,
   type AccessCodeSubmissionPayload,
 } from "../services/api";
+import citiesData from "../data/brazil-cities.json";
 import { BRAZIL_STATES } from "../data/brazil-states";
+
+type BrazilCity = { name: string; state: string };
+const BRAZIL_CITIES = citiesData as BrazilCity[];
 
 function parseLatLng(input: string) {
   const matches = input.match(/(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/i);
@@ -42,6 +46,11 @@ export default function AccessCodeRegister() {
   const [feedback, setFeedback] = useState<
     { type: "success" | "error"; message: string } | null
   >(null);
+
+  const availableCities = useMemo(() => {
+    if (!state) return [] as BrazilCity[];
+    return BRAZIL_CITIES.filter((item) => item.state === state);
+  }, [state]);
 
   const resolvedLocation = useMemo(() => {
     if (selectedLocation) return selectedLocation;
@@ -209,23 +218,36 @@ export default function AccessCodeRegister() {
               <select
                 className="select"
                 value={state}
-                onChange={(event) => setState(event.target.value)}
+                onChange={(event) => {
+                  setState(event.target.value);
+                  setCity("");
+                }}
               >
                 <option value="">Selecione</option>
                 {BRAZIL_STATES.map((item) => (
                   <option key={item.code} value={item.code}>
-                    {item.name}
+                    {item.code} - {item.name}
                   </option>
                 ))}
               </select>
             </label>
             <label>
               Cidade
-              <input
-                type="text"
+              <select
+                className="select"
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
-              />
+                disabled={!state}
+              >
+                <option value="">
+                  {state ? "Selecione" : "Selecione o estado primeiro"}
+                </option>
+                {availableCities.map((item) => (
+                  <option key={`${item.state}-${item.name}`} value={item.name}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="full">
               Observações públicas
