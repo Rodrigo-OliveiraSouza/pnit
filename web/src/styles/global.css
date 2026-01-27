@@ -288,13 +288,15 @@ img.theme-ignore,
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  border: none;
+  border: 1px solid #000;
   border-radius: 999px;
   padding: 0.7rem 1.4rem;
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
   transition: var(--transition);
+  background: #fff;
+  color: #000;
 }
 
 .btn:disabled {
@@ -304,54 +306,56 @@ img.theme-ignore,
 }
 
 .btn-primary {
-  background: var(--color-sun);
-  color: var(--color-ink);
-  box-shadow: var(--shadow-card);
+  background: #fff;
+  color: #000;
+  border-color: #000;
+  box-shadow: none;
 }
 
 .btn-primary:hover {
-  background: var(--color-sun);
+  background: #fff;
 }
 
 .btn-outline {
-  background: transparent;
-  border: 1px solid rgba(var(--color-forest-rgb), 0.3);
-  color: var(--color-forest);
+  background: #fff;
+  border: 1px solid #000;
+  color: #000;
 }
 
 .btn-outline:hover {
-  border-color: var(--color-forest);
-  background: rgba(var(--color-forest-rgb), 0.08);
+  border-color: #000;
+  background: #fff;
 }
 
 .btn-pdf {
-  background: var(--color-white);
+  background: #fff;
   border: 1px solid #000;
-  color: var(--color-ink);
+  color: #000;
 }
 
 .btn-pdf:hover {
-  background: var(--color-white);
+  background: #fff;
   border-color: #000;
 }
 
 .btn-ghost {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--color-forest);
+  background: #fff;
+  border: 1px solid #000;
+  color: #000;
 }
 
 .btn-ghost:hover {
-  background: rgba(var(--color-forest-rgb), 0.08);
+  background: #fff;
 }
 
 .site-header .btn-ghost {
-  color: var(--color-white);
-  border-color: rgba(255, 255, 255, 0.35);
+  color: #000;
+  border-color: #000;
+  background: #fff;
 }
 
 .site-header .btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: #fff;
 }
 
 .btn-sm {
