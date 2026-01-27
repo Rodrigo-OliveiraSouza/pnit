@@ -1394,10 +1394,10 @@ export default function EmployeeDashboard() {
               </label>
               <div className="form-row">
                 <label>
-                  Documento
+                  CPF
                   <input
                     type="text"
-                    placeholder="Documento"
+                    placeholder="CPF"
                     value={formState.docId}
                     onChange={(event) =>
                       handleFieldChange("docId", event.target.value)
@@ -3094,7 +3094,7 @@ export default function EmployeeDashboard() {
                 </label>
                 <div className="form-row">
                   <label>
-                    Documento
+                    CPF
                     <input
                       type="text"
                       value={editForm.docId}
