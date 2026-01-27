@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import NewsCarousel from "../components/NewsCarousel";
 import { loginUser, setAuthRole, setAuthToken, setAuthUserId } from "../services/api";
 
 export default function Login() {
@@ -36,6 +37,14 @@ export default function Login() {
           Credenciais de funcionário garantem acesso completo a cadastro,
           edição, associações e auditoria.
         </p>
+        <div className="auth-carousel">
+          <NewsCarousel
+            className="news-carousel-media"
+            imageOnly
+            showDots={false}
+            collection="reports"
+          />
+        </div>
         <div className="auth-highlights">
           <div>
             <strong>JWT + Cognito</strong>

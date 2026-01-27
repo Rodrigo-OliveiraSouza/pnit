@@ -1244,6 +1244,14 @@ textarea {
   gap: 1rem;
 }
 
+.auth-carousel {
+  margin-top: 1.6rem;
+}
+
+.auth-carousel .news-card-media {
+  height: clamp(220px, 40vh, 360px);
+}
+
 .auth-card {
   background: var(--color-white);
   border-radius: var(--radius-lg);
