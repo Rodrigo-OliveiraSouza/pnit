@@ -120,7 +120,7 @@ export default function NewsCarousel({
         className={`news-card${imageOnly ? " news-card-media" : ""}`}
       >
         <div
-          className={`news-media${active.src ? "" : " is-placeholder"}${
+          className={`news-media theme-media${active.src ? "" : " is-placeholder"}${
             useSplitView ? " news-media-split" : ""
           }`}
           role={useSplitView ? "img" : undefined}
@@ -139,7 +139,11 @@ export default function NewsCarousel({
                 />
               </>
             ) : (
-              <img src={active.src} alt={active.title} />
+              <img
+                src={active.src}
+                alt={active.title}
+                className="theme-media-img"
+              />
             )
           ) : (
             <div className="news-media-placeholder" aria-hidden="true" />

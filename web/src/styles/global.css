@@ -26,6 +26,13 @@
   --color-earth-rgb: 210, 164, 131;
   --shadow-soft: 0 18px 40px rgba(var(--color-ink-rgb), 0.14);
   --shadow-card: 0 12px 24px rgba(var(--color-ink-rgb), 0.1);
+  --image-overlay: #000000;
+  --image-overlay-opacity: 0;
+  --image-saturation: 1;
+  --image-contrast: 1;
+  --image-brightness: 1;
+  --image-radius: 24px;
+  --image-shadow: 0 18px 40px rgba(43, 26, 18, 0.14);
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-sm: 10px;
@@ -40,7 +47,7 @@ body {
   margin: 0;
   font-family: "Source Sans 3", "Segoe UI", sans-serif;
   color: var(--color-ink);
-  background: #c8651e;
+  background: var(--color-forest);
   min-height: 100vh;
 }
 
@@ -60,6 +67,60 @@ code {
 img {
   max-width: 100%;
   display: block;
+  border-radius: var(--image-radius);
+  box-shadow: var(--image-shadow);
+  filter: saturate(var(--image-saturation)) contrast(var(--image-contrast))
+    brightness(var(--image-brightness));
+  transition: filter var(--transition), box-shadow var(--transition),
+    border-radius var(--transition);
+}
+
+img.theme-ignore,
+.theme-ignore img {
+  filter: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.theme-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--image-radius);
+  box-shadow: var(--image-shadow);
+}
+
+.theme-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--image-overlay);
+  opacity: var(--image-overlay-opacity);
+  pointer-events: none;
+}
+
+.theme-media img,
+.theme-media .theme-media-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  box-shadow: none;
+  filter: saturate(var(--image-saturation)) contrast(var(--image-contrast))
+    brightness(var(--image-brightness));
+}
+
+.news-media-slice {
+  position: relative;
+  overflow: hidden;
+}
+
+.news-media-slice::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--image-overlay);
+  opacity: var(--image-overlay-opacity);
+  pointer-events: none;
 }
 
 .app-shell {
@@ -1378,6 +1439,88 @@ textarea {
   box-shadow: var(--shadow-card);
 }
 
+.theme-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.35fr) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.theme-list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.theme-item {
+  border: 1px solid rgba(var(--color-forest-rgb), 0.18);
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+  display: grid;
+  gap: 0.5rem;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.theme-item.active {
+  border-color: var(--color-sun);
+  box-shadow: var(--shadow-card);
+}
+
+.theme-swatches {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.theme-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--color-ink-rgb), 0.15);
+}
+
+.theme-editor {
+  display: grid;
+  gap: 1rem;
+}
+
+.theme-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1rem;
+}
+
+.theme-control label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(var(--color-ink-rgb), 0.6);
+}
+
+.theme-color {
+  padding: 0;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.2);
+  background: var(--color-white);
+}
+
+.theme-control input[type="range"] {
+  width: 100%;
+}
+
+.theme-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.theme-preview-note {
+  font-size: 0.85rem;
+  color: rgba(var(--color-ink-rgb), 0.6);
+}
+
 .activity-list {
   list-style: none;
   padding: 0;
@@ -1657,7 +1800,8 @@ th {
   .news-hero,
   .auth-page,
   .map-grid,
-  .detail-grid {
+  .detail-grid,
+  .theme-panel {
     grid-template-columns: 1fr;
   }
 

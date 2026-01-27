@@ -48,6 +48,27 @@ type CommunityPayload = {
   state?: string | null;
 };
 
+type ThemeColors = {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+  text: string;
+  border: string;
+  header_start?: string;
+  header_end?: string;
+};
+
+type ThemeImageStyles = {
+  overlay?: string;
+  overlay_opacity?: number;
+  saturation?: number;
+  contrast?: number;
+  brightness?: number;
+  radius?: number;
+  shadow?: string;
+};
+
 type UserClaims = {
   sub: string;
   role: "admin" | "manager" | "registrar" | "teacher";
@@ -442,6 +463,127 @@ function hasComplaintSecret(c: Context, env: Env) {
 
 function normalizeQuery(query: string) {
   return query.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+const THEME_COLOR_KEYS = [
+  "primary",
+  "secondary",
+  "accent",
+  "background",
+  "text",
+  "border",
+] as const;
+
+const DEFAULT_THEME_IMAGE_STYLES: Required<ThemeImageStyles> = {
+  overlay: "#000000",
+  overlay_opacity: 0,
+  saturation: 1,
+  contrast: 1,
+  brightness: 1,
+  radius: 24,
+  shadow: "0 18px 40px rgba(43,26,18,0.14)",
+};
+
+function parseJsonField<T>(value: unknown): T | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return null;
+    }
+  }
+  return value as T;
+}
+
+function normalizeThemeColors(payload: Record<string, unknown> | null): ThemeColors | null {
+  if (!payload) return null;
+  const colors: Record<string, string> = {};
+  for (const key of THEME_COLOR_KEYS) {
+    const value = payload[key];
+    if (typeof value !== "string" || value.trim().length === 0) {
+      return null;
+    }
+    colors[key] = value.trim();
+  }
+  const headerStart =
+    typeof payload.header_start === "string" && payload.header_start.trim()
+      ? payload.header_start.trim()
+      : colors.primary;
+  const headerEnd =
+    typeof payload.header_end === "string" && payload.header_end.trim()
+      ? payload.header_end.trim()
+      : colors.primary;
+  return {
+    primary: colors.primary,
+    secondary: colors.secondary,
+    accent: colors.accent,
+    background: colors.background,
+    text: colors.text,
+    border: colors.border,
+    header_start: headerStart,
+    header_end: headerEnd,
+  };
+}
+
+function normalizeThemeImageStyles(
+  payload: Record<string, unknown> | null
+): Required<ThemeImageStyles> {
+  if (!payload) return { ...DEFAULT_THEME_IMAGE_STYLES };
+  const clamp = (value: number, min: number, max: number) =>
+    Math.min(max, Math.max(min, value));
+  const overlay =
+    typeof payload.overlay === "string" && payload.overlay.trim()
+      ? payload.overlay.trim()
+      : DEFAULT_THEME_IMAGE_STYLES.overlay;
+  const overlayOpacityRaw =
+    typeof payload.overlay_opacity === "number"
+      ? payload.overlay_opacity
+      : Number(payload.overlay_opacity);
+  const overlay_opacity = Number.isFinite(overlayOpacityRaw)
+    ? clamp(overlayOpacityRaw, 0, 1)
+    : DEFAULT_THEME_IMAGE_STYLES.overlay_opacity;
+  const saturationRaw =
+    typeof payload.saturation === "number"
+      ? payload.saturation
+      : Number(payload.saturation);
+  const contrastRaw =
+    typeof payload.contrast === "number"
+      ? payload.contrast
+      : Number(payload.contrast);
+  const brightnessRaw =
+    typeof payload.brightness === "number"
+      ? payload.brightness
+      : Number(payload.brightness);
+  const radiusRaw =
+    typeof payload.radius === "number"
+      ? payload.radius
+      : Number(payload.radius);
+  const saturation = Number.isFinite(saturationRaw)
+    ? clamp(saturationRaw, 0.2, 3)
+    : DEFAULT_THEME_IMAGE_STYLES.saturation;
+  const contrast = Number.isFinite(contrastRaw)
+    ? clamp(contrastRaw, 0.2, 3)
+    : DEFAULT_THEME_IMAGE_STYLES.contrast;
+  const brightness = Number.isFinite(brightnessRaw)
+    ? clamp(brightnessRaw, 0.2, 3)
+    : DEFAULT_THEME_IMAGE_STYLES.brightness;
+  const radius = Number.isFinite(radiusRaw)
+    ? clamp(radiusRaw, 0, 64)
+    : DEFAULT_THEME_IMAGE_STYLES.radius;
+  const shadow =
+    typeof payload.shadow === "string" && payload.shadow.trim()
+      ? payload.shadow.trim()
+      : DEFAULT_THEME_IMAGE_STYLES.shadow;
+  return {
+    overlay,
+    overlay_opacity,
+    saturation,
+    contrast,
+    brightness,
+    radius,
+    shadow,
+  };
 }
 
 function generateAccessCode() {
@@ -4555,6 +4697,239 @@ app.put("/admin/complaints/:id", async (c) => {
     status: body.status,
   });
   return c.json({ ok: true });
+});
+
+app.get("/theme/active", async (c) => {
+  const sql = getSql(c.env);
+  const rows = await sql(
+    `
+    SELECT t.id, t.name, t.colors, t.image_styles, t.created_at, t.updated_at
+    FROM theme_active a
+    JOIN theme_palettes t ON t.id = a.theme_id
+    LIMIT 1
+    `
+  );
+  if (rows.length === 0) {
+    return c.json({ theme: null });
+  }
+  const row = rows[0] as Record<string, unknown>;
+  const colors = parseJsonField<ThemeColors>(row.colors);
+  const imageStyles = parseJsonField<ThemeImageStyles>(row.image_styles);
+  return c.json({
+    theme: {
+      id: row.id as string,
+      name: row.name as string,
+      colors: colors ?? null,
+      image_styles: imageStyles ?? null,
+      created_at: row.created_at ?? null,
+      updated_at: row.updated_at ?? null,
+    },
+  });
+});
+
+app.get("/admin/themes", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!isAdmin(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const themes = await sql(
+    `
+    SELECT id, name, colors, image_styles, created_at, updated_at
+    FROM theme_palettes
+    ORDER BY created_at DESC
+    `
+  );
+  const activeRows = await sql(
+    "SELECT theme_id FROM theme_active LIMIT 1"
+  );
+  const activeThemeId = (activeRows[0]?.theme_id as string | undefined) ?? null;
+  const items = themes.map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    name: row.name as string,
+    colors: parseJsonField<ThemeColors>(row.colors),
+    image_styles: parseJsonField<ThemeImageStyles>(row.image_styles),
+    created_at: row.created_at ?? null,
+    updated_at: row.updated_at ?? null,
+  }));
+  return c.json({ items, active_theme_id: activeThemeId });
+});
+
+app.post("/admin/themes", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!isAdmin(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const body = (await c.req.json().catch(() => null)) as
+    | {
+        name?: string;
+        colors?: Record<string, unknown>;
+        image_styles?: Record<string, unknown>;
+      }
+    | null;
+  const name = typeof body?.name === "string" ? body.name.trim() : "";
+  if (!name) {
+    return jsonError(c, 400, "name is required");
+  }
+  const colors = normalizeThemeColors(body?.colors ?? null);
+  if (!colors) {
+    return jsonError(c, 400, "colors are required");
+  }
+  const imageStyles = normalizeThemeImageStyles(body?.image_styles ?? null);
+  const rows = await sql(
+    `
+    INSERT INTO theme_palettes (name, colors, image_styles, created_by)
+    VALUES ($1, $2::jsonb, $3::jsonb, $4)
+    RETURNING id, name, colors, image_styles, created_at, updated_at
+    `,
+    [name, JSON.stringify(colors), JSON.stringify(imageStyles), claims.sub]
+  );
+  const item = rows[0] as Record<string, unknown>;
+  await logAudit(sql, claims.sub, "theme_create", "theme_palettes", item.id as string, {
+    name,
+  });
+  return c.json({
+    item: {
+      id: item.id as string,
+      name: item.name as string,
+      colors: parseJsonField<ThemeColors>(item.colors),
+      image_styles: parseJsonField<ThemeImageStyles>(item.image_styles),
+      created_at: item.created_at ?? null,
+      updated_at: item.updated_at ?? null,
+    },
+  });
+});
+
+app.put("/admin/themes/:id", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!isAdmin(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  const body = (await c.req.json().catch(() => null)) as
+    | {
+        name?: string;
+        colors?: Record<string, unknown>;
+        image_styles?: Record<string, unknown>;
+      }
+    | null;
+  const name = typeof body?.name === "string" ? body.name.trim() : "";
+  if (!name) {
+    return jsonError(c, 400, "name is required");
+  }
+  const colors = normalizeThemeColors(body?.colors ?? null);
+  if (!colors) {
+    return jsonError(c, 400, "colors are required");
+  }
+  const imageStyles = normalizeThemeImageStyles(body?.image_styles ?? null);
+  await sql(
+    `
+    UPDATE theme_palettes
+    SET name = $2,
+        colors = $3::jsonb,
+        image_styles = $4::jsonb,
+        updated_at = now()
+    WHERE id = $1
+    `,
+    [id, name, JSON.stringify(colors), JSON.stringify(imageStyles)]
+  );
+  await logAudit(sql, claims.sub, "theme_update", "theme_palettes", id, {
+    name,
+  });
+  return c.json({ ok: true });
+});
+
+app.delete("/admin/themes/:id", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!isAdmin(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  const activeRows = await sql("SELECT theme_id FROM theme_active LIMIT 1");
+  const activeThemeId = (activeRows[0]?.theme_id as string | undefined) ?? null;
+  if (activeThemeId === id) {
+    return jsonError(c, 400, "Cannot delete active theme");
+  }
+  await sql("DELETE FROM theme_palettes WHERE id = $1", [id]);
+  await logAudit(sql, claims.sub, "theme_delete", "theme_palettes", id);
+  return c.json({ ok: true });
+});
+
+app.post("/admin/themes/:id/activate", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!isAdmin(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  const rows = await sql("SELECT id FROM theme_palettes WHERE id = $1", [id]);
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Theme not found", "NOT_FOUND");
+  }
+  await sql(
+    `
+    INSERT INTO theme_active (id, theme_id, updated_at)
+    VALUES (true, $1, now())
+    ON CONFLICT (id)
+    DO UPDATE SET theme_id = EXCLUDED.theme_id, updated_at = now()
+    `,
+    [id]
+  );
+  await logAudit(sql, claims.sub, "theme_activate", "theme_palettes", id);
+  return c.json({ ok: true, theme_id: id });
+});
+
+app.post("/admin/themes/reset", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!isAdmin(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const rows = await sql(
+    `
+    SELECT id
+    FROM theme_palettes
+    WHERE name = 'Tema padrao'
+    ORDER BY created_at ASC
+    LIMIT 1
+    `
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Default theme not found", "NOT_FOUND");
+  }
+  const themeId = rows[0].id as string;
+  await sql(
+    `
+    INSERT INTO theme_active (id, theme_id, updated_at)
+    VALUES (true, $1, now())
+    ON CONFLICT (id)
+    DO UPDATE SET theme_id = EXCLUDED.theme_id, updated_at = now()
+    `,
+    [themeId]
+  );
+  await logAudit(sql, claims.sub, "theme_reset", "theme_palettes", themeId);
+  return c.json({ ok: true, theme_id: themeId });
 });
 
 app.get("/secure/complaints", async (c) => {

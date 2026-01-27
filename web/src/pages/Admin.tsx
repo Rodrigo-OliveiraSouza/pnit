@@ -1,4 +1,5 @@
 ﻿import { Fragment, useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
@@ -7,14 +8,20 @@ import {
   fetchAdminUserDetails,
   fetchProductivity,
   fetchUserSummary,
+  activateTheme,
+  createTheme,
+  deleteTheme,
   getAuthRole,
   getAuthUserId,
+  listThemes,
   listAdminUsers,
   listComplaints,
   listLinkCodes,
   refreshPublicMapCache,
+  resetTheme,
   updateAdminUser,
   updateComplaintStatus,
+  updateTheme,
   createLinkCode,
   revokeLinkCode,
   type AdminUser,
@@ -22,6 +29,14 @@ import {
   type LinkCode,
   type ProductivityResponse,
 } from "../services/api";
+import type { ThemeColors, ThemeImageStyles, ThemePalette } from "../types/theme";
+import {
+  applyThemeToRoot,
+  resolveThemeColors,
+  resolveThemeImageStyles,
+  DEFAULT_THEME_COLORS,
+  DEFAULT_THEME_IMAGE_STYLES,
+} from "../utils/theme";
 
 export function AdminPanel() {
   const role = getAuthRole();
@@ -37,6 +52,7 @@ export function AdminPanel() {
     | "management"
     | "settings"
     | "audit"
+    | "theme"
   >("requests");
   const [pendingUsers, setPendingUsers] = useState<AdminUser[]>([]);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
@@ -83,6 +99,36 @@ export function AdminPanel() {
   const [auditView, setAuditView] = useState<"recent" | "history">("recent");
   const [auditPage, setAuditPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [themes, setThemes] = useState<ThemePalette[]>([]);
+  const [activeThemeId, setActiveThemeId] = useState<string | null>(null);
+  const [themeLoading, setThemeLoading] = useState(false);
+  const [themeError, setThemeError] = useState<string | null>(null);
+  const [themeSaving, setThemeSaving] = useState(false);
+  const [themeDeletingId, setThemeDeletingId] = useState<string | null>(null);
+  const [themeActivatingId, setThemeActivatingId] = useState<string | null>(null);
+  const [themeResetting, setThemeResetting] = useState(false);
+  const [themeFeedback, setThemeFeedback] = useState<string | null>(null);
+  const [themeDraft, setThemeDraft] = useState<{
+    id: string | null;
+    name: string;
+    colors: ThemeColors;
+    image_styles: ThemeImageStyles;
+  } | null>(null);
+  const [themeSnapshot, setThemeSnapshot] = useState<{
+    id: string | null;
+    name: string;
+    colors: ThemeColors;
+    image_styles: ThemeImageStyles;
+  } | null>(null);
+
+  const toThemeDraft = (theme?: ThemePalette | null) => ({
+    id: theme?.id ?? null,
+    name: theme?.name ?? "Nova paleta",
+    colors: resolveThemeColors(theme?.colors ?? DEFAULT_THEME_COLORS),
+    image_styles: resolveThemeImageStyles(
+      theme?.image_styles ?? DEFAULT_THEME_IMAGE_STYLES
+    ),
+  });
 
   const loadUsers = async () => {
     setLoading(true);
@@ -120,12 +166,43 @@ export function AdminPanel() {
     }
   };
 
+  const loadThemes = async () => {
+    if (!isAdmin) return;
+    setThemeLoading(true);
+    setThemeError(null);
+    try {
+      const response = await listThemes();
+      setThemes(response.items);
+      setActiveThemeId(response.active_theme_id ?? null);
+      if (response.items.length > 0) {
+        const current =
+          response.items.find(
+            (item) => item.id === (themeDraft?.id ?? response.active_theme_id)
+          ) ?? response.items[0];
+        const draft = toThemeDraft(current);
+        setThemeDraft(draft);
+        setThemeSnapshot(draft);
+      } else {
+        const draft = toThemeDraft(null);
+        setThemeDraft(draft);
+        setThemeSnapshot(draft);
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao carregar paletas.";
+      setThemeError(message);
+    } finally {
+      setThemeLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!isSupervisor) return;
     void loadUsers();
     void loadLinkCodes();
     if (isAdmin) {
       void loadComplaints();
+      void loadThemes();
     }
     void loadAudit();
     void loadProductivity();
@@ -139,7 +216,15 @@ export function AdminPanel() {
     if (!isSupervisor && activeTab === "management") {
       setActiveTab("requests");
     }
+    if (!isAdmin && activeTab === "theme") {
+      setActiveTab("requests");
+    }
   }, [activeTab, isAdmin, isSupervisor]);
+
+  useEffect(() => {
+    if (!themeDraft) return;
+    applyThemeToRoot(themeDraft.colors, themeDraft.image_styles);
+  }, [themeDraft]);
 
   const handleApprove = async (id: string) => {
     await updateAdminUser(id, { status: "active" });
@@ -185,6 +270,182 @@ export function AdminPanel() {
       setLinkCodesError(message);
     } finally {
       setLinkCodeRevokingId(null);
+    }
+  };
+
+  const handleSelectTheme = (theme: ThemePalette) => {
+    const draft = toThemeDraft(theme);
+    setThemeDraft(draft);
+    setThemeSnapshot(draft);
+    setThemeFeedback(null);
+  };
+
+  const handleNewTheme = () => {
+    const draft = toThemeDraft(null);
+    setThemeDraft(draft);
+    setThemeSnapshot(draft);
+    setThemeFeedback("Nova paleta iniciada. Edite e salve para criar.");
+  };
+
+  const updateThemeDraft = (
+    partial: Partial<{
+      name: string;
+      colors: ThemeColors;
+      image_styles: ThemeImageStyles;
+    }>
+  ) => {
+    setThemeDraft((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        ...partial,
+        colors: partial.colors ? { ...current.colors, ...partial.colors } : current.colors,
+        image_styles: partial.image_styles
+          ? { ...current.image_styles, ...partial.image_styles }
+          : current.image_styles,
+      };
+    });
+  };
+
+  const handleThemeColorChange =
+    (key: keyof ThemeColors) => (event: ChangeEvent<HTMLInputElement>) => {
+      updateThemeDraft({ colors: { [key]: event.target.value } });
+    };
+
+  const handleThemeImageChange =
+    (key: keyof ThemeImageStyles) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      const parsed =
+        event.target.type === "number" || event.target.type === "range"
+          ? Number(value)
+          : value;
+      if (
+        (event.target.type === "number" || event.target.type === "range") &&
+        Number.isNaN(parsed as number)
+      ) {
+        return;
+      }
+      updateThemeDraft({
+        image_styles: {
+          [key]: parsed as ThemeImageStyles[keyof ThemeImageStyles],
+        },
+      });
+    };
+
+  const handleUndoTheme = () => {
+    if (!themeSnapshot) return;
+    setThemeDraft(themeSnapshot);
+    setThemeFeedback("Alterações desfeitas.");
+  };
+
+  const handleSaveTheme = async () => {
+    if (!isAdmin || !themeDraft) return;
+    setThemeSaving(true);
+    setThemeFeedback(null);
+    try {
+      if (themeDraft.id) {
+        await updateTheme(themeDraft.id, {
+          name: themeDraft.name,
+          colors: themeDraft.colors,
+          image_styles: themeDraft.image_styles,
+        });
+        setThemeFeedback("Paleta atualizada.");
+      } else {
+        const response = await createTheme({
+          name: themeDraft.name,
+          colors: themeDraft.colors,
+          image_styles: themeDraft.image_styles,
+        });
+        setThemeFeedback("Paleta criada.");
+        const created = toThemeDraft(response.item);
+        setThemeDraft(created);
+        setThemeSnapshot(created);
+      }
+      await loadThemes();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao salvar paleta.";
+      setThemeError(message);
+    } finally {
+      setThemeSaving(false);
+    }
+  };
+
+  const handleSaveThemeVersion = async () => {
+    if (!isAdmin || !themeDraft) return;
+    setThemeSaving(true);
+    setThemeFeedback(null);
+    try {
+      const response = await createTheme({
+        name: themeDraft.name || "Nova versão",
+        colors: themeDraft.colors,
+        image_styles: themeDraft.image_styles,
+      });
+      setThemeFeedback("Nova versão criada.");
+      const created = toThemeDraft(response.item);
+      setThemeDraft(created);
+      setThemeSnapshot(created);
+      await loadThemes();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao criar nova versão.";
+      setThemeError(message);
+    } finally {
+      setThemeSaving(false);
+    }
+  };
+
+  const handleActivateTheme = async () => {
+    if (!isAdmin || !themeDraft?.id) return;
+    setThemeActivatingId(themeDraft.id);
+    setThemeFeedback(null);
+    try {
+      await activateTheme(themeDraft.id);
+      setActiveThemeId(themeDraft.id);
+      setThemeFeedback("Paleta ativada.");
+      await loadThemes();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao ativar paleta.";
+      setThemeError(message);
+    } finally {
+      setThemeActivatingId(null);
+    }
+  };
+
+  const handleDeleteTheme = async (id: string) => {
+    if (!isAdmin) return;
+    if (!window.confirm("Remover esta paleta?")) return;
+    setThemeDeletingId(id);
+    setThemeFeedback(null);
+    try {
+      await deleteTheme(id);
+      setThemeFeedback("Paleta removida.");
+      await loadThemes();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao remover paleta.";
+      setThemeError(message);
+    } finally {
+      setThemeDeletingId(null);
+    }
+  };
+
+  const handleResetTheme = async () => {
+    if (!isAdmin) return;
+    setThemeResetting(true);
+    setThemeFeedback(null);
+    try {
+      await resetTheme();
+      setThemeFeedback("Tema padrão restaurado.");
+      await loadThemes();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao restaurar tema.";
+      setThemeError(message);
+    } finally {
+      setThemeResetting(false);
     }
   };
 
@@ -413,6 +674,8 @@ export function AdminPanel() {
     }
   };
 
+  const isThemeActive = Boolean(themeDraft?.id && themeDraft.id === activeThemeId);
+
   return (
     <>
       <section className="dashboard-hero">
@@ -502,6 +765,15 @@ export function AdminPanel() {
               onClick={() => setActiveTab("settings")}
             >
               Configurações
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className={`tab ${activeTab === "theme" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("theme")}
+            >
+              Perfil admin
             </button>
           )}
           <button
@@ -1126,6 +1398,329 @@ export function AdminPanel() {
                 </div>
               </>
             )}
+          </div>
+        )}
+        {activeTab === "theme" && (
+          <div className="dashboard-card">
+            <div className="table-header">
+              <div>
+                <span className="eyebrow">Design system</span>
+                <h3>Perfil admin</h3>
+                <p className="muted">
+                  Ajuste cores, paletas e estilos globais de imagem com
+                  prÃ©-visualizaÃ§Ã£o instantÃ¢nea.
+                </p>
+              </div>
+              <div className="theme-actions">
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={handleNewTheme}
+                >
+                  Nova paleta
+                </button>
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={() => void handleResetTheme()}
+                  disabled={themeResetting}
+                >
+                  {themeResetting ? "Resetando..." : "Resetar padrÃ£o"}
+                </button>
+              </div>
+            </div>
+
+            {themeError && <div className="alert">{themeError}</div>}
+            {themeFeedback && <div className="report-ready">{themeFeedback}</div>}
+
+            <div className="theme-panel">
+              <div className="theme-list">
+                {themeLoading && <p className="muted">Carregando paletas...</p>}
+                {!themeLoading && themes.length === 0 && (
+                  <p className="muted">Nenhuma paleta cadastrada.</p>
+                )}
+                {!themeLoading &&
+                  themes.map((theme) => {
+                    const resolved = resolveThemeColors(
+                      theme.colors ?? DEFAULT_THEME_COLORS
+                    );
+                    const isActive = theme.id === activeThemeId;
+                    const isSelected = themeDraft?.id === theme.id;
+                    return (
+                      <div
+                        key={theme.id}
+                        className={`theme-item ${isSelected ? "active" : ""}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => handleSelectTheme(theme)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            handleSelectTheme(theme);
+                          }
+                        }}
+                      >
+                        <strong>{theme.name}</strong>
+                        <span className="muted">
+                          {isActive ? "Ativa" : "DisponÃ­vel"}
+                        </span>
+                        <div className="theme-swatches">
+                          {[resolved.primary, resolved.secondary, resolved.accent, resolved.background, resolved.text, resolved.border].map(
+                            (color) => (
+                              <span
+                                key={`${theme.id}-${color}`}
+                                className="theme-swatch"
+                                style={{ background: color }}
+                              />
+                            )
+                          )}
+                        </div>
+                        <div className="theme-actions">
+                          <button
+                            className="btn btn-ghost"
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setThemeDraft(toThemeDraft(theme));
+                              setThemeSnapshot(toThemeDraft(theme));
+                            }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            className="btn btn-ghost"
+                            type="button"
+                            disabled={isActive || themeDeletingId === theme.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleDeleteTheme(theme.id);
+                            }}
+                          >
+                            {themeDeletingId === theme.id ? "Excluindo..." : "Excluir"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              <div className="theme-editor">
+                {!themeDraft && <p className="muted">Selecione uma paleta.</p>}
+                {themeDraft && (
+                  <>
+                    <div className="theme-editor-grid">
+                      <div className="theme-control">
+                        <label>Nome da paleta</label>
+                        <input
+                          value={themeDraft.name}
+                          onChange={(event) =>
+                            updateThemeDraft({ name: event.target.value })
+                          }
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Status</label>
+                        <input
+                          value={isThemeActive ? "Ativa" : "Rascunho"}
+                          disabled
+                        />
+                      </div>
+                    </div>
+
+                    <h4>Paleta global</h4>
+                    <div className="theme-editor-grid">
+                      <div className="theme-control">
+                        <label>PrimÃ¡ria</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.primary}
+                          onChange={handleThemeColorChange("primary")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>SecundÃ¡ria</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.secondary}
+                          onChange={handleThemeColorChange("secondary")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Destaque</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.accent}
+                          onChange={handleThemeColorChange("accent")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Fundo</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.background}
+                          onChange={handleThemeColorChange("background")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Texto</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.text}
+                          onChange={handleThemeColorChange("text")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Bordas</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.border}
+                          onChange={handleThemeColorChange("border")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Header (inÃ­cio)</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.header_start ?? themeDraft.colors.primary}
+                          onChange={handleThemeColorChange("header_start")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Header (fim)</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.header_end ?? themeDraft.colors.secondary}
+                          onChange={handleThemeColorChange("header_end")}
+                        />
+                      </div>
+                    </div>
+
+                    <h4>Estilo global das imagens</h4>
+                    <div className="theme-editor-grid">
+                      <div className="theme-control">
+                        <label>Overlay</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.image_styles.overlay ?? "#000000"}
+                          onChange={handleThemeImageChange("overlay")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Opacidade</label>
+                        <input
+                          type="range"
+                          min="0"
+                          max="0.8"
+                          step="0.05"
+                          value={themeDraft.image_styles.overlay_opacity ?? 0}
+                          onChange={handleThemeImageChange("overlay_opacity")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>SaturaÃ§Ã£o</label>
+                        <input
+                          type="range"
+                          min="0.3"
+                          max="2"
+                          step="0.05"
+                          value={themeDraft.image_styles.saturation ?? 1}
+                          onChange={handleThemeImageChange("saturation")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Contraste</label>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="2"
+                          step="0.05"
+                          value={themeDraft.image_styles.contrast ?? 1}
+                          onChange={handleThemeImageChange("contrast")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Brilho</label>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="2"
+                          step="0.05"
+                          value={themeDraft.image_styles.brightness ?? 1}
+                          onChange={handleThemeImageChange("brightness")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Arredondamento (px)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="64"
+                          value={themeDraft.image_styles.radius ?? 0}
+                          onChange={handleThemeImageChange("radius")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Sombra</label>
+                        <input
+                          value={themeDraft.image_styles.shadow ?? ""}
+                          onChange={handleThemeImageChange("shadow")}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="theme-actions">
+                      <button
+                        className="btn btn-outline"
+                        type="button"
+                        onClick={handleUndoTheme}
+                        disabled={!themeSnapshot}
+                      >
+                        Desfazer
+                      </button>
+                      <button
+                        className="btn btn-outline"
+                        type="button"
+                        onClick={() => void handleSaveThemeVersion()}
+                        disabled={themeSaving}
+                      >
+                        Salvar como versÃ£o
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        type="button"
+                        onClick={() => void handleSaveTheme()}
+                        disabled={themeSaving}
+                      >
+                        {themeSaving ? "Salvando..." : "Salvar alteraÃ§Ãµes"}
+                      </button>
+                      <button
+                        className="btn btn-ghost"
+                        type="button"
+                        onClick={() => void handleActivateTheme()}
+                        disabled={!themeDraft.id || themeActivatingId === themeDraft.id}
+                      >
+                        {themeActivatingId === themeDraft.id
+                          ? "Ativando..."
+                          : "Ativar paleta"}
+                      </button>
+                    </div>
+                    <p className="theme-preview-note">
+                      As alteraÃ§Ãµes sÃ£o aplicadas em tempo real. VocÃª pode desfazer
+                      antes de salvar.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
         {activeTab === "settings" && (

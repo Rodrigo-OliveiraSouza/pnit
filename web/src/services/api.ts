@@ -1,3 +1,11 @@
+import type {
+  ThemeActiveResponse,
+  ThemeColors,
+  ThemeImageStyles,
+  ThemeListResponse,
+  ThemePalette,
+} from "../types/theme";
+
 const API_BASE_URL =
   (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
 const AUTH_TOKEN_KEY = "pnit_auth_token";
@@ -112,6 +120,56 @@ async function apiFetch<T>(
   }
 
   return (await response.text()) as unknown as T;
+}
+
+export async function fetchActiveTheme(): Promise<ThemeActiveResponse> {
+  return apiFetch<ThemeActiveResponse>("/theme/active");
+}
+
+export async function listThemes(): Promise<ThemeListResponse> {
+  return apiFetch<ThemeListResponse>("/admin/themes");
+}
+
+export async function createTheme(payload: {
+  name: string;
+  colors: ThemeColors;
+  image_styles: ThemeImageStyles;
+}): Promise<{ item: ThemePalette }> {
+  return apiFetch<{ item: ThemePalette }>("/admin/themes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTheme(
+  id: string,
+  payload: Partial<{
+    name: string;
+    colors: ThemeColors;
+    image_styles: ThemeImageStyles;
+  }>
+): Promise<{ item: ThemePalette }> {
+  return apiFetch<{ item: ThemePalette }>(`/admin/themes/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTheme(id: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/admin/themes/${id}`, { method: "DELETE" });
+}
+
+export async function activateTheme(id: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/admin/themes/${id}/activate`, {
+    method: "POST",
+  });
+}
+
+export async function resetTheme(): Promise<{ ok: boolean; theme_id?: string }> {
+  return apiFetch<{ ok: boolean; theme_id?: string }>(
+    "/admin/themes/reset",
+    { method: "POST" }
+  );
 }
 
 export type PublicPointDto = {

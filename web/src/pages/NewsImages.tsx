@@ -191,6 +191,7 @@ export default function NewsImages() {
                   <img
                     src={item.url}
                     alt={item.name ?? `Imagem ${index + 1}`}
+                    className="theme-media-img"
                   />
                   <figcaption>{item.name ?? `Imagem ${index + 1}`}</figcaption>
                   <div className="gallery-card-actions">
