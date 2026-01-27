@@ -1569,6 +1569,17 @@ th {
   font-weight: 500;
 }
 
+.module-grid .checkbox-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-weight: 500;
+}
+
+.module-grid .checkbox-inline input[type="checkbox"] {
+  margin-top: 0.2rem;
+}
+
 .module-actions {
   display: flex;
   gap: 1rem;
