@@ -2773,21 +2773,6 @@ export default function EmployeeDashboard() {
               </label>
 
               <div className="form-note">
-                <strong>Registros visuais</strong>
-              </div>
-              <label>
-                Tipos de foto
-                <input
-                  type="text"
-                  placeholder="Local, residencia, equipamentos, documentos"
-                  value={formState.photoTypes}
-                  onChange={(event) =>
-                    handleFieldChange("photoTypes", event.target.value)
-                  }
-                />
-              </label>
-
-              <div className="form-note">
                 <strong>Avaliação técnica do agente</strong>
               </div>
               <label>
