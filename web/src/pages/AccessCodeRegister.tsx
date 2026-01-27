@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import MapEditor, { type SelectedLocation } from "../components/MapEditor";
 import {
   submitAccessCodeRegistration,
+  validateAccessCode,
   type AccessCodeSubmissionPayload,
 } from "../services/api";
 import citiesData from "../data/brazil-cities.json";
@@ -32,6 +33,9 @@ export default function AccessCodeRegister() {
   const [publicNote, setPublicNote] = useState("");
   const [precision, setPrecision] = useState<"approx" | "exact">("approx");
   const [locationText, setLocationText] = useState("");
+  const [codeValidated, setCodeValidated] = useState(false);
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [codeError, setCodeError] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(0);
   const [selectedLocation, setSelectedLocation] =
     useState<SelectedLocation | null>(null);
@@ -62,8 +66,38 @@ export default function AccessCodeRegister() {
     setScores((current) => ({ ...current, [field]: value }));
   };
 
+  const handleValidateCode = async () => {
+    setCodeError(null);
+    if (!code.trim()) {
+      setCodeError("Informe o codigo de acesso.");
+      return;
+    }
+    setCodeLoading(true);
+    try {
+      const response = await validateAccessCode(code.trim().toUpperCase());
+      if (!response.ok) {
+        setCodeError("Codigo invalido ou expirado.");
+        setCodeValidated(false);
+        return;
+      }
+      setCode(response.code);
+      setCodeValidated(true);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao validar o codigo.";
+      setCodeError(message);
+      setCodeValidated(false);
+    } finally {
+      setCodeLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     setFeedback(null);
+    if (!codeValidated) {
+      setFeedback({ type: "error", message: "Valide o codigo de acesso." });
+      return;
+    }
     if (!code.trim()) {
       setFeedback({ type: "error", message: "Informe o código de acesso." });
       return;
@@ -136,6 +170,8 @@ export default function AccessCodeRegister() {
       setPublicNote("");
       setLocationText("");
       setSelectedLocation(null);
+      setCodeValidated(false);
+      setCodeError(null);
       setResetKey((current) => current + 1);
     } catch (error) {
       const message =
@@ -164,17 +200,59 @@ export default function AccessCodeRegister() {
         )}
         <div className="form-card">
           <div className="form-grid">
-            <label>
-              Código de acesso
+            <label className="full">
+              Codigo de acesso
               <input
                 type="text"
                 value={code}
-                onChange={(event) => setCode(event.target.value)}
+                onChange={(event) => {
+                  setCode(event.target.value);
+                  setCodeError(null);
+                  if (codeValidated) setCodeValidated(false);
+                }}
                 placeholder="Ex: A1B2C3D4"
+                disabled={codeValidated}
               />
             </label>
-            <label>
-              Nome completo
+          </div>
+          <div className="form-actions">
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={() => void handleValidateCode()}
+              disabled={codeLoading || codeValidated}
+            >
+              {codeValidated
+                ? "Codigo validado"
+                : codeLoading
+                ? "Validando..."
+                : "Validar codigo"}
+            </button>
+            {codeValidated && (
+              <button
+                className="btn btn-ghost"
+                type="button"
+                onClick={() => {
+                  setCodeValidated(false);
+                  setCode("");
+                }}
+              >
+                Trocar codigo
+              </button>
+            )}
+          </div>
+          {codeError && <div className="alert error">{codeError}</div>}
+        </div>
+
+        {!codeValidated ? (
+          <div className="empty-state">
+            Informe o codigo para liberar o formulario completo.
+          </div>
+        ) : (
+          <div className="form-card">
+            <div className="form-grid">
+              <label>
+                Nome completo
               <input
                 type="text"
                 value={fullName}
@@ -363,6 +441,7 @@ export default function AccessCodeRegister() {
             </button>
           </div>
         </div>
+        )}
       </section>
     </div>
   );
