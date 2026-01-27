@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import NewsCarousel from "../components/NewsCarousel";
 import {
+  deleteReportsImage,
   deleteNewsImage,
+  fetchReportsImages,
   fetchNewsImages,
   getAuthRole,
+  uploadReportsImage,
   uploadNewsImage,
   type NewsImage,
 } from "../services/api";
+
+type MediaCollection = "news" | "reports";
 
 export default function NewsImages() {
   const [images, setImages] = useState<NewsImage[]>([]);
@@ -15,14 +20,18 @@ export default function NewsImages() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
+  const [collection, setCollection] = useState<MediaCollection>("news");
   const role = getAuthRole();
   const isAdmin = role === "admin";
 
-  const loadImages = async () => {
+  const loadImages = async (targetCollection: MediaCollection = collection) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetchNewsImages();
+      const response =
+        targetCollection === "reports"
+          ? await fetchReportsImages()
+          : await fetchNewsImages();
       setImages(response.items);
     } catch (loadError) {
       const message =
@@ -36,8 +45,8 @@ export default function NewsImages() {
   };
 
   useEffect(() => {
-    void loadImages();
-  }, []);
+    void loadImages(collection);
+  }, [collection]);
 
   const carouselItems = useMemo(
     () =>
@@ -57,9 +66,13 @@ export default function NewsImages() {
     setUploading(true);
     setUploadFeedback(null);
     try {
-      await uploadNewsImage(uploadFile);
+      if (collection === "reports") {
+        await uploadReportsImage(uploadFile);
+      } else {
+        await uploadNewsImage(uploadFile);
+      }
       setUploadFile(null);
-      await loadImages();
+      await loadImages(collection);
     } catch (uploadError) {
       const message =
         uploadError instanceof Error
@@ -76,7 +89,11 @@ export default function NewsImages() {
       return;
     }
     try {
-      await deleteNewsImage(id);
+      if (collection === "reports") {
+        await deleteReportsImage(id);
+      } else {
+        await deleteNewsImage(id);
+      }
       setImages((current) => current.filter((item) => item.id !== id));
     } catch (deleteError) {
       const message =
@@ -94,17 +111,48 @@ export default function NewsImages() {
           showDots={false}
           imageOnly
           splitView
+          collection={collection}
           items={carouselItems.length > 0 ? carouselItems : undefined}
         />
       </section>
       {isAdmin && (
         <section className="dashboard-card">
+          <div className="tabs" role="tablist" aria-label="Coleções de carrossel">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={collection === "news"}
+              className={`tab${collection === "news" ? " active" : ""}`}
+              onClick={() => {
+                setCollection("news");
+                setUploadFeedback(null);
+                setError(null);
+              }}
+            >
+              Carrossel público
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={collection === "reports"}
+              className={`tab${collection === "reports" ? " active" : ""}`}
+              onClick={() => {
+                setCollection("reports");
+                setUploadFeedback(null);
+                setError(null);
+              }}
+            >
+              Carrossel de relatórios
+            </button>
+          </div>
           <div className="form-header">
             <div>
               <span className="eyebrow">CatÃ¡logo</span>
               <h2>Gerenciar imagens do carrossel</h2>
               <p className="muted">
-                Adicione ou remova imagens que aparecem no carrossel pÃºblico.
+                {collection === "reports"
+                  ? "Adicione ou remova imagens do carrossel exibido na área restrita de relatórios."
+                  : "Adicione ou remova imagens que aparecem no carrossel público."}
               </p>
             </div>
           </div>
@@ -163,3 +211,8 @@ export default function NewsImages() {
     </div>
   );
 }
+
+
+
+
+

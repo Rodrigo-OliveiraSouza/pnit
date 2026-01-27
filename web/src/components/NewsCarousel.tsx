@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchNewsImages } from "../services/api";
+import { fetchNewsImages, fetchReportsImages } from "../services/api";
 
 const fallbackItems = Array.from({ length: 4 }, (_, index) => ({
   id: `placeholder-${index + 1}`,
@@ -14,6 +14,7 @@ type NewsCarouselProps = {
   showArrows?: boolean;
   imageOnly?: boolean;
   splitView?: boolean;
+  collection?: "news" | "reports";
   items?: Array<{
     id: string;
     src: string;
@@ -28,6 +29,7 @@ export default function NewsCarousel({
   showArrows = true,
   imageOnly = false,
   splitView = false,
+  collection = "news",
   items: itemsProp,
 }: NewsCarouselProps) {
   const [remoteItems, setRemoteItems] = useState<typeof fallbackItems>([]);
@@ -40,7 +42,10 @@ export default function NewsCarousel({
     let active = true;
     const load = async () => {
       try {
-        const response = await fetchNewsImages();
+        const response =
+          collection === "reports"
+            ? await fetchReportsImages()
+            : await fetchNewsImages();
         if (!active) return;
         const mapped = response.items.map((item, index) => ({
           id: item.id,
@@ -62,7 +67,7 @@ export default function NewsCarousel({
     return () => {
       active = false;
     };
-  }, [itemsProp]);
+  }, [itemsProp, collection]);
 
   const items = useMemo(() => {
     if (itemsProp && itemsProp.length > 0) {

@@ -24,6 +24,9 @@ import {
 } from "../services/api";
 
 const defaultCenter = { lat: -14.235, lng: -51.925 };
+// Wide bounds used when a state/city/community filter is active so results
+// are not unintentionally limited by the current viewport.
+const BRAZIL_BBOX = "-74.1,-34.0,-34.7,5.4";
 
 type Bounds = {
   north: number;
@@ -158,6 +161,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   const fetchTimeoutRef = useRef<number | null>(null);
   const lastRequestRef = useRef<string | null>(null);
   const activeFiltersRef = useRef<PointFilters>(defaultFilters);
+  const lastFittedFilterRef = useRef<string | null>(null);
 
   const getGoogleMaps = useCallback(
     () => (window as typeof window & { google?: typeof google }).google,
@@ -171,7 +175,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   ) => {
     const northEast = bounds.getNorthEast();
     const southWest = bounds.getSouthWest();
-    const bbox = `${southWest.lng()},${southWest.lat()},${northEast.lng()},${northEast.lat()}`;
+    const computedBbox = `${southWest.lng()},${southWest.lat()},${northEast.lng()},${northEast.lat()}`;
     const filters = filtersOverride ?? appliedFilters;
     const status = filters.status === "all" ? undefined : filters.status;
     const precision = filters.precision === "all" ? undefined : filters.precision;
@@ -186,6 +190,8 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
     const community = filters.community.trim()
       ? filters.community.trim()
       : undefined;
+    const useWideBounds = Boolean(state || city || community);
+    const bbox = useWideBounds ? BRAZIL_BBOX : computedBbox;
     const requestKey = JSON.stringify({
       bbox,
       status,
@@ -216,6 +222,29 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
       });
       setMapPoints(response.items.map(mapPointFromApi));
       setLastSyncAt(response.last_sync_at ?? null);
+
+      // When filtering by state/city/community, fit the map to the filtered
+      // points once so the user can see all matching markers.
+      if (useWideBounds) {
+        const filterKey = `${state ?? ""}|${city ?? ""}|${community ?? ""}`;
+        const map = mapRef.current;
+        const googleMaps = getGoogleMaps();
+        if (
+          map &&
+          googleMaps?.maps &&
+          response.items.length > 0 &&
+          filterKey !== lastFittedFilterRef.current
+        ) {
+          const fitBounds = new googleMaps.maps.LatLngBounds();
+          response.items.forEach((item) => {
+            fitBounds.extend({ lat: item.public_lat, lng: item.public_lng });
+          });
+          map.fitBounds(fitBounds, 56);
+          lastFittedFilterRef.current = filterKey;
+        }
+      } else {
+        lastFittedFilterRef.current = null;
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Falha ao carregar pontos.";
@@ -223,7 +252,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
     } finally {
       setPointsLoading(false);
     }
-  }, [appliedFilters]);
+  }, [appliedFilters, getGoogleMaps]);
 
   const handleMapReady = useCallback(
     (map: google.maps.Map) => {

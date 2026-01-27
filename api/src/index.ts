@@ -157,6 +157,17 @@ function base64Decode(input: string) {
   return bytes;
 }
 
+function parseDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/i);
+  if (!match) {
+    return null;
+  }
+  return {
+    mime: match[1],
+    base64: match[2],
+  };
+}
+
 async function deriveAesKey(secret: string, salt: Uint8Array) {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -345,13 +356,27 @@ function isManagerOrTeacher(claims: UserClaims | null) {
 }
 
 function normalizeRole(role: string | null | undefined): UserClaims["role"] {
-  if (role === "admin" || role === "manager" || role === "registrar" || role === "teacher") {
-    return role;
+  const normalized = role?.toLowerCase().trim();
+  if (!normalized) return "registrar";
+
+  if (normalized === "admin" || normalized === "administrador") {
+    return "admin";
   }
-  // Backward compatibility for old roles
-  if (role === "employee" || role === "user") {
+  if (normalized === "manager" || normalized === "gerente") {
+    return "manager";
+  }
+  if (normalized === "teacher" || normalized === "professor") {
+    return "teacher";
+  }
+  if (normalized === "registrar" || normalized === "cadastrante") {
     return "registrar";
   }
+
+  // Backward compatibility for old roles
+  if (normalized === "employee" || normalized === "user") {
+    return "registrar";
+  }
+
   return "registrar";
 }
 
@@ -431,6 +456,75 @@ function generateAccessCode() {
 function generateLinkCode() {
   return `V${generateAccessCode()}`;
 }
+
+const RESIDENT_PROFILE_FIELDS = [
+  "health_score",
+  "health_has_clinic",
+  "health_has_emergency",
+  "health_has_community_agent",
+  "health_unit_distance_km",
+  "health_travel_time",
+  "health_has_regular_service",
+  "health_has_ambulance",
+  "health_difficulties",
+  "health_notes",
+  "education_score",
+  "education_level",
+  "education_has_school",
+  "education_has_transport",
+  "education_material_support",
+  "education_has_internet",
+  "education_notes",
+  "income_score",
+  "income_monthly",
+  "income_source",
+  "income_contributors",
+  "income_occupation_type",
+  "income_has_social_program",
+  "income_social_program",
+  "assets_has_car",
+  "assets_has_fridge",
+  "assets_has_furniture",
+  "assets_has_land",
+  "housing_score",
+  "housing_rooms",
+  "housing_area_m2",
+  "housing_land_m2",
+  "housing_type",
+  "housing_material",
+  "housing_has_bathroom",
+  "housing_has_water_treated",
+  "housing_condition",
+  "housing_risks",
+  "security_score",
+  "security_has_police_station",
+  "security_has_patrol",
+  "security_has_guard",
+  "security_occurrences",
+  "security_notes",
+  "race_identity",
+  "territory_narrative",
+  "territory_memories",
+  "territory_conflicts",
+  "territory_culture",
+  "energy_access",
+  "water_supply",
+  "water_treatment",
+  "sewage_type",
+  "garbage_collection",
+  "internet_access",
+  "transport_access",
+  "participation_types",
+  "participation_events",
+  "participation_engagement",
+  "demand_priorities",
+  "photo_types",
+  "vulnerability_level",
+  "technical_issues",
+  "referrals",
+  "agencies_contacted",
+  "consent_accepted",
+] as const;
 
 function encodeCursor(offset: number) {
   return btoa(String(offset));
@@ -885,6 +979,41 @@ app.get("/access-codes", async (c) => {
     params
   );
   return c.json({ items: rows });
+});
+
+app.get("/public/access-code/validate", async (c) => {
+  const sql = getSql(c.env);
+  const code = c.req.query("code");
+  if (!code) {
+    return jsonError(c, 400, "code is required");
+  }
+  const codeValue = code.trim().toUpperCase();
+  const rows = await sql(
+    `
+    SELECT id, code, created_by, status, used_at
+    FROM access_codes
+    WHERE code = $1
+    `,
+    [codeValue]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Codigo invalido", "NOT_FOUND");
+  }
+  const accessCode = rows[0] as {
+    id: string;
+    code: string;
+    created_by: string;
+    status: "active" | "used" | "revoked";
+    used_at?: string | null;
+  };
+  if (accessCode.status !== "active" || accessCode.used_at) {
+    return jsonError(c, 409, "Codigo ja utilizado", "CONFLICT");
+  }
+  return c.json({
+    ok: true,
+    code: accessCode.code,
+    created_by: accessCode.created_by,
+  });
 });
 
 app.post("/link-codes", async (c) => {
@@ -4065,6 +4194,107 @@ app.delete("/media/news/:id", async (c) => {
   await sql("DELETE FROM attachments WHERE id = $1", [id]);
   await logAudit(sql, claims.sub, "news_image_delete", "attachments", id, {
     collection: "news",
+  });
+  return c.json({ ok: true });
+});
+
+app.get("/media/reports", async (c) => {
+  const sql = getSql(c.env);
+  const rows = await sql(
+    `
+    SELECT id, original_name, created_at
+    FROM attachments
+    WHERE collection = 'reports'
+    ORDER BY created_at DESC
+    `
+  );
+  const baseUrl = getPublicBaseUrl(c, c.env);
+  const items = rows.map((row) => ({
+    id: row.id as string,
+    name: (row.original_name as string | null) ?? null,
+    url: `${baseUrl}/attachments/${row.id}`,
+    created_at: row.created_at,
+  }));
+  return c.json({ items });
+});
+
+app.post("/media/reports", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  if (!c.env.R2_BUCKET) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+  }
+  const body = await c.req.parseBody();
+  const file = body.file;
+  if (!(file instanceof File)) {
+    return jsonError(c, 400, "file is required");
+  }
+  const key = `reports/${crypto.randomUUID()}-${file.name}`;
+  await c.env.R2_BUCKET.put(key, await file.arrayBuffer(), {
+    httpMetadata: { contentType: file.type || "application/octet-stream" },
+  });
+  const rows = await sql(
+    `
+    INSERT INTO attachments (s3_key, original_name, mime_type, size, visibility, collection)
+    VALUES ($1, $2, $3, $4, 'public', 'reports')
+    RETURNING id, created_at
+    `,
+    [key, file.name, file.type || "application/octet-stream", file.size]
+  );
+  const item = rows[0];
+  await logAudit(
+    sql,
+    claims.sub,
+    "reports_image_create",
+    "attachments",
+    item.id,
+    {
+      collection: "reports",
+      key,
+    }
+  );
+  const baseUrl = getPublicBaseUrl(c, c.env);
+  return c.json({
+    item: {
+      id: item.id as string,
+      name: file.name,
+      url: `${baseUrl}/attachments/${item.id}`,
+      created_at: item.created_at,
+    },
+  });
+});
+
+app.delete("/media/reports/:id", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  if (!c.env.R2_BUCKET) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+  }
+  const id = c.req.param("id");
+  const rows = await sql(
+    "SELECT s3_key FROM attachments WHERE id = $1 AND collection = 'reports'",
+    [id]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Media not found", "NOT_FOUND");
+  }
+  const key = rows[0].s3_key as string;
+  await c.env.R2_BUCKET.delete(key);
+  await sql("DELETE FROM attachments WHERE id = $1", [id]);
+  await logAudit(sql, claims.sub, "reports_image_delete", "attachments", id, {
+    collection: "reports",
   });
   return c.json({ ok: true });
 });

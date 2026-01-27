@@ -1,4 +1,4 @@
--- Update role hierarchy and add binding codes for user approval routing
+em -- Update role hierarchy and add binding codes for user approval routing
 
 ALTER TABLE app_users
   DROP CONSTRAINT IF EXISTS app_users_role_check;

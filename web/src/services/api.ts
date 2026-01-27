@@ -27,9 +27,18 @@ export function setAuthRole(role: UserRole | null) {
 }
 
 export function getAuthRole(): UserRole | null {
-  const value = localStorage.getItem(AUTH_ROLE_KEY);
-  if (value === "employee" || value === "user") {
+  const rawValue = localStorage.getItem(AUTH_ROLE_KEY);
+  const value = rawValue?.toLowerCase().trim();
+  if (!value) return null;
+
+  if (value === "employee" || value === "user" || value === "cadastrante") {
     return "registrar";
+  }
+  if (value === "gerente") {
+    return "manager";
+  }
+  if (value === "professor") {
+    return "teacher";
   }
   if (
     value === "admin" ||
@@ -596,6 +605,37 @@ export async function deleteNewsImage(id: string): Promise<{ ok: boolean }> {
   return apiFetch<{ ok: boolean }>(`/media/news/${id}`, { method: "DELETE" });
 }
 
+export async function fetchReportsImages(): Promise<{ items: NewsImage[] }> {
+  return apiFetch<{ items: NewsImage[] }>("/media/reports");
+}
+
+export async function uploadReportsImage(
+  file: File
+): Promise<{ item: NewsImage }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const token = getAuthToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const response = await fetch(`${API_BASE_URL}/media/reports`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
+}
+
+export async function deleteReportsImage(id: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/media/reports/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export type AccessCode = {
   id: string;
   code: string;
@@ -603,6 +643,19 @@ export type AccessCode = {
   created_at: string;
   used_at?: string | null;
 };
+
+export async function validateAccessCode(code: string): Promise<{
+  ok: boolean;
+  code: string;
+  created_by: string;
+}> {
+  const query = new URLSearchParams({ code });
+  return apiFetch<{
+    ok: boolean;
+    code: string;
+    created_by: string;
+  }>(`/public/access-code/validate?${query.toString()}`);
+}
 
 export async function createAccessCode(): Promise<{ item: AccessCode }> {
   return apiFetch<{ item: AccessCode }>("/access-codes", { method: "POST" });

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import NewsCarousel from "../components/NewsCarousel";
 import PublicMapSection from "../components/PublicMapSection";
 import citiesData from "../data/brazil-cities.json";
 import { BRAZIL_STATES } from "../data/brazil-states";
@@ -136,19 +137,21 @@ export default function Reports() {
 
   if (!isLoggedIn) {
     return (
-      <div className="page">
-        <section className="public-hero">
-          <div>
-            <span className="eyebrow">Relatórios</span>
-            <h1>Acesso restrito</h1>
-            <p className="lead">
-              Entre no painel para acessar relatórios territoriais completos.
-            </p>
-            <Link className="btn btn-primary" to="/login">
-              Entrar no painel
-            </Link>
-          </div>
+      <div className="page news-page">
+        <section className="news-hero news-hero-media">
+          <NewsCarousel
+            className="news-carousel-hero news-carousel-media"
+            imageOnly
+            splitView={false}
+            showDots={false}
+            collection="reports"
+          />
         </section>
+        <div className="form-actions" style={{ marginTop: "1rem" }}>
+          <Link className="btn btn-primary" to="/login">
+            Entrar no painel
+          </Link>
+        </div>
       </div>
     );
   }
@@ -446,3 +449,4 @@ export default function Reports() {
     </div>
   );
 }
+
