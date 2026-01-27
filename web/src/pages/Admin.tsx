@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+﻿import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
@@ -11,18 +11,24 @@ import {
   getAuthUserId,
   listAdminUsers,
   listComplaints,
+  listLinkCodes,
   refreshPublicMapCache,
   updateAdminUser,
   updateComplaintStatus,
+  createLinkCode,
+  revokeLinkCode,
   type AdminUser,
   type Complaint,
+  type LinkCode,
   type ProductivityResponse,
 } from "../services/api";
 
 export function AdminPanel() {
   const role = getAuthRole();
   const isAdmin = role === "admin";
+  const isManager = role === "manager";
   const isTeacher = role === "teacher";
+  const isSupervisor = isAdmin || isManager || isTeacher;
   const [activeTab, setActiveTab] = useState<
     | "requests"
     | "users"
@@ -69,6 +75,11 @@ export function AdminPanel() {
   const [managedUserError, setManagedUserError] = useState<string | null>(null);
   const [refreshLoading, setRefreshLoading] = useState(false);
   const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
+  const [linkCodes, setLinkCodes] = useState<LinkCode[]>([]);
+  const [linkCodesLoading, setLinkCodesLoading] = useState(false);
+  const [linkCodesError, setLinkCodesError] = useState<string | null>(null);
+  const [linkCodeCreating, setLinkCodeCreating] = useState(false);
+  const [linkCodeRevokingId, setLinkCodeRevokingId] = useState<string | null>(null);
   const [auditView, setAuditView] = useState<"recent" | "history">("recent");
   const [auditPage, setAuditPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -92,20 +103,43 @@ export function AdminPanel() {
     }
   };
 
+  const loadLinkCodes = async () => {
+    if (!isSupervisor) return;
+    setLinkCodesLoading(true);
+    setLinkCodesError(null);
+    try {
+      const response = await listLinkCodes();
+      setLinkCodes(response.items);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao carregar códigos.";
+      setLinkCodesError(message);
+      setLinkCodes([]);
+    } finally {
+      setLinkCodesLoading(false);
+    }
+  };
+
   useEffect(() => {
+    if (!isSupervisor) return;
     void loadUsers();
+    void loadLinkCodes();
     if (isAdmin) {
       void loadComplaints();
     }
     void loadAudit();
     void loadProductivity();
-  }, [isAdmin]);
+  }, [isSupervisor, isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin && (activeTab === "complaints" || activeTab === "settings" || activeTab === "management")) {
+    if (!isAdmin && (activeTab === "complaints" || activeTab === "settings")) {
+      setActiveTab("requests");
+      return;
+    }
+    if (!isSupervisor && activeTab === "management") {
       setActiveTab("requests");
     }
-  }, [activeTab, isAdmin]);
+  }, [activeTab, isAdmin, isSupervisor]);
 
   const handleApprove = async (id: string) => {
     await updateAdminUser(id, { status: "active" });
@@ -120,6 +154,38 @@ export function AdminPanel() {
   const handleEnable = async (id: string) => {
     await updateAdminUser(id, { status: "active" });
     await loadUsers();
+  };
+
+  const handleCreateLinkCode = async () => {
+    if (!isSupervisor) return;
+    setLinkCodeCreating(true);
+    setLinkCodesError(null);
+    try {
+      await createLinkCode();
+      await loadLinkCodes();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao gerar código.";
+      setLinkCodesError(message);
+    } finally {
+      setLinkCodeCreating(false);
+    }
+  };
+
+  const handleRevokeLinkCode = async (id: string) => {
+    if (!isSupervisor) return;
+    setLinkCodeRevokingId(id);
+    setLinkCodesError(null);
+    try {
+      await revokeLinkCode(id);
+      await loadLinkCodes();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao revogar código.";
+      setLinkCodesError(message);
+    } finally {
+      setLinkCodeRevokingId(null);
+    }
   };
 
   const loadComplaints = async () => {
@@ -171,7 +237,7 @@ export function AdminPanel() {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao carregar relatório individual.";
+          : "Falha ao carregar relatÃ³rio individual.";
       setProductivityDetailsError(message);
     } finally {
       setProductivityDetailsLoadingId(null);
@@ -201,7 +267,7 @@ export function AdminPanel() {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao baixar relatório individual.";
+          : "Falha ao baixar relatÃ³rio individual.";
       setProductivityDetailsError(message);
     } finally {
       setProductivityDownloadId(null);
@@ -294,22 +360,56 @@ export function AdminPanel() {
           ? new Date(response.last_refresh).toLocaleString()
           : "agora";
         setRefreshFeedback(
-          `Atualização já executada nas últimas 24h (última: ${when}).`
+          `AtualizaÃ§Ã£o jÃ¡ executada nas Ãºltimas 24h (Ãºltima: ${when}).`
         );
       } else {
         const when = response.refreshed_at
           ? new Date(response.refreshed_at).toLocaleString()
           : "agora";
-        setRefreshFeedback(`Atualização executada em ${when}.`);
+        setRefreshFeedback(`AtualizaÃ§Ã£o executada em ${when}.`);
       }
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao atualizar o mapa público.";
+          : "Falha ao atualizar o mapa pÃºblico.";
       setRefreshFeedback(message);
     } finally {
       setRefreshLoading(false);
+    }
+  };
+
+  const roleLabel = isAdmin
+    ? "Administrador"
+    : isManager
+    ? "Gerente"
+    : "Professor";
+
+  const formatRoleLabel = (value?: string | null) => {
+    switch (value) {
+      case "admin":
+        return "Administrador";
+      case "manager":
+        return "Gerente";
+      case "teacher":
+        return "Professor";
+      case "registrar":
+        return "Cadastrante";
+      default:
+        return value ?? "-";
+    }
+  };
+
+  const formatLinkCodeStatus = (status: LinkCode["status"]) => {
+    switch (status) {
+      case "active":
+        return "Ativo";
+      case "used":
+        return "Usado";
+      case "revoked":
+        return "Revogado";
+      default:
+        return status;
     }
   };
 
@@ -317,7 +417,7 @@ export function AdminPanel() {
     <>
       <section className="dashboard-hero">
         <div>
-          <span className="eyebrow">{isAdmin ? "Admin" : "Professor"}</span>
+          <span className="eyebrow">{roleLabel}</span>
           <h1>
             {isAdmin
               ? "Gestão de equipes e auditoria"
@@ -370,7 +470,7 @@ export function AdminPanel() {
           >
             Cadastros registrados
           </button>
-          {isAdmin && (
+          {isSupervisor && (
             <button
               className={`tab ${activeTab === "management" ? "active" : ""}`}
               type="button"
@@ -503,7 +603,7 @@ export function AdminPanel() {
                       <td>{user.id}</td>
                       <td>{user.full_name ?? "-"}</td>
                       <td>{user.email}</td>
-                      <td>{user.role}</td>
+                      <td>{formatRoleLabel(user.role)}</td>
                       <td>
                         <span className={`status ${user.status}`}>
                           {formatStatus(user.status)}
@@ -545,6 +645,85 @@ export function AdminPanel() {
         )}
         {activeTab === "management" && (
           <div className="table-card">
+            {isSupervisor && (
+              <div className="card" style={{ marginBottom: "1.2rem" }}>
+                <div className="card-header">
+                  <div>
+                    <span className="eyebrow">Códigos</span>
+                    <h2>Código de vinculação</h2>
+                    <p>
+                      Gere um código para direcionar a aprovação de novos
+                      cadastros de usuários ao seu perfil.
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => void handleCreateLinkCode()}
+                    disabled={linkCodeCreating}
+                  >
+                    {linkCodeCreating ? "Gerando..." : "Gerar código"}
+                  </button>
+                </div>
+                {linkCodesError && <div className="alert">{linkCodesError}</div>}
+                <div className="card-body">
+                  {linkCodesLoading ? (
+                    <div className="empty-state">Carregando códigos...</div>
+                  ) : linkCodes.length === 0 ? (
+                    <div className="empty-state">
+                      Nenhum código de vinculação criado ainda.
+                    </div>
+                  ) : (
+                    <div className="code-list">
+                      {linkCodes.map((code) => (
+                        <div key={code.id} className="code-item">
+                          <div>
+                            <strong>{code.code}</strong>
+                            <div className="muted">
+                              Status: {formatLinkCodeStatus(code.status)}
+                            </div>
+                            <div className="muted">
+                              Criado em{" "}
+                              {code.created_at
+                                ? new Date(code.created_at).toLocaleString()
+                                : "-"}
+                            </div>
+                            {code.used_at && (
+                              <div className="muted">
+                                Usado em {new Date(code.used_at).toLocaleString()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="code-actions">
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() =>
+                                void navigator.clipboard.writeText(code.code)
+                              }
+                            >
+                              Copiar
+                            </button>
+                            {code.status === "active" && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost"
+                                onClick={() => void handleRevokeLinkCode(code.id)}
+                                disabled={linkCodeRevokingId === code.id}
+                              >
+                                {linkCodeRevokingId === code.id
+                                  ? "Revogando..."
+                                  : "Revogar"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {managedUserError && <div className="alert">{managedUserError}</div>}
             <table>
               <thead>
@@ -582,7 +761,7 @@ export function AdminPanel() {
                         <tr>
                           <td>{user.full_name ?? "-"}</td>
                           <td>{user.email}</td>
-                          <td>{user.role}</td>
+                          <td>{formatRoleLabel(user.role)}</td>
                           <td>
                             <span className={`status ${user.status}`}>
                               {formatStatus(user.status)}
@@ -609,7 +788,7 @@ export function AdminPanel() {
                                 <strong>Dados do usuário</strong>
                                 <div className="summary-grid" style={{ marginTop: "0.8rem" }}>
                                   <div>
-                                    <span>Organização</span>
+                                    <span>OrganizaÃ§Ã£o</span>
                                     <strong>{detail?.user.organization ?? "-"}</strong>
                                   </div>
                                   <div>
@@ -706,7 +885,7 @@ export function AdminPanel() {
                   <tr>
                     <td colSpan={7}>
                       <div className="table-empty">
-                        Nenhuma denúncia registrada.
+                        Nenhuma denÃºncia registrada.
                       </div>
                     </td>
                   </tr>
@@ -743,7 +922,7 @@ export function AdminPanel() {
                               }
                             >
                               <option value="new">Novo</option>
-                              <option value="reviewing">Em análise</option>
+                              <option value="reviewing">Em anÃ¡lise</option>
                               <option value="closed">Encerrado</option>
                             </select>
                             <button
@@ -751,7 +930,7 @@ export function AdminPanel() {
                               type="button"
                               onClick={() => handleToggleComplaint(complaint.id)}
                             >
-                              {isOpen ? "Fechar denúncia" : "Ver denúncia"}
+                              {isOpen ? "Fechar denÃºncia" : "Ver denÃºncia"}
                             </button>
                           </td>
                         </tr>
@@ -807,11 +986,11 @@ export function AdminPanel() {
                         <th>Email</th>
                         <th>Cadastros</th>
                         <th>Pontos</th>
-                        <th>Média Saúde</th>
-                        <th>Média Educação</th>
-                        <th>Média Renda</th>
-                        <th>Média Moradia</th>
-                        <th>Média Segurança</th>
+                        <th>MÃ©dia SaÃºde</th>
+                        <th>MÃ©dia EducaÃ§Ã£o</th>
+                        <th>MÃ©dia Renda</th>
+                        <th>MÃ©dia Moradia</th>
+                        <th>MÃ©dia SeguranÃ§a</th>
                         <th>Opções</th>
                       </tr>
                     </thead>
@@ -863,7 +1042,7 @@ export function AdminPanel() {
                                   >
                                     {productivityDownloadId === item.user_id
                                       ? "Baixando..."
-                                      : "Baixar relatório"}
+                                      : "Baixar relatÃ³rio"}
                                   </button>
                                 </td>
                               </tr>
@@ -871,7 +1050,7 @@ export function AdminPanel() {
                                 <tr>
                                   <td colSpan={10}>
                                     <div className="table-empty" style={{ textAlign: "left" }}>
-                                      <strong>Relatório individual</strong>
+                                      <strong>RelatÃ³rio individual</strong>
                                       {detailsLoading && (
                                         <p className="muted">Carregando detalhes...</p>
                                       )}
@@ -890,19 +1069,19 @@ export function AdminPanel() {
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Renda média (R$)</span>
+                                              <span>Renda mÃ©dia (R$)</span>
                                               <strong>
                                                 {details.averages?.income_monthly ?? "-"}
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Saúde</span>
+                                              <span>SaÃºde</span>
                                               <strong>
                                                 {details.averages?.health_score ?? "-"}
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Educação</span>
+                                              <span>EducaÃ§Ã£o</span>
                                               <strong>
                                                 {details.averages?.education_score ?? "-"}
                                               </strong>
@@ -914,7 +1093,7 @@ export function AdminPanel() {
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Segurança</span>
+                                              <span>SeguranÃ§a</span>
                                               <strong>
                                                 {details.averages?.security_score ?? "-"}
                                               </strong>
@@ -965,8 +1144,8 @@ export function AdminPanel() {
                 <span className="eyebrow">Registro</span>
                 <h3>
                   {auditView === "recent"
-                    ? "Minhas ações recentes (últimas 10)"
-                    : "Histórico completo de ações"}
+                    ? "Minhas ações recentes (Ãºltimas 10)"
+                    : "HistÃ³rico completo de aÃ§Ãµes"}
                 </h3>
               </div>
               {auditView === "recent" && auditEntries.length > auditPageSize && (
@@ -1030,7 +1209,7 @@ export function AdminPanel() {
             {auditView === "history" && auditEntries.length > auditPageSize && (
               <div className="table-footer">
                 <span className="muted">
-                  Página {auditPage + 1} de {auditTotalPages}
+                  PÃ¡gina {auditPage + 1} de {auditTotalPages}
                 </span>
                 <div className="pager">
                   <button
@@ -1051,7 +1230,7 @@ export function AdminPanel() {
                     }
                     disabled={auditPage >= auditTotalPages - 1}
                   >
-                    Próxima
+                    PrÃ³xima
                   </button>
                 </div>
               </div>
@@ -1065,7 +1244,7 @@ export function AdminPanel() {
 
 export default function Admin() {
   const role = getAuthRole();
-  if (role !== "admin" && role !== "teacher") {
+  if (role !== "admin" && role !== "manager" && role !== "teacher") {
     return (
       <div className="page">
         <div className="alert">Acesso restrito ao painel admin.</div>
@@ -1078,3 +1257,6 @@ export default function Admin() {
     </div>
   );
 }
+
+
+

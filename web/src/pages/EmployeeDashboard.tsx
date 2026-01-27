@@ -347,6 +347,7 @@ export default function EmployeeDashboard() {
   const [pendingError, setPendingError] = useState<string | null>(null);
   const role = getAuthRole();
   const isAdmin = role === "admin";
+  const isSupervisor = role === "admin" || role === "manager" || role === "teacher";
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<
     "register" | "people" | "admin" | "pending"
@@ -491,10 +492,8 @@ export default function EmployeeDashboard() {
 
   useEffect(() => {
     void loadResidents();
-    if (!isAdmin) {
-      void loadAccessCodes();
-      void loadPendingSubmissions();
-    }
+    void loadAccessCodes();
+    void loadPendingSubmissions();
   }, [isAdmin]);
 
   const loadCommunityOptions = async () => {
@@ -1231,13 +1230,10 @@ export default function EmployeeDashboard() {
   };
 
   useEffect(() => {
-    if (!isAdmin && activeTab === "admin") {
+    if (!isSupervisor && activeTab === "admin") {
       setActiveTab("register");
     }
-    if (isAdmin && activeTab === "pending") {
-      setActiveTab("register");
-    }
-  }, [activeTab, isAdmin]);
+  }, [activeTab, isSupervisor]);
 
   const panelTabs = (
     <div className="tabs" style={{ marginBottom: "1.5rem" }}>

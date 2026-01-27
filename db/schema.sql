@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS app_users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   cognito_sub text NOT NULL UNIQUE,
   email text NOT NULL,
-  role text NOT NULL CHECK (role IN ('admin', 'employee', 'user', 'teacher')),
+  role text NOT NULL CHECK (role IN ('admin', 'manager', 'registrar', 'teacher')),
   status text NOT NULL CHECK (status IN ('active', 'disabled', 'pending')),
   full_name text NULL,
   phone text NULL,
@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS app_users (
   last_login_at timestamptz NULL,
   approved_by uuid NULL REFERENCES app_users(id),
   approved_at timestamptz NULL,
+  link_code_id uuid NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -40,6 +41,35 @@ CREATE TABLE IF NOT EXISTS access_codes (
 
 CREATE INDEX IF NOT EXISTS idx_access_codes_created_by ON access_codes (created_by);
 CREATE INDEX IF NOT EXISTS idx_access_codes_status ON access_codes (status);
+
+CREATE TABLE IF NOT EXISTS user_link_codes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code text NOT NULL UNIQUE,
+  created_by uuid NOT NULL REFERENCES app_users(id),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'revoked')),
+  used_by uuid NULL REFERENCES app_users(id),
+  used_at timestamptz NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_link_codes_created_by ON user_link_codes (created_by);
+CREATE INDEX IF NOT EXISTS idx_user_link_codes_status ON user_link_codes (status);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_app_users_link_code'
+  ) THEN
+    ALTER TABLE app_users
+      ADD CONSTRAINT fk_app_users_link_code
+      FOREIGN KEY (link_code_id)
+      REFERENCES user_link_codes(id);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_app_users_link_code_id ON app_users (link_code_id);
 
 CREATE TABLE IF NOT EXISTS employees (
   user_id uuid PRIMARY KEY REFERENCES app_users(id),

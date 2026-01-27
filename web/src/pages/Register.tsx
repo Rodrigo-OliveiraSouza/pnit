@@ -10,6 +10,8 @@ const BRAZIL_CITIES = citiesData as BrazilCity[];
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"registrar" | "manager">("registrar");
+  const [linkCode, setLinkCode] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [organization, setOrganization] = useState("");
@@ -49,6 +51,8 @@ export default function Register() {
       await registerUser({
         email,
         password,
+        role,
+        link_code: linkCode.trim() ? linkCode.trim().toUpperCase() : undefined,
         full_name: fullName,
         phone,
         organization,
@@ -143,6 +147,31 @@ export default function Register() {
                   required
                 />
               </label>
+              <div className="form-row">
+                <label>
+                  Perfil
+                  <select
+                    className="select"
+                    value={role}
+                    onChange={(event) =>
+                      setRole(event.target.value as "registrar" | "manager")
+                    }
+                    required
+                  >
+                    <option value="registrar">Cadastrante</option>
+                    <option value="manager">Gerente</option>
+                  </select>
+                </label>
+                <label>
+                  Código de vinculação (opcional)
+                  <input
+                    type="text"
+                    placeholder="Código gerado por gerente ou professor"
+                    value={linkCode}
+                    onChange={(event) => setLinkCode(event.target.value)}
+                  />
+                </label>
+              </div>
               <div className="form-row">
                 <label>
                   Cidade

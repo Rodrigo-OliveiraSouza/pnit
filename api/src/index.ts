@@ -50,7 +50,7 @@ type CommunityPayload = {
 
 type UserClaims = {
   sub: string;
-  role: "admin" | "employee" | "user" | "teacher";
+  role: "admin" | "manager" | "registrar" | "teacher";
   email: string;
   exp: number;
 };
@@ -318,15 +318,38 @@ function requireStaff(claims: UserClaims | null) {
   if (!claims) return false;
   return (
     claims.role === "admin" ||
-    claims.role === "employee" ||
-    claims.role === "user" ||
+    claims.role === "manager" ||
+    claims.role === "registrar" ||
     claims.role === "teacher"
   );
 }
 
 function requireSupervisor(claims: UserClaims | null) {
   if (!claims) return false;
-  return claims.role === "admin" || claims.role === "teacher";
+  return (
+    claims.role === "admin" ||
+    claims.role === "manager" ||
+    claims.role === "teacher"
+  );
+}
+
+function isAdmin(claims: UserClaims | null) {
+  return claims?.role === "admin";
+}
+
+function isManagerOrTeacher(claims: UserClaims | null) {
+  return claims?.role === "manager" || claims?.role === "teacher";
+}
+
+function normalizeRole(role: string | null | undefined): UserClaims["role"] {
+  if (role === "admin" || role === "manager" || role === "registrar" || role === "teacher") {
+    return role;
+  }
+  // Backward compatibility for old roles
+  if (role === "employee" || role === "user") {
+    return "registrar";
+  }
+  return "registrar";
 }
 
 function getPublicBaseUrl(c: Context, env: Env) {
@@ -400,6 +423,10 @@ function generateAccessCode() {
     code += alphabet[Math.floor(Math.random() * alphabet.length)];
   }
   return code;
+}
+
+function generateLinkCode() {
+  return `V${generateAccessCode()}`;
 }
 
 function encodeCursor(offset: number) {
@@ -614,6 +641,8 @@ app.post("/auth/register", async (c) => {
         state?: string;
         territory?: string;
         access_reason?: string;
+        role?: "registrar" | "manager";
+        link_code?: string;
       }
     | null;
   if (!body?.email || !body.password || !body.full_name || !body.phone) {
@@ -638,6 +667,46 @@ app.post("/auth/register", async (c) => {
   if (existing.length > 0) {
     return jsonError(c, 409, "Email already registered", "CONFLICT");
   }
+  const requestedRole = body.role ?? "registrar";
+  if (requestedRole !== "registrar" && requestedRole !== "manager") {
+    return jsonError(c, 400, "role must be registrar or manager");
+  }
+  let linkCodeId: string | null = null;
+  let linkCodeCreator: string | null = null;
+  if (typeof body.link_code === "string" && body.link_code.trim()) {
+    const linkCodeValue = body.link_code.trim().toUpperCase();
+    const linkCodeRows = await sql(
+      `
+      SELECT lc.id, lc.created_by, lc.status, lc.used_at, u.role AS creator_role
+      FROM user_link_codes lc
+      JOIN app_users u ON u.id = lc.created_by
+      WHERE lc.code = $1
+      `,
+      [linkCodeValue]
+    );
+    if (linkCodeRows.length === 0) {
+      return jsonError(c, 404, "Codigo de vinculacao invalido", "NOT_FOUND");
+    }
+    const linkCode = linkCodeRows[0] as {
+      id: string;
+      created_by: string;
+      status: "active" | "used" | "revoked";
+      used_at?: string | null;
+      creator_role: UserClaims["role"];
+    };
+    if (linkCode.status !== "active" || linkCode.used_at) {
+      return jsonError(c, 409, "Codigo de vinculacao ja utilizado", "CONFLICT");
+    }
+    if (
+      linkCode.creator_role !== "manager" &&
+      linkCode.creator_role !== "teacher" &&
+      linkCode.creator_role !== "admin"
+    ) {
+      return jsonError(c, 403, "Codigo de vinculacao invalido", "FORBIDDEN");
+    }
+    linkCodeId = linkCode.id;
+    linkCodeCreator = linkCode.created_by;
+  }
   const userId = crypto.randomUUID();
   const password = await hashPassword(body.password);
   await sql(
@@ -645,14 +714,15 @@ app.post("/auth/register", async (c) => {
     INSERT INTO app_users (
       id, cognito_sub, email, role, status,
       full_name, phone, organization, city, state, territory, access_reason,
-      password_hash, password_salt
+      password_hash, password_salt, link_code_id
     )
-    VALUES ($1, $2, $3, 'user', 'pending', $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     `,
     [
       userId,
       userId,
       body.email.toLowerCase(),
+      requestedRole,
       body.full_name,
       body.phone,
       body.organization,
@@ -662,14 +732,29 @@ app.post("/auth/register", async (c) => {
       body.access_reason,
       password.hash,
       password.salt,
+      linkCodeId,
     ]
   );
+  if (linkCodeId) {
+    await sql(
+      `
+      UPDATE user_link_codes
+      SET status = 'used', used_at = now(), used_by = $2
+      WHERE id = $1
+      `,
+      [linkCodeId, userId]
+    );
+  }
   await logAudit(sql, userId, "register", "app_users", userId, {
     status: "pending",
+    role: requestedRole,
+    link_code_id: linkCodeId,
   });
   return c.json({
     status: "pending",
-    message: "Cadastro recebido. Aguarde aprovacao do administrador.",
+    message: linkCodeCreator
+      ? "Cadastro recebido. Aguarde aprovacao do responsavel pelo codigo."
+      : "Cadastro recebido. Aguarde aprovacao do gestor.",
   });
 });
 
@@ -694,7 +779,7 @@ app.post("/auth/login", async (c) => {
   const user = rows[0] as {
     id: string;
     email: string;
-    role: UserClaims["role"];
+    role: string;
     status: "active" | "pending" | "disabled";
     password_hash: string;
     password_salt: string;
@@ -712,12 +797,22 @@ app.post("/auth/login", async (c) => {
   await sql("UPDATE app_users SET last_login_at = now() WHERE id = $1", [
     user.id,
   ]);
+  const normalizedRole = normalizeRole(user.role);
+  if (normalizedRole !== user.role) {
+    await sql("UPDATE app_users SET role = $2 WHERE id = $1", [
+      user.id,
+      normalizedRole,
+    ]);
+  }
   await logAudit(sql, user.id, "login", "app_users", user.id);
   const token = await signJwt(
-    { sub: user.id, email: user.email, role: user.role },
+    { sub: user.id, email: user.email, role: normalizedRole },
     c.env.AUTH_JWT_SECRET
   );
-  return c.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+  return c.json({
+    token,
+    user: { id: user.id, email: user.email, role: normalizedRole },
+  });
 });
 
 app.get("/auth/me", async (c) => {
@@ -787,6 +882,109 @@ app.get("/access-codes", async (c) => {
     params
   );
   return c.json({ items: rows });
+});
+
+app.post("/link-codes", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!requireSupervisor(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  let created: { id: string; code: string; created_at: string } | null = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generateLinkCode();
+    try {
+      const rows = await sql(
+        `
+        INSERT INTO user_link_codes (code, created_by)
+        VALUES ($1, $2)
+        RETURNING id, code, created_at
+        `,
+        [code, claims.sub]
+      );
+      created = rows[0] as { id: string; code: string; created_at: string };
+      break;
+    } catch (error) {
+      const message = String(error).toLowerCase();
+      if (message.includes("duplicate") || message.includes("unique")) {
+        continue;
+      }
+      throw error;
+    }
+  }
+  if (!created) {
+    return jsonError(c, 500, "Falha ao gerar codigo", "INTERNAL");
+  }
+  await logAudit(sql, claims.sub, "link_code_create", "user_link_codes", created.id);
+  return c.json({ item: created });
+});
+
+app.get("/link-codes", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!requireSupervisor(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const status = c.req.query("status");
+  const params: (string | number)[] = [claims.sub];
+  const filters = ["created_by = $1"];
+  if (status) {
+    params.push(status);
+    filters.push(`status = $${params.length}`);
+  }
+  const rows = await sql(
+    `
+    SELECT id, code, status, created_at, used_at, used_by
+    FROM user_link_codes
+    WHERE ${filters.join(" AND ")}
+    ORDER BY created_at DESC
+    LIMIT 50
+    `,
+    params
+  );
+  return c.json({ items: rows });
+});
+
+app.put("/link-codes/:id/revoke", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!requireSupervisor(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  const rows = await sql(
+    "SELECT id, created_by, status FROM user_link_codes WHERE id = $1",
+    [id]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "Codigo nao encontrado", "NOT_FOUND");
+  }
+  const code = rows[0] as {
+    id: string;
+    created_by: string;
+    status: "active" | "used" | "revoked";
+  };
+  if (!isAdmin(claims) && code.created_by !== claims.sub) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  if (code.status !== "active") {
+    return c.json({ ok: true });
+  }
+  await sql(
+    "UPDATE user_link_codes SET status = 'revoked' WHERE id = $1",
+    [id]
+  );
+  await logAudit(sql, claims.sub, "link_code_revoke", "user_link_codes", id);
+  return c.json({ ok: true });
 });
 
 app.post("/public/access-code/submit", async (c) => {
@@ -2230,10 +2428,10 @@ app.get("/reports/user-summary", async (c) => {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
   const requestedUser =
-    claims.role === "admin" || claims.role === "teacher"
+    requireSupervisor(claims)
       ? c.req.query("user_id")
       : null;
-  if (claims.role === "teacher" && requestedUser) {
+  if (!isAdmin(claims) && requestedUser) {
     const allowed = await sql(
       "SELECT 1 FROM app_users WHERE id = $1 AND approved_by = $2",
       [requestedUser, claims.sub]
@@ -2390,7 +2588,8 @@ app.get("/admin/users", async (c) => {
   if (!requireSupervisor(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
-  const isTeacher = claims.role === "teacher";
+  const isAdminUser = isAdmin(claims);
+  const isManagerTeacher = isManagerOrTeacher(claims);
   const status = c.req.query("status");
   const role = c.req.query("role");
   const search = c.req.query("q");
@@ -2398,27 +2597,54 @@ app.get("/admin/users", async (c) => {
   const params: (string | number)[] = [];
   if (status) {
     params.push(status);
-    filters.push(`status = $${params.length}`);
+    filters.push(`u.status = $${params.length}`);
   }
   if (role) {
     params.push(role);
-    filters.push(`role = $${params.length}`);
+    filters.push(`u.role = $${params.length}`);
   }
   if (search) {
     params.push(`%${search.toLowerCase()}%`);
-    filters.push(`LOWER(email) LIKE $${params.length}`);
+    filters.push(`LOWER(u.email) LIKE $${params.length}`);
   }
-  if (isTeacher && status !== "pending") {
+  if (!isAdminUser && isManagerTeacher) {
     params.push(claims.sub);
-    filters.push(`approved_by = $${params.length}`);
+    const approverIndex = params.length;
+    if (status === "pending") {
+      filters.push(
+        `(u.status = 'pending' AND (u.link_code_id IS NULL OR lc.created_by = $${approverIndex}))`
+      );
+    } else if (status && status !== "pending") {
+      filters.push(`u.approved_by = $${approverIndex}`);
+    } else {
+      filters.push(
+        `((u.status = 'pending' AND (u.link_code_id IS NULL OR lc.created_by = $${approverIndex})) OR (u.status <> 'pending' AND u.approved_by = $${approverIndex}))`
+      );
+    }
   }
   const rows = await sql(
     `
-    SELECT id, email, role, status, full_name, phone, organization, city, state, territory,
-           access_reason, created_at, last_login_at
-    FROM app_users
+    SELECT
+      u.id,
+      u.email,
+      u.role,
+      u.status,
+      u.full_name,
+      u.phone,
+      u.organization,
+      u.city,
+      u.state,
+      u.territory,
+      u.access_reason,
+      u.created_at,
+      u.last_login_at,
+      u.link_code_id,
+      lc.code AS link_code,
+      lc.created_by AS link_code_created_by
+    FROM app_users u
+    LEFT JOIN user_link_codes lc ON lc.id = u.link_code_id
     WHERE ${filters.join(" AND ")}
-    ORDER BY created_at DESC
+    ORDER BY u.created_at DESC
     LIMIT 500
     `,
     params
@@ -2435,14 +2661,32 @@ app.get("/admin/users/:id/details", async (c) => {
   if (!requireSupervisor(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
-  const isTeacher = claims.role === "teacher";
+  const isAdminUser = isAdmin(claims);
+  const isManagerTeacher = isManagerOrTeacher(claims);
   const userId = c.req.param("id");
   const users = await sql(
     `
-    SELECT id, email, role, status, full_name, phone, organization, city, state,
-           territory, access_reason, created_at, last_login_at, approved_by
-    FROM app_users
-    WHERE id = $1
+    SELECT
+      u.id,
+      u.email,
+      u.role,
+      u.status,
+      u.full_name,
+      u.phone,
+      u.organization,
+      u.city,
+      u.state,
+      u.territory,
+      u.access_reason,
+      u.created_at,
+      u.last_login_at,
+      u.approved_by,
+      u.link_code_id,
+      lc.code AS link_code,
+      lc.created_by AS link_code_created_by
+    FROM app_users u
+    LEFT JOIN user_link_codes lc ON lc.id = u.link_code_id
+    WHERE u.id = $1
     `,
     [userId]
   );
@@ -2453,9 +2697,18 @@ app.get("/admin/users/:id/details", async (c) => {
     id: string;
     status: "active" | "pending" | "disabled";
     approved_by?: string | null;
+    link_code_id?: string | null;
+    link_code_created_by?: string | null;
   };
-  if (isTeacher && userRecord.status !== "pending") {
-    if (userRecord.approved_by !== claims.sub) {
+  if (!isAdminUser && isManagerTeacher) {
+    if (userRecord.status === "pending") {
+      if (
+        userRecord.link_code_id &&
+        userRecord.link_code_created_by !== claims.sub
+      ) {
+        return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+      }
+    } else if (userRecord.approved_by !== claims.sub) {
       return jsonError(c, 403, "Forbidden", "FORBIDDEN");
     }
   }
@@ -2508,16 +2761,16 @@ app.post("/admin/users", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  const isAdmin = claims.role === "admin";
-  const isTeacher = claims.role === "teacher";
-  if (!isAdmin && !isTeacher) {
+  const isAdminUser = isAdmin(claims);
+  const isManagerTeacher = isManagerOrTeacher(claims);
+  if (!isAdminUser && !isManagerTeacher) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as
     | {
         email?: string;
         password?: string;
-        role?: "admin" | "employee" | "user" | "teacher";
+        role?: "admin" | "manager" | "registrar" | "teacher";
         status?: "active" | "pending" | "disabled";
         full_name?: string;
         phone?: string;
@@ -2537,6 +2790,21 @@ app.post("/admin/users", async (c) => {
   if (existing.length > 0) {
     return jsonError(c, 409, "Email already registered", "CONFLICT");
   }
+  const requestedRole = body.role ?? "registrar";
+  if (
+    requestedRole !== "admin" &&
+    requestedRole !== "manager" &&
+    requestedRole !== "registrar" &&
+    requestedRole !== "teacher"
+  ) {
+    return jsonError(c, 400, "role is invalid");
+  }
+  const requestedStatus = isAdminUser
+    ? body.status ?? "active"
+    : "pending";
+  if (!isAdminUser && requestedRole !== "registrar") {
+    return jsonError(c, 403, "Apenas o ADM pode criar esse perfil", "FORBIDDEN");
+  }
   const password = await hashPassword(body.password);
   const userId = crypto.randomUUID();
   const rows = await sql(
@@ -2552,8 +2820,8 @@ app.post("/admin/users", async (c) => {
       userId,
       userId,
       body.email.toLowerCase(),
-      body.role ?? "employee",
-      body.status ?? "active",
+      requestedRole,
+      requestedStatus,
       body.full_name,
       body.phone ?? null,
       body.organization ?? null,
@@ -2565,8 +2833,16 @@ app.post("/admin/users", async (c) => {
       password.salt,
     ]
   );
+  if (requestedStatus === "active") {
+    await sql(
+      "UPDATE app_users SET approved_by = $2, approved_at = now() WHERE id = $1",
+      [userId, claims.sub]
+    );
+  }
   await logAudit(sql, claims.sub, "admin_user_create", "app_users", userId, {
     email: body.email.toLowerCase(),
+    role: requestedRole,
+    status: requestedStatus,
   });
   return c.json({ user: rows[0] });
 });
@@ -2577,13 +2853,13 @@ app.put("/admin/users/:id", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  const isAdmin = claims.role === "admin";
-  const isTeacher = claims.role === "teacher";
-  if (!isAdmin && !isTeacher) {
+  const isAdminUser = isAdmin(claims);
+  const isManagerTeacher = isManagerOrTeacher(claims);
+  if (!isAdminUser && !isManagerTeacher) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown>;
-  const allowed = isTeacher
+  const allowed = isManagerTeacher && !isAdminUser
     ? ["status"]
     : [
         "role",
@@ -2603,16 +2879,30 @@ app.put("/admin/users/:id", async (c) => {
     return jsonError(c, 400, "No valid fields to update");
   }
   const id = c.req.param("id");
-  if (isTeacher) {
+  if (isManagerTeacher && !isAdminUser) {
     const rows = await sql(
-      "SELECT status, approved_by FROM app_users WHERE id = $1",
+      `
+      SELECT u.status, u.approved_by, u.link_code_id, lc.created_by AS link_code_created_by
+      FROM app_users u
+      LEFT JOIN user_link_codes lc ON lc.id = u.link_code_id
+      WHERE u.id = $1
+      `,
       [id]
     );
     if (rows.length === 0) {
       return jsonError(c, 404, "User not found", "NOT_FOUND");
     }
-    const target = rows[0] as { status: string; approved_by?: string | null };
-    if (target.status !== "pending" && target.approved_by !== claims.sub) {
+    const target = rows[0] as {
+      status: string;
+      approved_by?: string | null;
+      link_code_id?: string | null;
+      link_code_created_by?: string | null;
+    };
+    if (target.status === "pending") {
+      if (target.link_code_id && target.link_code_created_by !== claims.sub) {
+        return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+      }
+    } else if (target.approved_by !== claims.sub) {
       return jsonError(c, 403, "Forbidden", "FORBIDDEN");
     }
   }
@@ -2648,9 +2938,9 @@ app.get("/admin/productivity", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  const isAdmin = claims.role === "admin";
-  const isTeacher = claims.role === "teacher";
-  if (!isAdmin && !isTeacher) {
+  const isAdminUser = isAdmin(claims);
+  const isManagerTeacher = isManagerOrTeacher(claims);
+  if (!isAdminUser && !isManagerTeacher) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const periodRaw = c.req.query("period") ?? "month";
@@ -2663,7 +2953,7 @@ app.get("/admin/productivity", async (c) => {
   const city = c.req.query("city");
   const state = c.req.query("state");
   const userId = c.req.query("user_id");
-  if (isTeacher && userId) {
+  if (isManagerTeacher && userId && userId !== claims.sub) {
     const allowed = await sql(
       "SELECT 1 FROM app_users WHERE id = $1 AND approved_by = $2",
       [userId, claims.sub]
@@ -2695,10 +2985,14 @@ app.get("/admin/productivity", async (c) => {
     residentParams.push(userId);
     residentFilters.push(`r.created_by = $${residentParams.length}`);
   }
-  if (isTeacher) {
+  if (isManagerTeacher && !userId) {
     residentParams.push(claims.sub);
     residentFilters.push(
-      `r.created_by IN (SELECT id FROM app_users WHERE approved_by = $${residentParams.length})`
+      `r.created_by IN (
+        SELECT id
+        FROM app_users
+        WHERE approved_by = $${residentParams.length} OR id = $${residentParams.length}
+      )`
     );
   }
 
@@ -2724,10 +3018,14 @@ app.get("/admin/productivity", async (c) => {
     pointParams.push(userId);
     pointFilters.push(`p.created_by = $${pointParams.length}`);
   }
-  if (isTeacher) {
+  if (isManagerTeacher && !userId) {
     pointParams.push(claims.sub);
     pointFilters.push(
-      `p.created_by IN (SELECT id FROM app_users WHERE approved_by = $${pointParams.length})`
+      `p.created_by IN (
+        SELECT id
+        FROM app_users
+        WHERE approved_by = $${pointParams.length} OR id = $${pointParams.length}
+      )`
     );
   }
 
@@ -3844,20 +4142,61 @@ app.post("/public/complaints", async (c) => {
     await c.env.R2_BUCKET.put(key, await file.arrayBuffer(), {
       httpMetadata: { contentType: file.type || "application/octet-stream" },
     });
-    const attachmentRows = await sql(
-      `
-      INSERT INTO attachments (complaint_id, s3_key, original_name, mime_type, size, visibility)
-      VALUES ($1, $2, $3, $4, $5, 'public')
-      RETURNING id
-      `,
-      [
-        complaintId,
-        key,
-        file.name,
-        file.type || "application/octet-stream",
-        file.size,
-      ]
-    );
+    let attachmentRows: { id: string }[] | null = null;
+    try {
+      attachmentRows = (await sql(
+        `
+        INSERT INTO attachments (complaint_id, s3_key, original_name, mime_type, size, visibility)
+        VALUES ($1, $2, $3, $4, $5, 'public')
+        RETURNING id
+        `,
+        [
+          complaintId,
+          key,
+          file.name,
+          file.type || "application/octet-stream",
+          file.size,
+        ]
+      )) as { id: string }[];
+    } catch (error) {
+      console.error("attachments insert with original_name failed, retrying", error);
+      try {
+        attachmentRows = (await sql(
+          `
+          INSERT INTO attachments (complaint_id, s3_key, mime_type, size, visibility)
+          VALUES ($1, $2, $3, $4, 'public')
+          RETURNING id
+          `,
+          [
+            complaintId,
+            key,
+            file.type || "application/octet-stream",
+            file.size,
+          ]
+        )) as { id: string }[];
+      } catch (retryError) {
+        console.error("attachments insert with visibility failed, retrying minimal", retryError);
+        try {
+          attachmentRows = (await sql(
+            `
+            INSERT INTO attachments (complaint_id, s3_key, mime_type, size)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+            `,
+            [
+              complaintId,
+              key,
+              file.type || "application/octet-stream",
+              file.size,
+            ]
+          )) as { id: string }[];
+        } catch (finalError) {
+          console.error("attachments insert minimal failed, cleaning up R2 object", finalError);
+          await c.env.R2_BUCKET.delete(key);
+          throw finalError;
+        }
+      }
+    }
     attachmentId = attachmentRows[0].id as string;
     await sql(
       "UPDATE complaints SET photo_attachment_id = $1 WHERE id = $2",

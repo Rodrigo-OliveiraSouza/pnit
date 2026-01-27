@@ -4,7 +4,7 @@ const AUTH_TOKEN_KEY = "pnit_auth_token";
 const AUTH_ROLE_KEY = "pnit_auth_role";
 const AUTH_USER_ID_KEY = "pnit_auth_user_id";
 
-export type UserRole = "admin" | "employee" | "user" | "teacher";
+export type UserRole = "admin" | "manager" | "registrar" | "teacher";
 
 export function setAuthToken(token: string | null) {
   if (token) {
@@ -28,7 +28,15 @@ export function setAuthRole(role: UserRole | null) {
 
 export function getAuthRole(): UserRole | null {
   const value = localStorage.getItem(AUTH_ROLE_KEY);
-  if (value === "admin" || value === "employee" || value === "user") {
+  if (value === "employee" || value === "user") {
+    return "registrar";
+  }
+  if (
+    value === "admin" ||
+    value === "manager" ||
+    value === "registrar" ||
+    value === "teacher"
+  ) {
     return value;
   }
   return null;
@@ -306,6 +314,9 @@ export type AdminUser = {
   email: string;
   role: UserRole;
   status: "active" | "pending" | "disabled";
+  link_code_id?: string | null;
+  link_code?: string | null;
+  link_code_created_by?: string | null;
   full_name?: string | null;
   phone?: string | null;
   organization?: string | null;
@@ -606,6 +617,36 @@ export async function listAccessCodes(params?: {
   return apiFetch<{ items: AccessCode[] }>(
     `/access-codes${suffix ? `?${suffix}` : ""}`
   );
+}
+
+export type LinkCode = {
+  id: string;
+  code: string;
+  status: "active" | "used" | "revoked";
+  created_at: string;
+  used_at?: string | null;
+  used_by?: string | null;
+};
+
+export async function createLinkCode(): Promise<{ item: LinkCode }> {
+  return apiFetch<{ item: LinkCode }>("/link-codes", { method: "POST" });
+}
+
+export async function listLinkCodes(params?: {
+  status?: string;
+}): Promise<{ items: LinkCode[] }> {
+  const query = new URLSearchParams();
+  if (params?.status) query.set("status", params.status);
+  const suffix = query.toString();
+  return apiFetch<{ items: LinkCode[] }>(
+    `/link-codes${suffix ? `?${suffix}` : ""}`
+  );
+}
+
+export async function revokeLinkCode(id: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/link-codes/${id}/revoke`, {
+    method: "PUT",
+  });
 }
 
 export type AccessCodeSubmissionPayload = {
@@ -920,6 +961,8 @@ export async function registerUser(payload: {
   state: string;
   territory: string;
   access_reason: string;
+  role: "registrar" | "manager";
+  link_code?: string;
 }): Promise<RegisterResponse> {
   return apiFetch<RegisterResponse>("/auth/register", {
     method: "POST",
