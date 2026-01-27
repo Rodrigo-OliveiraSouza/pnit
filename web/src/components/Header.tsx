@@ -14,7 +14,7 @@ export default function Header() {
   const role = getAuthRole();
   const isAdmin = role === "admin";
   const isTeacher = role === "teacher";
-  const panelLink = "/painel";
+  const panelLink = "/painel?tab=register";
   const panelLabel = "Painel";
 
   const handleLogout = () => {
