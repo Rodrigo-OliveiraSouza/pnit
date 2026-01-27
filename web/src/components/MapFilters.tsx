@@ -188,7 +188,6 @@ export default function MapFilters({
       </div>
 
       <div className="filter-block">
-        <span className="eyebrow">Relatório</span>
         <label className="filter-label">Nome do relatório</label>
         <input
           type="text"
