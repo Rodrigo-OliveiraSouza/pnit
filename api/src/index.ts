@@ -64,7 +64,10 @@ app.use("*", async (c, next) => {
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization, X-Actor-User-Id, X-Complaints-Secret"
   );
-  c.header("Access-Control-Allow-Methods", "GET,POST,PUT,OPTIONS");
+  c.header(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+  );
   c.header("Access-Control-Max-Age", "86400");
   if (c.req.method === "OPTIONS") {
     return c.body(null, 204);

@@ -10,6 +10,7 @@ import {
   approvePendingSubmission,
   createCommunity,
   createAccessCode,
+  createLinkCode,
   createPoint,
   createResident,
   createResidentProfile,
@@ -17,9 +18,11 @@ import {
   fetchResidentDetail,
   getAuthRole,
   listAccessCodes,
+  listLinkCodes,
   listPendingSubmissions,
   listResidents,
   rejectPendingSubmission,
+  revokeLinkCode,
   updatePoint,
   updateResident,
   uploadAttachment,
@@ -27,6 +30,7 @@ import {
   type CreatePointPayload,
   type CreateResidentPayload,
   type CommunityInfo,
+  type LinkCode,
 } from "../services/api";
 import { formatStatus } from "../utils/format";
 
@@ -333,6 +337,19 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
   };
 }
 
+function formatLinkCodeStatus(status: LinkCode["status"]) {
+  switch (status) {
+    case "active":
+      return "Ativo";
+    case "used":
+      return "Usado";
+    case "revoked":
+      return "Revogado";
+    default:
+      return status;
+  }
+}
+
 export default function EmployeeDashboard() {
   const [selectedLocation, setSelectedLocation] =
     useState<SelectedLocation | null>(null);
@@ -342,6 +359,11 @@ export default function EmployeeDashboard() {
   const [accessCodes, setAccessCodes] = useState<AccessCode[]>([]);
   const [codesLoading, setCodesLoading] = useState(false);
   const [codesError, setCodesError] = useState<string | null>(null);
+  const [linkCodes, setLinkCodes] = useState<LinkCode[]>([]);
+  const [linkCodesLoading, setLinkCodesLoading] = useState(false);
+  const [linkCodesError, setLinkCodesError] = useState<string | null>(null);
+  const [linkCodeCreating, setLinkCodeCreating] = useState(false);
+  const [linkCodeRevokingId, setLinkCodeRevokingId] = useState<string | null>(null);
   const [pendingSubmissions, setPendingSubmissions] = useState<PendingSubmission[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pendingError, setPendingError] = useState<string | null>(null);
@@ -463,6 +485,51 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const loadLinkCodes = async () => {
+    setLinkCodesError(null);
+    setLinkCodesLoading(true);
+    try {
+      const response = await listLinkCodes({ status: "active" });
+      setLinkCodes(response.items);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao carregar códigos.";
+      setLinkCodesError(message);
+    } finally {
+      setLinkCodesLoading(false);
+    }
+  };
+
+  const handleCreateLinkCode = async () => {
+    setLinkCodesError(null);
+    setLinkCodeCreating(true);
+    try {
+      await createLinkCode();
+      await loadLinkCodes();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao gerar código.";
+      setLinkCodesError(message);
+    } finally {
+      setLinkCodeCreating(false);
+    }
+  };
+
+  const handleRevokeLinkCode = async (id: string) => {
+    setLinkCodesError(null);
+    setLinkCodeRevokingId(id);
+    try {
+      await revokeLinkCode(id);
+      await loadLinkCodes();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Falha ao revogar código.";
+      setLinkCodesError(message);
+    } finally {
+      setLinkCodeRevokingId(null);
+    }
+  };
+
   const loadPendingSubmissions = async () => {
     setPendingError(null);
     setPendingLoading(true);
@@ -494,7 +561,10 @@ export default function EmployeeDashboard() {
     void loadResidents();
     void loadAccessCodes();
     void loadPendingSubmissions();
-  }, [isAdmin]);
+    if (isSupervisor && !isAdmin) {
+      void loadLinkCodes();
+    }
+  }, [isAdmin, isSupervisor]);
 
   const loadCommunityOptions = async () => {
     setCommunityOptionsError(null);
@@ -1331,6 +1401,88 @@ export default function EmployeeDashboard() {
                           >
                             Copiar
                           </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {isSupervisor && !isAdmin && (
+            <section className="module-section">
+              <div className="card">
+                <div className="card-header">
+                  <div>
+                    <span className="eyebrow">Códigos</span>
+                    <h2>Código de vinculação</h2>
+                    <p>
+                      Gere um código para direcionar a aprovação de novos
+                      cadastros de usuários ao seu perfil.
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => void handleCreateLinkCode()}
+                    disabled={linkCodeCreating}
+                  >
+                    {linkCodeCreating ? "Gerando..." : "Gerar código"}
+                  </button>
+                </div>
+                {linkCodesError && <div className="alert">{linkCodesError}</div>}
+                <div className="card-body">
+                  {linkCodesLoading ? (
+                    <div className="empty-state">Carregando códigos...</div>
+                  ) : linkCodes.length === 0 ? (
+                    <div className="empty-state">
+                      Nenhum código de vinculação criado ainda.
+                    </div>
+                  ) : (
+                    <div className="code-list">
+                      {linkCodes.map((code) => (
+                        <div key={code.id} className="code-item">
+                          <div>
+                            <strong>{code.code}</strong>
+                            <div className="muted">
+                              Status: {formatLinkCodeStatus(code.status)}
+                            </div>
+                            <div className="muted">
+                              Criado em{" "}
+                              {code.created_at
+                                ? new Date(code.created_at).toLocaleString()
+                                : "-"}
+                            </div>
+                            {code.used_at && (
+                              <div className="muted">
+                                Usado em {new Date(code.used_at).toLocaleString()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="code-actions">
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() =>
+                                void navigator.clipboard.writeText(code.code)
+                              }
+                            >
+                              Copiar
+                            </button>
+                            {code.status === "active" && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost"
+                                onClick={() => void handleRevokeLinkCode(code.id)}
+                                disabled={linkCodeRevokingId === code.id}
+                              >
+                                {linkCodeRevokingId === code.id
+                                  ? "Revogando..."
+                                  : "Revogar"}
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2896,86 +3048,168 @@ export default function EmployeeDashboard() {
       )}
 
       {activeTab === "pending" && (
-        <section className="module-section">
-          <div className="card">
-            <div className="card-header">
-              <div>
-                <span className="eyebrow">Cadastros pendentes</span>
-                <h2>Registros enviados por código de acesso</h2>
-                <p>
-                  Verifique os dados enviados e aprove para liberar no mapa.
-                </p>
-              </div>
-              <button
-                className="btn btn-outline"
-                type="button"
-                onClick={() => void loadPendingSubmissions()}
-                disabled={pendingLoading}
-              >
-                {pendingLoading ? "Atualizando..." : "Atualizar lista"}
-              </button>
-            </div>
-            {pendingError && <div className="alert">{pendingError}</div>}
-            <div className="card-body">
-              {pendingSubmissions.length === 0 ? (
-                <div className="empty-state">
-                  Nenhum cadastro pendente no momento.
+        <>
+          {isSupervisor && !isAdmin && (
+            <section className="module-section">
+              <div className="card">
+                <div className="card-header">
+                  <div>
+                    <span className="eyebrow">Codigos</span>
+                    <h2>Codigo de vinculacao</h2>
+                    <p>
+                      Gere um codigo para direcionar a aprovacao de novos
+                      cadastros de usuarios ao seu perfil.
+                    </p>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => void handleCreateLinkCode()}
+                    disabled={linkCodeCreating}
+                  >
+                    {linkCodeCreating ? "Gerando..." : "Gerar codigo"}
+                  </button>
                 </div>
-              ) : (
-                <div className="table-card">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Nome</th>
-                        <th>Cidade</th>
-                        <th>Estado</th>
-                        <th>Comunidade</th>
-                        <th>Enviado em</th>
-                        <th>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pendingSubmissions.map((item) => (
-                        <tr key={item.id}>
-                          <td>{item.full_name}</td>
-                          <td>{item.city ?? "-"}</td>
-                          <td>{item.state ?? "-"}</td>
-                          <td>{item.community_name ?? "-"}</td>
-                          <td>
-                            {new Date(item.created_at).toLocaleDateString(
-                              "pt-BR"
-                            )}
-                          </td>
-                          <td>
-                            <div className="table-actions">
-                              <button
-                                className="btn btn-primary"
-                                type="button"
-                                onClick={() => void handleApprovePending(item.id)}
-                              >
-                                Aprovar
-                              </button>
-                              <button
-                                className="btn btn-ghost"
-                                type="button"
-                                onClick={() => void handleRejectPending(item.id)}
-                              >
-                                Rejeitar
-                              </button>
+                {linkCodesError && <div className="alert">{linkCodesError}</div>}
+                <div className="card-body">
+                  {linkCodesLoading ? (
+                    <div className="empty-state">Carregando codigos...</div>
+                  ) : linkCodes.length === 0 ? (
+                    <div className="empty-state">
+                      Nenhum codigo de vinculacao criado ainda.
+                    </div>
+                  ) : (
+                    <div className="code-list">
+                      {linkCodes.map((code) => (
+                        <div key={code.id} className="code-item">
+                          <div>
+                            <strong>{code.code}</strong>
+                            <div className="muted">
+                              Status: {formatLinkCodeStatus(code.status)}
                             </div>
-                          </td>
-                        </tr>
+                            <div className="muted">
+                              Criado em {" "}
+                              {code.created_at
+                                ? new Date(code.created_at).toLocaleString()
+                                : "-"}
+                            </div>
+                            {code.used_at && (
+                              <div className="muted">
+                                Usado em {new Date(code.used_at).toLocaleString()}
+                              </div>
+                            )}
+                          </div>
+                          <div className="code-actions">
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() =>
+                                void navigator.clipboard.writeText(code.code)
+                              }
+                            >
+                              Copiar
+                            </button>
+                            {code.status === "active" && (
+                              <button
+                                type="button"
+                                className="btn btn-ghost"
+                                onClick={() => void handleRevokeLinkCode(code.id)}
+                                disabled={linkCodeRevokingId === code.id}
+                              >
+                                {linkCodeRevokingId === code.id
+                                  ? "Revogando..."
+                                  : "Revogar"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+            </section>
+          )}
+          <section className="module-section">
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <span className="eyebrow">Cadastros pendentes</span>
+                  <h2>Registros enviados por codigo de acesso</h2>
+                  <p>
+                    Verifique os dados enviados e aprove para liberar no mapa.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={() => void loadPendingSubmissions()}
+                  disabled={pendingLoading}
+                >
+                  {pendingLoading ? "Atualizando..." : "Atualizar lista"}
+                </button>
+              </div>
+              {pendingError && <div className="alert">{pendingError}</div>}
+              <div className="card-body">
+                {pendingSubmissions.length === 0 ? (
+                  <div className="empty-state">
+                    Nenhum cadastro pendente no momento.
+                  </div>
+                ) : (
+                  <div className="table-card">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Nome</th>
+                          <th>Cidade</th>
+                          <th>Estado</th>
+                          <th>Comunidade</th>
+                          <th>Enviado em</th>
+                          <th>Acoes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingSubmissions.map((item) => (
+                          <tr key={item.id}>
+                            <td>{item.full_name}</td>
+                            <td>{item.city ?? "-"}</td>
+                            <td>{item.state ?? "-"}</td>
+                            <td>{item.community_name ?? "-"}</td>
+                            <td>
+                              {new Date(item.created_at).toLocaleDateString(
+                                "pt-BR"
+                              )}
+                            </td>
+                            <td>
+                              <div className="table-actions">
+                                <button
+                                  className="btn btn-primary"
+                                  type="button"
+                                  onClick={() => void handleApprovePending(item.id)}
+                                >
+                                  Aprovar
+                                </button>
+                                <button
+                                  className="btn btn-ghost"
+                                  type="button"
+                                  onClick={() => void handleRejectPending(item.id)}
+                                >
+                                  Rejeitar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </>
       )}
-
-      {activeTab === "people" && (
+{activeTab === "people" && (
         <section className="table-section">
           <div className="table-header">
             <div>
