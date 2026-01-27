@@ -1293,28 +1293,6 @@ export default function EmployeeDashboard() {
       {panelTabs}
       {activeTab === "register" && (
         <>
-          <section className="dashboard-hero">
-            <div>
-              <h1>Cadastro de pessoas no mapa</h1>
-              <p>
-                Registre pessoas e indicadores sociais. Cada pessoa vira um ponto
-                no mapa e aparece na sincronizacao diaria.
-              </p>
-            </div>
-            <div className="dashboard-actions">
-              <button className="btn btn-primary" type="button">
-                Novo cadastro
-              </button>
-              <button
-                className="btn btn-outline"
-                type="button"
-                onClick={handleDownloadTemplate}
-              >
-                Baixar modelo (PDF)
-              </button>
-            </div>
-          </section>
-
           {!isAdmin && (
             <section className="module-section">
               <div className="card">
@@ -2920,6 +2898,27 @@ export default function EmployeeDashboard() {
                   </div>
                 </div>
               </div>
+            </div>
+          </section>
+          <section className="dashboard-hero">
+            <div>
+              <h1>Cadastro de pessoas no mapa</h1>
+              <p>
+                Registre pessoas e indicadores sociais. Cada pessoa vira um ponto
+                no mapa e aparece na sincronizacao diaria.
+              </p>
+            </div>
+            <div className="dashboard-actions">
+              <button className="btn btn-primary" type="button">
+                Novo cadastro
+              </button>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={handleDownloadTemplate}
+              >
+                Baixar modelo (PDF)
+              </button>
             </div>
           </section>
         </>
