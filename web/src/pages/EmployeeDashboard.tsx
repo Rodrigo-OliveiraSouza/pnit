@@ -2903,7 +2903,7 @@ export default function EmployeeDashboard() {
           <section className="dashboard-hero">
             <div className="dashboard-actions">
               <button
-                className="btn btn-outline"
+                className="btn btn-outline btn-pdf"
                 type="button"
                 onClick={handleDownloadTemplate}
               >
