@@ -72,7 +72,7 @@ export default function NewsImages() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Remover esta imagem do catalogo?")) {
+    if (!window.confirm("Remover esta imagem do catálogo?")) {
       return;
     }
     try {
@@ -101,10 +101,10 @@ export default function NewsImages() {
         <section className="dashboard-card">
           <div className="form-header">
             <div>
-              <span className="eyebrow">Catalogo</span>
+              <span className="eyebrow">Catálogo</span>
               <h2>Gerenciar imagens do carrossel</h2>
               <p className="muted">
-                Adicione ou remova imagens que aparecem no carrossel publico.
+                Adicione ou remova imagens que aparecem no carrossel público.
               </p>
             </div>
           </div>
@@ -126,7 +126,7 @@ export default function NewsImages() {
                 onClick={handleUpload}
                 disabled={uploading}
               >
-                {uploading ? "Enviando..." : "Adicionar ao catalogo"}
+                {uploading ? "Enviando..." : "Adicionar ao catálogo"}
               </button>
             </div>
           </div>

@@ -77,8 +77,8 @@ export default function MapEditor({ onLocationChange, resetKey }: MapEditorProps
       <MapShell points={emptyPoints} height="360px" onMapReady={handleMapReady} />
       <div className="map-editor-info">
         <div>
-          <span className="eyebrow">Localizacao</span>
-          <h4>Informacoes do ponto</h4>
+          <span className="eyebrow">Localização</span>
+          <h4>Informações do ponto</h4>
           {selectedLocation ? (
             <p>
               Latitude {selectedLocation.lat.toFixed(5)} | Longitude{" "}

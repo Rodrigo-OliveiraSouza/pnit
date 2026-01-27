@@ -33,16 +33,16 @@ export default function Login() {
         <span className="eyebrow">Acesso restrito</span>
         <h1>Entrar no painel</h1>
         <p>
-          Credenciais de funcionario garantem acesso completo a cadastro,
-          edicao, associacoes e auditoria.
+          Credenciais de funcionário garantem acesso completo a cadastro,
+          edição, associações e auditoria.
         </p>
         <div className="auth-highlights">
           <div>
             <strong>JWT + Cognito</strong>
-            <span>Autenticacao segura e grupos de permissao.</span>
+            <span>Autenticação segura e grupos de permissão.</span>
           </div>
           <div>
-            <strong>Auditoria automatica</strong>
+            <strong>Auditoria automática</strong>
             <span>Todos os acessos ficam registrados.</span>
           </div>
         </div>

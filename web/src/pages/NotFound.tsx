@@ -5,10 +5,10 @@ export default function NotFound() {
     <div className="page">
       <section className="empty-state">
         <span className="eyebrow">404</span>
-        <h1>Pagina nao encontrada</h1>
-        <p>O endereco que voce tentou acessar nao existe.</p>
+        <h1>Página não encontrada</h1>
+        <p>O endereço que você tentou acessar não existe.</p>
         <Link className="btn btn-primary" to="/">
-          Voltar ao inicio
+          Voltar ao início
         </Link>
       </section>
     </div>

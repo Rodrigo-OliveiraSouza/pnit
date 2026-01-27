@@ -143,7 +143,7 @@ export default function NewsCarousel({
         {!imageOnly && (
           <div className="news-body">
             <h2>{active.title}</h2>
-            <p>Registro visual com rotacao automatica de imagens.</p>
+            <p>Registro visual com rotação automática de imagens.</p>
           </div>
         )}
         {(showDots || showArrows) && (
@@ -162,7 +162,7 @@ export default function NewsCarousel({
                   type="button"
                   className="news-arrow"
                   onClick={handleNext}
-                  aria-label="Proxima imagem"
+                  aria-label="Próxima imagem"
                 >
                   {">"}
                 </button>

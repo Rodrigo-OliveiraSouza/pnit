@@ -7,25 +7,25 @@ export default function Footer() {
           <div className="footer-logos">
             <img
               src={`${baseUrl}logos/mir.png`}
-              alt="MIR - Ministerio da Igualdade Racial"
+              alt="MIR - Ministério da Igualdade Racial"
               className="logo logo-mir"
             />
             <img
               src={`${baseUrl}logos/diversifica.png`}
-              alt="Diversifica Inclusao e Diversidade"
+              alt="Diversifica Inclusão e Diversidade"
               className="logo logo-diversifica"
             />
           </div>
           <p>
-            Plataforma nacional para visibilidade e gestao de pontos de residentes.
+            Plataforma nacional para visibilidade e gestão de pontos de residentes.
           </p>
         </div>
         <div>
-          <h4>Transparencia</h4>
+          <h4>Transparência</h4>
           <ul>
-            <li>Dados publicos limitados e anonimizados</li>
-            <li>Politica de privacidade e seguranca</li>
-            <li>Atualizacao continua via auditoria</li>
+            <li>Dados públicos limitados e anonimizados</li>
+            <li>Política de privacidade e segurança</li>
+            <li>Atualização contínua via auditoria</li>
           </ul>
         </div>
         <div>
@@ -45,7 +45,7 @@ export default function Footer() {
             className="logo logo-governo"
           />
         </div>
-        <span>Versao MVP</span>
+        <span>Versão MVP</span>
       </div>
     </footer>
   );

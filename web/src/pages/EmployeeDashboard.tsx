@@ -209,7 +209,7 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
   const healthParts: string[] = [];
   if (form.healthHasClinic) {
     healthScore += 3;
-    healthParts.push("posto proximo");
+    healthParts.push("posto próximo");
   } else {
     healthParts.push("sem posto");
   }
@@ -226,7 +226,7 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
   const educationParts: string[] = [];
   if (form.educationHasSchool) {
     educationScore += 3;
-    educationParts.push("escola proxima");
+    educationParts.push("escola próxima");
   }
   if (form.educationHasTransport) {
     educationScore += 2;
@@ -312,23 +312,23 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
   return {
     health: {
       score: clampScore(healthScore),
-      note: healthParts.join(", ") || "sem informacoes",
+      note: healthParts.join(", ") || "sem informações",
     },
     education: {
       score: clampScore(educationScore),
-      note: educationParts.join(", ") || "sem informacoes",
+      note: educationParts.join(", ") || "sem informações",
     },
     income: {
       score: clampScore(incomeScore),
-      note: incomeParts.join(", ") || "sem informacoes",
+      note: incomeParts.join(", ") || "sem informações",
     },
     housing: {
       score: clampScore(housingScore),
-      note: housingParts.join(", ") || "sem informacoes",
+      note: housingParts.join(", ") || "sem informações",
     },
     security: {
       score: clampScore(securityScore),
-      note: securityParts.join(", ") || "sem informacoes",
+      note: securityParts.join(", ") || "sem informações",
     },
   };
 }
@@ -440,7 +440,7 @@ export default function EmployeeDashboard() {
       setAccessCodes(response.items);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Falha ao carregar codigos.";
+        error instanceof Error ? error.message : "Falha ao carregar códigos.";
       setCodesError(message);
     } finally {
       setCodesLoading(false);
@@ -455,7 +455,7 @@ export default function EmployeeDashboard() {
       await loadAccessCodes();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Falha ao gerar codigo.";
+        error instanceof Error ? error.message : "Falha ao gerar código.";
       setCodesError(message);
     } finally {
       setCodesLoading(false);
@@ -767,7 +767,7 @@ export default function EmployeeDashboard() {
       setSaveFeedback({
         type: "error",
         message:
-          "Informe a localizacao no mapa ou cole a coordenada do WhatsApp.",
+          "Informe a localização no mapa ou cole a coordenada do WhatsApp.",
       });
       return;
     }
@@ -935,7 +935,7 @@ export default function EmployeeDashboard() {
       setSaveFeedback({
         type: "success",
         message:
-          "Cadastro salvo. O mapa publico sera atualizado no proximo ciclo diario.",
+          "Cadastro salvo. O mapa público será atualizado no próximo ciclo diário.",
       });
       const normalizedCommunity = formState.communityName.trim();
       if (
@@ -983,57 +983,57 @@ export default function EmployeeDashboard() {
     <p>Imprima este modelo e preencha no campo. Depois, transcreva no sistema.</p>
 
     <div class="section">
-      <h2>1) Identificacao do cidadao</h2>
+      <h2>1) Identificação do cidadão</h2>
       <div class="field">Nome completo: <span class="line"></span></div>
       <div class="field">CPF / RG: <span class="line"></span></div>
       <div class="field">Data de nascimento: <span class="line"></span></div>
       <div class="field">Sexo (opcional): <span class="line"></span></div>
       <div class="field">Telefone: <span class="line"></span></div>
       <div class="field">Email: <span class="line"></span></div>
-      <div class="field">Endereco completo: <span class="line"></span></div>
-      <div class="field">Numero de moradores no domicilio: <span class="line"></span></div>
-      <div class="field">Quantas criancas: <span class="line"></span></div>
+      <div class="field">Endereço completo: <span class="line"></span></div>
+      <div class="field">Número de moradores no domicílio: <span class="line"></span></div>
+      <div class="field">Quantas crianças: <span class="line"></span></div>
       <div class="field">Quantos idosos: <span class="line"></span></div>
-      <div class="field">Pessoas com deficiencia (PCD)? <span class="line"></span></div>
+      <div class="field">Pessoas com deficiência (PCD)? <span class="line"></span></div>
     </div>
 
     <div class="section">
-      <h2>2) Localizacao territorial</h2>
+      <h2>2) Localização territorial</h2>
       <div class="field">Estado: <span class="line"></span></div>
-      <div class="field">Municipio: <span class="line"></span></div>
+      <div class="field">Município: <span class="line"></span></div>
       <div class="field">Bairro / Zona rural: <span class="line"></span></div>
-      <div class="field">Ponto de referencia: <span class="line"></span></div>
+      <div class="field">Ponto de referência: <span class="line"></span></div>
       <div class="field">Latitude: <span class="line"></span></div>
       <div class="field">Longitude: <span class="line"></span></div>
       <div class="field">
-        Tipo de area:
+        Tipo de área:
         <span class="checkbox"></span>Urbana
         <span class="checkbox"></span>Rural
         <span class="checkbox"></span>Periurbana
       </div>
       <div class="field">
-        Precisao da localizacao:
+        Precisão da localização:
         <span class="checkbox"></span>Exata
         <span class="checkbox"></span>Aproximada
       </div>
     </div>
 
     <div class="section">
-      <h2>3) Caracterizacao da comunidade</h2>
+      <h2>3) Caracterização da comunidade</h2>
       <div class="field">Nome da localidade/comunidade: <span class="line"></span></div>
-      <div class="field">Quantidade aproximada de familias: <span class="line"></span></div>
+      <div class="field">Quantidade aproximada de famílias: <span class="line"></span></div>
       <div class="field">
-        Tipo de organizacao social:
-        <span class="checkbox"></span>Associacao
+        Tipo de organização social:
+        <span class="checkbox"></span>Associação
         <span class="checkbox"></span>Cooperativa
-        <span class="checkbox"></span>Grupo comunitario
+        <span class="checkbox"></span>Grupo comunitário
         <span class="checkbox"></span>Nenhuma
       </div>
-      <div class="field">Possui lideranca comunitaria? Nome: <span class="line"></span></div>
+      <div class="field">Possui liderança comunitária? Nome: <span class="line"></span></div>
       <div class="field">Contato: <span class="line"></span></div>
       <div class="field">Atividades coletivas existentes: <span class="line"></span></div>
       <div class="field">
-        Frequencia de reunioes comunitarias:
+        Frequência de reuniões comunitárias:
         <span class="checkbox"></span>Semanal
         <span class="checkbox"></span>Mensal
         <span class="checkbox"></span>Eventual
@@ -1042,84 +1042,84 @@ export default function EmployeeDashboard() {
     </div>
 
     <div class="section">
-      <h2>4) Infraestrutura basica</h2>
-      <div class="field">Energia eletrica: <span class="line"></span></div>
-      <div class="field">Abastecimento de agua: <span class="line"></span></div>
-      <div class="field">Tratamento da agua: <span class="line"></span></div>
-      <div class="field">Esgotamento sanitario: <span class="line"></span></div>
+      <h2>4) Infraestrutura básica</h2>
+      <div class="field">Energia elétrica: <span class="line"></span></div>
+      <div class="field">Abastecimento de água: <span class="line"></span></div>
+      <div class="field">Tratamento da água: <span class="line"></span></div>
+      <div class="field">Esgotamento sanitário: <span class="line"></span></div>
       <div class="field">Coleta de lixo: <span class="line"></span></div>
-      <div class="field">Acesso a internet: <span class="line"></span></div>
-      <div class="field">Acesso a transporte publico: <span class="line"></span></div>
+      <div class="field">Acesso à internet: <span class="line"></span></div>
+      <div class="field">Acesso a transporte público: <span class="line"></span></div>
     </div>
 
     <div class="section">
-      <h2>5) Saude</h2>
-      <div class="field">Unidade de saude mais proxima (km): <span class="line"></span></div>
-      <div class="field">Tempo medio de deslocamento: <span class="line"></span></div>
+      <h2>5) Saúde</h2>
+      <div class="field">Unidade de saúde mais próxima (km): <span class="line"></span></div>
+      <div class="field">Tempo médio de deslocamento: <span class="line"></span></div>
       <div class="field">Possui atendimento regular? <span class="line"></span></div>
-      <div class="field">Existe posto de saude? <span class="line"></span></div>
-      <div class="field">Existe agente comunitario? <span class="line"></span></div>
-      <div class="field">Existe ambulancia? <span class="line"></span></div>
+      <div class="field">Existe posto de saúde? <span class="line"></span></div>
+      <div class="field">Existe agente comunitário? <span class="line"></span></div>
+      <div class="field">Existe ambulância? <span class="line"></span></div>
       <div class="field">Principais dificuldades: <span class="line"></span></div>
     </div>
 
     <div class="section">
-      <h2>6) Educacao</h2>
-      <div class="field">Nivel de escolaridade predominante: <span class="line"></span></div>
-      <div class="field">Escola proxima? <span class="line"></span></div>
+      <h2>6) Educação</h2>
+      <div class="field">Nível de escolaridade predominante: <span class="line"></span></div>
+      <div class="field">Escola próxima? <span class="line"></span></div>
       <div class="field">Transporte escolar? <span class="line"></span></div>
       <div class="field">Acesso a material escolar? <span class="line"></span></div>
-      <div class="field">Acesso a internet para estudo? <span class="line"></span></div>
+      <div class="field">Acesso à internet para estudo? <span class="line"></span></div>
     </div>
 
     <div class="section">
       <h2>7) Trabalho e renda</h2>
       <div class="field">Renda familiar aproximada: <span class="line"></span></div>
       <div class="field">Quantas pessoas contribuem com renda: <span class="line"></span></div>
-      <div class="field">Tipo de ocupacao: <span class="line"></span></div>
+      <div class="field">Tipo de ocupação: <span class="line"></span></div>
       <div class="field">Participa de programas sociais? Qual? <span class="line"></span></div>
     </div>
 
     <div class="section">
-      <h2>8) Habitacao</h2>
+      <h2>8) Habitação</h2>
       <div class="field">Tipo de moradia: <span class="line"></span></div>
       <div class="field">Material predominante: <span class="line"></span></div>
       <div class="field">Possui banheiro interno? <span class="line"></span></div>
-      <div class="field">Possui agua tratada? <span class="line"></span></div>
-      <div class="field">Condicao da moradia: <span class="line"></span></div>
+      <div class="field">Possui água tratada? <span class="line"></span></div>
+      <div class="field">Condição da moradia: <span class="line"></span></div>
       <div class="field">Riscos ambientais: <span class="line"></span></div>
     </div>
 
     <div class="section">
-      <h2>9) Seguranca e servicos publicos</h2>
-      <div class="field">Presenca de delegacia? <span class="line"></span></div>
+      <h2>9) Segurança e serviços públicos</h2>
+      <div class="field">Presença de delegacia? <span class="line"></span></div>
       <div class="field">Patrulhamento? <span class="line"></span></div>
       <div class="field">Guarda municipal? <span class="line"></span></div>
-      <div class="field">Ocorrencias frequentes: <span class="line"></span></div>
+      <div class="field">Ocorrências frequentes: <span class="line"></span></div>
     </div>
 
     <div class="section">
-      <h2>10) Participacao social</h2>
+      <h2>10) Participação social</h2>
       <div class="field">Participa de: <span class="line"></span></div>
-      <div class="field">Ja participou de: <span class="line"></span></div>
-      <div class="field">Grau de engajamento comunitario: <span class="line"></span></div>
+      <div class="field">Já participou de: <span class="line"></span></div>
+      <div class="field">Grau de engajamento comunitário: <span class="line"></span></div>
     </div>
 
     <div class="section">
-      <h2>11) Demandas prioritarias</h2>
-      <div class="field">Infraestrutura / Saude / Educacao / Emprego / Regularizacao / Assistencia: <span class="line"></span></div>
+      <h2>11) Demandas prioritárias</h2>
+      <div class="field">Infraestrutura / Saúde / Educação / Emprego / Regularização / Assistência: <span class="line"></span></div>
     </div>
 
     <div class="section">
       <h2>12) Registros visuais</h2>
       <div class="field">Foto do local: <span class="line"></span></div>
-      <div class="field">Foto da residencia: <span class="line"></span></div>
-      <div class="field">Foto de equipamentos publicos: <span class="line"></span></div>
+      <div class="field">Foto da residência: <span class="line"></span></div>
+      <div class="field">Foto de equipamentos públicos: <span class="line"></span></div>
       <div class="field">Documentos (opcional): <span class="line"></span></div>
     </div>
 
     <div class="section">
-      <h2>13) Avaliacao tecnica do agente</h2>
+      <h2>13) Avaliação técnica do agente</h2>
       <div class="field">Nivel de vulnerabilidade: <span class="line"></span></div>
       <div class="field">Principais problemas identificados: <span class="line"></span></div>
       <div class="field">Encaminhamentos realizados: <span class="line"></span></div>
@@ -1128,7 +1128,7 @@ export default function EmployeeDashboard() {
 
     <div class="section">
       <h2>14) Termo de consentimento (institucional)</h2>
-      <p>Autorizo a utilizacao dos dados coletados exclusivamente para fins de diagnostico territorial, planejamento de politicas publicas e relatorios institucionais, conforme a LGPD.</p>
+      <p>Autorizo a utilização dos dados coletados exclusivamente para fins de diagnóstico territorial, planejamento de políticas públicas e relatórios institucionais, conforme a LGPD.</p>
       <div class="field">Assinatura: <span class="line"></span> Data: <span class="line"></span></div>
     </div>
 
@@ -1298,12 +1298,12 @@ export default function EmployeeDashboard() {
               <div className="card">
                 <div className="card-header">
                   <div>
-                    <span className="eyebrow">Codigo de acesso</span>
-                    <h2>Gerar codigo unico para cadastro externo</h2>
+                    <span className="eyebrow">Código de acesso</span>
+                    <h2>Gerar código único para cadastro externo</h2>
                     <p>
-                      Compartilhe um codigo unico para que uma pessoa sem login
-                      registre um ponto. O cadastro entrara como pendente para
-                      sua aprovacao.
+                      Compartilhe um código único para que uma pessoa sem login
+                      registre um ponto. O cadastro entrará como pendente para
+                      sua aprovação.
                     </p>
                   </div>
                   <button
@@ -1312,14 +1312,14 @@ export default function EmployeeDashboard() {
                     onClick={() => void handleCreateAccessCode()}
                     disabled={codesLoading}
                   >
-                    {codesLoading ? "Gerando..." : "Gerar codigo"}
+                    {codesLoading ? "Gerando..." : "Gerar código"}
                   </button>
                 </div>
                 {codesError && <div className="alert">{codesError}</div>}
                 <div className="card-body">
                   {accessCodes.length === 0 ? (
                     <div className="empty-state">
-                      Nenhum codigo ativo no momento.
+                      Nenhum código ativo no momento.
                     </div>
                   ) : (
                     <div className="code-list">
@@ -1350,8 +1350,8 @@ export default function EmployeeDashboard() {
                 <span className="eyebrow">Cadastro e georreferenciamento</span>
                 <h2>Registrar pessoa (ponto no mapa)</h2>
                 <p className="muted">
-                  Preencha os dados, inclua fotografia e indicadores. O mapa publico
-                  sera atualizado a cada 24 horas.
+                  Preencha os dados, inclua fotografia e indicadores. O mapa público
+                  será atualizado a cada 24 horas.
                 </p>
               </div>
             </div>
@@ -1414,7 +1414,7 @@ export default function EmployeeDashboard() {
                       handleFieldChange("sex", event.target.value)
                     }
                   >
-                    <option value="">Nao informado</option>
+                    <option value="">Não informado</option>
                     <option value="masculino">Masculino</option>
                     <option value="feminino">Feminino</option>
                     <option value="outro">Outro</option>
@@ -1433,10 +1433,10 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Endereco
+                Endereço
                 <input
                   type="text"
-                  placeholder="Endereco completo"
+                  placeholder="Endereço completo"
                   value={formState.address}
                   onChange={(event) =>
                     handleFieldChange("address", event.target.value)
@@ -1574,12 +1574,12 @@ export default function EmployeeDashboard() {
                     </div>
                     <div>
                       <span>Atividade</span>
-                      <strong>{selectedCommunity?.activity || "Nao informado"}</strong>
+                      <strong>{selectedCommunity?.activity || "Não informado"}</strong>
                     </div>
                     <div>
                       <span>Foco social</span>
                       <strong>
-                        {selectedCommunity?.focus_social || "Nao informado"}
+                        {selectedCommunity?.focus_social || "Não informado"}
                       </strong>
                     </div>
                     <div>
@@ -1592,37 +1592,37 @@ export default function EmployeeDashboard() {
                     <div>
                       <span>Familias</span>
                       <strong>
-                        {selectedCommunity?.families_count ?? "Nao informado"}
+                        {selectedCommunity?.families_count ?? "Não informado"}
                       </strong>
                     </div>
                     <div>
-                      <span>Organizacao</span>
+                      <span>Organização</span>
                       <strong>
-                        {selectedCommunity?.organization_type || "Nao informado"}
+                        {selectedCommunity?.organization_type || "Não informado"}
                       </strong>
                     </div>
                     <div>
                       <span>Lideranca</span>
                       <strong>
-                        {selectedCommunity?.leader_name || "Nao informado"}
+                        {selectedCommunity?.leader_name || "Não informado"}
                       </strong>
                     </div>
                     <div>
                       <span>Contato lideranca</span>
                       <strong>
-                        {selectedCommunity?.leader_contact || "Nao informado"}
+                        {selectedCommunity?.leader_contact || "Não informado"}
                       </strong>
                     </div>
                     <div>
                       <span>Atividades coletivas</span>
                       <strong>
-                        {selectedCommunity?.activities || "Nao informado"}
+                        {selectedCommunity?.activities || "Não informado"}
                       </strong>
                     </div>
                     <div>
                       <span>Reunioes</span>
                       <strong>
-                        {selectedCommunity?.meeting_frequency || "Nao informado"}
+                        {selectedCommunity?.meeting_frequency || "Não informado"}
                       </strong>
                     </div>
                   </div>
@@ -1686,10 +1686,10 @@ export default function EmployeeDashboard() {
                       />
                     </label>
                     <label>
-                      Organizacao social
+                      Organização social
                       <input
                         type="text"
-                        placeholder="Associacao, cooperativa, grupo..."
+                        placeholder="Associação, cooperativa, grupo..."
                         value={communityDraft.organizationType}
                         onChange={(event) =>
                           handleCommunityDraftChange(
@@ -1759,7 +1759,7 @@ export default function EmployeeDashboard() {
                       </select>
                     </label>
                     <label>
-                      Observacoes
+                      Observações
                       <textarea
                         rows={3}
                         value={communityDraft.notes}
@@ -1845,7 +1845,7 @@ export default function EmployeeDashboard() {
                   </select>
                 </label>
                 <label>
-                  Precisao da localizacao
+                  Precisão da localização
                   <select
                     className="select"
                     value={formState.precision}
@@ -1862,7 +1862,7 @@ export default function EmployeeDashboard() {
                 </label>
               </div>
               <label>
-                Localizacao do WhatsApp (link ou coordenada)
+                Localização do WhatsApp (link ou coordenada)
                 <input
                   type="text"
                   placeholder="Cole o link ou 'lat,lng'"
@@ -1907,17 +1907,17 @@ export default function EmployeeDashboard() {
                     }
                   >
                     <option>Residencia</option>
-                    <option>Equipamento publico</option>
-                    <option>Organizacao comunitaria</option>
+                    <option>Equipamento público</option>
+                    <option>Organização comunitária</option>
                     <option>Outro</option>
                   </select>
                 </label>
               </div>
               <label>
-                Informacao publica no mapa
+                Informação pública no mapa
                 <textarea
                   rows={3}
-                  placeholder="Descricao publica do ponto"
+                  placeholder="Descrição pública do ponto"
                   value={formState.publicNote}
                   onChange={(event) =>
                     handleFieldChange("publicNote", event.target.value)
@@ -1951,10 +1951,10 @@ export default function EmployeeDashboard() {
                 </select>
               </label>
               <label>
-                Observacoes do agente
+                Observações do agente
                 <textarea
                   rows={3}
-                  placeholder="Resumo e informacoes relevantes"
+                  placeholder="Resumo e informações relevantes"
                   value={formState.notes}
                   onChange={(event) =>
                     handleFieldChange("notes", event.target.value)
@@ -1991,8 +1991,8 @@ export default function EmployeeDashboard() {
                     }
                   >
                     <option value="">Selecione</option>
-                    <option value="rede_publica">Rede publica</option>
-                    <option value="poco">Poco</option>
+                    <option value="rede_publica">Rede pública</option>
+                    <option value="poco">Poço</option>
                     <option value="rio">Rio</option>
                     <option value="carro_pipa">Carro-pipa</option>
                   </select>
@@ -2010,7 +2010,7 @@ export default function EmployeeDashboard() {
                   >
                     <option value="">Selecione</option>
                     <option value="sim">Sim</option>
-                    <option value="nao">Nao</option>
+                    <option value="nao">Não</option>
                   </select>
                 </label>
                 <label>
@@ -2042,7 +2042,7 @@ export default function EmployeeDashboard() {
                     <option value="">Selecione</option>
                     <option value="regular">Regular</option>
                     <option value="irregular">Irregular</option>
-                    <option value="nao_existe">Nao existe</option>
+                    <option value="nao_existe">Não existe</option>
                   </select>
                 </label>
                 <label>
@@ -2056,11 +2056,11 @@ export default function EmployeeDashboard() {
                   >
                     <option value="">Selecione</option>
                     <option value="sim">Sim</option>
-                    <option value="nao">Nao</option>
+                    <option value="nao">Não</option>
                   </select>
                 </label>
                 <label>
-                  Transporte publico
+                  Transporte público
                   <select
                     className="select"
                     value={formState.transportAccess ? "sim" : formState.transportAccess === false ? "nao" : ""}
@@ -2070,7 +2070,7 @@ export default function EmployeeDashboard() {
                   >
                     <option value="">Selecione</option>
                     <option value="sim">Sim</option>
-                    <option value="nao">Nao</option>
+                    <option value="nao">Não</option>
                   </select>
                 </label>
               </div>
@@ -2083,7 +2083,7 @@ export default function EmployeeDashboard() {
               </div>
               <div className="form-row">
                 <label>
-                  Saude
+                  Saúde
                   <input
                     type="number"
                     min={1}
@@ -2094,7 +2094,7 @@ export default function EmployeeDashboard() {
                   <span className="muted">Criterios: {indicators.health.note}</span>
                 </label>
                 <label>
-                  Educacao
+                  Educação
                   <input
                     type="number"
                     min={1}
@@ -2131,7 +2131,7 @@ export default function EmployeeDashboard() {
                   <span className="muted">Criterios: {indicators.housing.note}</span>
                 </label>
                 <label>
-                  Seguranca
+                  Segurança
                   <input
                     type="number"
                     min={1}
@@ -2146,7 +2146,7 @@ export default function EmployeeDashboard() {
               </div>
 
               <div className="form-note">
-                <strong>Saude</strong>
+                <strong>Saúde</strong>
               </div>
               <div className="checkbox-list">
                 <label>
@@ -2214,7 +2214,7 @@ export default function EmployeeDashboard() {
               </div>
               <div className="form-row">
                 <label>
-                  Unidade de saude mais proxima (km)
+                  Unidade de saúde mais próxima (km)
                   <input
                     type="number"
                     placeholder="0"
@@ -2251,7 +2251,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Observacoes de saude
+                Observações de saúde
                 <textarea
                   rows={2}
                   placeholder="Qualidade do atendimento, distancia, etc."
@@ -2263,7 +2263,7 @@ export default function EmployeeDashboard() {
               </label>
 
               <div className="form-note">
-                <strong>Educacao</strong>
+                <strong>Educação</strong>
               </div>
               <label>
                 Nivel de escolaridade
@@ -2285,7 +2285,7 @@ export default function EmployeeDashboard() {
                       handleFieldChange("educationHasSchool", event.target.checked)
                     }
                   />
-                  Ha escola proxima?
+                  Há escola próxima?
                 </label>
                 <label>
                   <input
@@ -2328,7 +2328,7 @@ export default function EmployeeDashboard() {
                 </label>
               </div>
               <label>
-                Observacoes de educacao
+                Observações de educação
                 <textarea
                   rows={2}
                   placeholder="Qualidade da escola, turnos, etc."
@@ -2379,7 +2379,7 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Tipo de ocupacao
+                  Tipo de ocupação
                   <select
                     className="select"
                     value={formState.incomeOccupationType}
@@ -2497,7 +2497,7 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Area do terreno (m2)
+                Área do terreno (m²)
                   <input
                     type="number"
                     placeholder="0"
@@ -2512,7 +2512,7 @@ export default function EmployeeDashboard() {
                 Tipo de moradia
                 <input
                   type="text"
-                  placeholder="Alvenaria, madeira, aluguel, etc."
+                  placeholder="Aluguel ou casa própria"
                   value={formState.housingType}
                   onChange={(event) =>
                     handleFieldChange("housingType", event.target.value)
@@ -2536,7 +2536,7 @@ export default function EmployeeDashboard() {
                   </select>
                 </label>
                 <label>
-                  Condicao da moradia
+                  Condição da moradia
                   <select
                     className="select"
                     value={formState.housingCondition}
@@ -2592,7 +2592,7 @@ export default function EmployeeDashboard() {
               </label>
 
               <div className="form-note">
-                <strong>Seguranca</strong>
+                <strong>Segurança</strong>
               </div>
               <div className="checkbox-list">
                 <label>
@@ -2606,7 +2606,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Ha delegacia proxima?
+                  Há delegacia próxima?
                 </label>
                 <label>
                   <input
@@ -2647,7 +2647,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Observacoes de seguranca
+                Observações de segurança
                 <textarea
                   rows={2}
                   placeholder="Percepcao de risco, ocorrencias, etc."
@@ -2659,13 +2659,13 @@ export default function EmployeeDashboard() {
               </label>
 
               <div className="form-note">
-                <strong>Identidade e territorio</strong>
+                <strong>Identidade e território</strong>
               </div>
               <label>
-                Identificacao racial
+                Identificação racial
                 <input
                   type="text"
-                  placeholder="Autodeclaracao"
+                  placeholder="Autodeclaração"
                   value={formState.raceIdentity}
                   onChange={(event) =>
                     handleFieldChange("raceIdentity", event.target.value)
@@ -2673,7 +2673,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Narrativa do territorio
+                Narrativa do território
                 <textarea
                   rows={3}
                   placeholder="Resumo da historia, identidade e dinamicas locais"
@@ -2706,7 +2706,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Manifestacoes culturais
+                Manifestações culturais
                 <textarea
                   rows={3}
                   placeholder="Festas, praticas culturais, coletivos"
@@ -2718,13 +2718,13 @@ export default function EmployeeDashboard() {
               </label>
 
               <div className="form-note">
-                <strong>Participacao social</strong>
+                <strong>Participação social</strong>
               </div>
               <label>
                 Participa de
                 <input
                   type="text"
-                  placeholder="Associacao, conselho, projetos sociais..."
+                  placeholder="Associação, conselho, projetos sociais..."
                   value={formState.participationTypes}
                   onChange={(event) =>
                     handleFieldChange("participationTypes", event.target.value)
@@ -2735,7 +2735,7 @@ export default function EmployeeDashboard() {
                 Ja participou de
                 <input
                   type="text"
-                  placeholder="Audiencias, conferencias, capacitacoes..."
+                  placeholder="Audiências, conferências, capacitações..."
                   value={formState.participationEvents}
                   onChange={(event) =>
                     handleFieldChange("participationEvents", event.target.value)
@@ -2768,7 +2768,7 @@ export default function EmployeeDashboard() {
                 Demandas
                 <input
                   type="text"
-                  placeholder="Infraestrutura, saude, educacao, emprego..."
+                  placeholder="Infraestrutura, saúde, educação, emprego..."
                   value={formState.demandPriorities}
                   onChange={(event) =>
                     handleFieldChange("demandPriorities", event.target.value)
@@ -2792,7 +2792,7 @@ export default function EmployeeDashboard() {
               </label>
 
               <div className="form-note">
-                <strong>Avaliacao tecnica do agente</strong>
+                <strong>Avaliação técnica do agente</strong>
               </div>
               <label>
                 Nivel de vulnerabilidade
@@ -2851,9 +2851,9 @@ export default function EmployeeDashboard() {
                     handleFieldChange("consentAccepted", event.target.checked)
                   }
                 />
-                Autorizo a utilizacao dos dados coletados exclusivamente para fins
-                de diagnostico territorial, planejamento de politicas publicas e
-                relatorios institucionais, conforme a LGPD.
+                Autorizo a utilização dos dados coletados exclusivamente para fins
+                de diagnóstico territorial, planejamento de políticas públicas e
+                relatórios institucionais, conforme a LGPD.
               </label>
 
               {saveFeedback && (
@@ -2894,7 +2894,7 @@ export default function EmployeeDashboard() {
                   />
                   <div className="form-note">
                     <strong>Dica:</strong> clique no mapa para definir o ponto e
-                    adicionar informacoes do territorio.
+                    adicionar informações do território.
                   </div>
                 </div>
               </div>
@@ -2920,7 +2920,7 @@ export default function EmployeeDashboard() {
             <div className="card-header">
               <div>
                 <span className="eyebrow">Cadastros pendentes</span>
-                <h2>Registros enviados por codigo de acesso</h2>
+                <h2>Registros enviados por código de acesso</h2>
                 <p>
                   Verifique os dados enviados e aprove para liberar no mapa.
                 </p>
@@ -2950,7 +2950,7 @@ export default function EmployeeDashboard() {
                         <th>Estado</th>
                         <th>Comunidade</th>
                         <th>Enviado em</th>
-                        <th>Acoes</th>
+                        <th>Ações</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3002,7 +3002,7 @@ export default function EmployeeDashboard() {
               <h2>Cadastros realizados por voce</h2>
             </div>
             <Link className="btn btn-primary" to="/relatorios">
-              Gerar relatorio publico
+              Gerar relatório público
             </Link>
           </div>
           <div className="table-card">
@@ -3016,7 +3016,7 @@ export default function EmployeeDashboard() {
                   <th>Estado</th>
                   <th>Status</th>
                   <th>Criado em</th>
-                  <th>Acoes</th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -3114,7 +3114,7 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Endereco
+                  Endereço
                   <input
                     type="text"
                     value={editForm.address}
@@ -3208,7 +3208,7 @@ export default function EmployeeDashboard() {
                   </select>
                 </label>
                 <label>
-                  Observacoes
+                  Observações
                   <textarea
                     rows={3}
                     value={editForm.notes}
@@ -3225,7 +3225,7 @@ export default function EmployeeDashboard() {
                     onClick={handleEditSave}
                     disabled={editSaving}
                   >
-                    {editSaving ? "Salvando..." : "Salvar alteracoes"}
+                    {editSaving ? "Salvando..." : "Salvar alterações"}
                   </button>
                   <button
                     className="btn btn-outline"

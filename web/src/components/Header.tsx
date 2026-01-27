@@ -36,12 +36,12 @@ export default function Header() {
             />
             <img
               src={`${baseUrl}logos/diversifica.png`}
-              alt="Diversifica Inclusao e Diversidade"
+              alt="Diversifica Inclusão e Diversidade"
               className="logo logo-diversifica"
             />
           </div>
           <div className="brand">
-            <span className="brand-sub">Mapa publico de residentes</span>
+            <span className="brand-sub">Mapa público de residentes</span>
           </div>
         </div>
         <div className="header-actions">
@@ -61,7 +61,7 @@ export default function Header() {
                   `nav-link${isActive ? " active" : ""}`
                 }
               >
-                Cadastro com codigo
+                Cadastro com código
               </NavLink>
             )}
             {isLoggedIn && (
@@ -71,7 +71,7 @@ export default function Header() {
                   `nav-link${isActive ? " active" : ""}`
                 }
               >
-                Relatorios
+                Relatórios
               </NavLink>
             )}
             {isAdmin && (
@@ -90,7 +90,7 @@ export default function Header() {
                 `nav-link${isActive ? " active" : ""}`
               }
             >
-              Denuncias
+              Denúncias
             </NavLink>
             {isLoggedIn ? (
               <>
@@ -113,7 +113,7 @@ export default function Header() {
           </nav>
           <img
             src={`${baseUrl}logos/mir.png`}
-            alt="MIR - Ministerio da Igualdade Racial"
+            alt="MIR - Ministério da Igualdade Racial"
             className="logo logo-mir"
           />
         </div>

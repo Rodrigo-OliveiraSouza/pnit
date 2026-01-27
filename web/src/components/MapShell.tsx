@@ -322,7 +322,7 @@ export default function MapShell({
         {!apiKey && (
           <div className="map-fallback">
             <div>
-              <span className="eyebrow">Mapa indisponivel</span>
+              <span className="eyebrow">Mapa indisponível</span>
               <h3>Configure a chave da API Google Maps</h3>
               <p>
                 Defina <code>VITE_GOOGLE_MAPS_API_KEY</code> para carregar o
@@ -335,7 +335,7 @@ export default function MapShell({
           <div className="map-fallback">
             <div>
               <span className="eyebrow">Erro no mapa</span>
-              <h3>Nao foi possivel carregar o Google Maps</h3>
+              <h3>Não foi possível carregar o Google Maps</h3>
               <p>{loadError}</p>
             </div>
           </div>

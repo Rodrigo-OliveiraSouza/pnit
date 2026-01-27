@@ -116,17 +116,17 @@ export default function MapFilters({
   return (
     <aside className="map-filters">
       <div className="filter-block">
-        <span className="eyebrow">Navegacao</span>
-        <h3>Mapa publico</h3>
+        <span className="eyebrow">Navegação</span>
+        <h3>Mapa público</h3>
         <p>
-          Navegue pelo mapa, selecione uma area e gere relatorios agregados sem
-          dados sensiveis.
+          Navegue pelo mapa, selecione uma área e gere relatórios agregados sem
+          dados sensíveis.
         </p>
         <label className="filter-label">Busca territorial</label>
         <div className="search-row">
           <input
             type="search"
-            placeholder="Buscar por endereco ou regiao"
+            placeholder="Buscar por endereço ou região"
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             onKeyDown={(event) => {
@@ -146,21 +146,21 @@ export default function MapFilters({
       </div>
 
       <div className="filter-block">
-        <span className="eyebrow">Selecao</span>
-        <h4>Area para relatorio</h4>
+        <span className="eyebrow">Seleção</span>
+        <h4>Área para relatório</h4>
         <div className="action-stack">
           <button
             className={`btn ${selectionActive ? "btn-primary" : "btn-outline"}`}
             type="button"
             onClick={onStartSelection}
           >
-            {selectionActive ? "Selecione no mapa" : "Selecionar area"}
+            {selectionActive ? "Selecione no mapa" : "Selecionar área"}
           </button>
           <button className="btn btn-outline" type="button" onClick={onUseViewport}>
-            Usar area visivel
+            Usar área visível
           </button>
           <button className="btn btn-ghost" type="button" onClick={onClearSelection}>
-            Limpar selecao
+            Limpar seleção
           </button>
         </div>
         {selectedBounds ? (
@@ -183,13 +183,13 @@ export default function MapFilters({
             </div>
           </div>
         ) : (
-          <p className="muted">Nenhuma area selecionada.</p>
+          <p className="muted">Nenhuma área selecionada.</p>
         )}
       </div>
 
       <div className="filter-block">
-        <span className="eyebrow">Relatorio</span>
-        <label className="filter-label">Nome do relatorio</label>
+        <span className="eyebrow">Relatório</span>
+        <label className="filter-label">Nome do relatório</label>
         <input
           type="text"
           value={reportName}
@@ -227,7 +227,7 @@ export default function MapFilters({
                 onIncludeChange("points", event.target.checked)
               }
             />{" "}
-            Pontos publicos
+            Pontos públicos
           </label>
           <label>
             <input
@@ -246,11 +246,11 @@ export default function MapFilters({
           onClick={onGenerateReport}
           disabled={!canGenerateReport || reportLoading}
         >
-          {reportLoading ? "Gerando..." : "Gerar relatorio"}
+          {reportLoading ? "Gerando..." : "Gerar relatório"}
         </button>
         {reportReady && (
           <div className="report-ready">
-            Relatorio gerado. Revise os dados antes de exportar.
+            Relatório gerado. Revise os dados antes de exportar.
           </div>
         )}
       </div>
@@ -281,7 +281,7 @@ export default function MapFilters({
             Inativo
           </button>
         </div>
-        <label className="filter-label">Precisao</label>
+        <label className="filter-label">Precisão</label>
         <div className="pill-group">
           <button
             className={`pill${precisionFilter === "all" ? " is-active" : ""}`}

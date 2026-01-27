@@ -56,7 +56,7 @@ export default function AccessCodeRegister() {
   const handleSubmit = async () => {
     setFeedback(null);
     if (!code.trim()) {
-      setFeedback({ type: "error", message: "Informe o codigo de acesso." });
+      setFeedback({ type: "error", message: "Informe o código de acesso." });
       return;
     }
     if (!fullName.trim()) {
@@ -74,7 +74,7 @@ export default function AccessCodeRegister() {
     if (!resolvedLocation) {
       setFeedback({
         type: "error",
-        message: "Informe a localizacao no mapa ou cole a coordenada.",
+        message: "Informe a localização no mapa ou cole a coordenada.",
       });
       return;
     }
@@ -114,8 +114,7 @@ export default function AccessCodeRegister() {
       await submitAccessCodeRegistration(payload);
       setFeedback({
         type: "success",
-        message:
-          "Cadastro enviado. O responsavel pelo codigo fara a aprovacao.",
+        message: "Cadastro enviado. O responsável pelo código fará a aprovação.",
       });
       setCode("");
       setFullName("");
@@ -143,11 +142,11 @@ export default function AccessCodeRegister() {
       <section className="form-section">
         <div className="form-header">
           <div>
-            <span className="eyebrow">Cadastro com codigo</span>
-            <h1>Registrar pessoa com acesso unico</h1>
+            <span className="eyebrow">Cadastro com código</span>
+            <h1>Registrar pessoa com acesso único</h1>
             <p className="muted">
-              Insira o codigo fornecido e preencha os dados essenciais para
-              enviar o registro. O responsavel aprovara o cadastro.
+              Insira o código fornecido e preencha os dados essenciais para
+              enviar o registro. O responsável aprovará o cadastro.
             </p>
           </div>
         </div>
@@ -157,7 +156,7 @@ export default function AccessCodeRegister() {
         <div className="form-card">
           <div className="form-grid">
             <label>
-              Codigo de acesso
+              Código de acesso
               <input
                 type="text"
                 value={code}
@@ -190,7 +189,7 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Endereco
+              Endereço
               <input
                 type="text"
                 value={address}
@@ -229,7 +228,7 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label className="full">
-              Observacoes publicas
+              Observações públicas
               <textarea
                 rows={2}
                 value={publicNote}
@@ -243,7 +242,7 @@ export default function AccessCodeRegister() {
           </div>
           <div className="form-row">
             <label>
-              Saude
+              Saúde
               <input
                 type="number"
                 min="1"
@@ -253,7 +252,7 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Educacao
+              Educação
               <input
                 type="number"
                 min="1"
@@ -287,7 +286,7 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Seguranca
+              Segurança
               <input
                 type="number"
                 min="1"
@@ -301,11 +300,11 @@ export default function AccessCodeRegister() {
           </div>
 
           <div className="form-note">
-            <strong>Localizacao</strong>
+            <strong>Localização</strong>
           </div>
           <div className="form-row">
             <label>
-              Precisao da localizacao
+              Precisão da localização
               <select
                 className="select"
                 value={precision}

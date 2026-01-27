@@ -311,7 +311,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
       return true;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Falha ao gerar relatorio.";
+        error instanceof Error ? error.message : "Falha ao gerar relatório.";
       setReportError(message);
       setReportStatus("idle");
       return false;
@@ -388,11 +388,11 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
           URL.revokeObjectURL(url);
           return;
         }
-        setReportFeedback("Nao foi possivel exportar o relatorio.");
+        setReportFeedback("Não foi possível exportar o relatório.");
       })
       .catch((error) => {
         const message =
-          error instanceof Error ? error.message : "Falha ao exportar relatorio.";
+          error instanceof Error ? error.message : "Falha ao exportar relatório.";
         setReportFeedback(message);
       });
   }, [
@@ -436,7 +436,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   const handleSearchSubmit = useCallback(() => {
     const query = searchValue.trim();
     if (!query) {
-      setSearchFeedback("Informe um endereco ou regiao.");
+      setSearchFeedback("Informe um endereço ou região.");
       return;
     }
     if (!mapRef.current) {
@@ -451,7 +451,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
       })
       .catch((error) => {
         const message =
-          error instanceof Error ? error.message : "Nao foi possivel localizar.";
+          error instanceof Error ? error.message : "Não foi possível localizar.";
         setSearchFeedback(message);
       });
   }, [searchValue]);
@@ -744,7 +744,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   const healthChart = useMemo(
     () =>
       buildScoreChart(
-        "Saude",
+        "Saúde",
         reportIndicatorScores?.health,
         "#3f7f5a"
       ),
@@ -753,7 +753,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   const educationChart = useMemo(
     () =>
       buildScoreChart(
-        "Educacao",
+        "Educação",
         reportIndicatorScores?.education,
         "#395fa3"
       ),
@@ -762,7 +762,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   const securityChart = useMemo(
     () =>
       buildScoreChart(
-        "Seguranca",
+        "Segurança",
         reportIndicatorScores?.security,
         "#a33a3a"
       ),
@@ -780,10 +780,10 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
     const total = values.reduce((sum, value) => sum + value, 0);
     if (!total) return null;
     return {
-      labels: ["Saude", "Educacao", "Renda", "Moradia", "Seguranca"],
+      labels: ["Saúde", "Educação", "Renda", "Moradia", "Segurança"],
       datasets: [
         {
-          label: "Media",
+          label: "Média",
           data: values,
           backgroundColor: [
             "#3f7f5a",
@@ -820,8 +820,8 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
         {isPublicMode ? (
           <aside className="map-filters">
             <div className="filter-block">
-              <span className="eyebrow">Navegacao</span>
-              <h3>Mapa publico</h3>
+              <span className="eyebrow">Navegação</span>
+              <h3>Mapa público</h3>
               <p>
                 Navegue pelos pontos cadastrados e filtre por estado, cidade ou
                 comunidade.
@@ -938,12 +938,12 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
           <div className="map-header">
             <div>
               <span className="eyebrow">
-                {isPublicMode ? "Mapa publico" : "Mapa e relatorios"}
+                {isPublicMode ? "Mapa público" : "Mapa e relatórios"}
               </span>
               <h2>
                 {isPublicMode
-                  ? "Navegacao por cidade e comunidade"
-                  : "Navegacao publica com selecao de areas"}
+                  ? "Navegação por cidade e comunidade"
+                  : "Navegação pública com seleção de áreas"}
               </h2>
             </div>
             <div className="map-actions">
@@ -953,7 +953,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                 onClick={handleRefreshArea}
                 disabled={pointsLoading}
               >
-                Atualizar area
+                Atualizar área
               </button>
               {!isPublicMode && (
                 <button
@@ -962,7 +962,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                   disabled={!canGenerateReport || reportLoading}
                   onClick={handleExportReport}
                 >
-                  Exportar relatorio
+                  Exportar relatório
                 </button>
               )}
             </div>
@@ -976,38 +976,38 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
           />
           <div className="map-info-grid">
             <div className="info-card">
-              <span className="eyebrow">Informacoes</span>
-              <h3>Pontos publicos</h3>
+              <span className="eyebrow">Informações</span>
+              <h3>Pontos públicos</h3>
               {pointsLoading ? (
-                <p className="muted">Carregando pontos da area atual.</p>
+                <p className="muted">Carregando pontos da área atual.</p>
               ) : pointsError ? (
                 <div className="alert">{pointsError}</div>
               ) : (
                 <p className="muted">
                   {mapPoints.length === 0
-                    ? "Nenhum ponto publicado para a area atual."
-                    : `${mapPoints.length} pontos disponiveis na area.`}
+                    ? "Nenhum ponto publicado para a área atual."
+                    : `${mapPoints.length} pontos disponíveis na área.`}
                 </p>
               )}
               {lastSyncAt && (
-                <p className="muted">Ultima atualizacao: {lastSyncAt}</p>
+                <p className="muted">Última atualização: {lastSyncAt}</p>
               )}
               {!lastSyncAt && (
-                <p className="muted">Dados publicos sincronizados diariamente.</p>
+                <p className="muted">Dados públicos sincronizados diariamente.</p>
               )}
             </div>
             {!isPublicMode && (
               <>
                 <div className="info-card">
-                  <span className="eyebrow">Relatorio</span>
-                  <h3>Status da selecao</h3>
+                  <span className="eyebrow">Relatório</span>
+                  <h3>Status da seleção</h3>
                   <p className="muted">
                     {selectedBounds
-                      ? "Area pronta para gerar relatorio."
-                      : "Selecione uma area no mapa para iniciar."}
+                      ? "Área pronta para gerar relatório."
+                      : "Selecione uma área no mapa para iniciar."}
                   </p>
                   {reportLoading && (
-                    <p className="muted">Gerando relatorio agregado...</p>
+                    <p className="muted">Gerando relatório agregado...</p>
                   )}
                   {reportError && <div className="alert">{reportError}</div>}
                   {reportSummary && (
@@ -1024,7 +1024,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                   )}
                   {reportStatus === "ready" && (
                     <div className="report-ready">
-                      Relatorio pronto para exportar.
+                      Relatório pronto para exportar.
                     </div>
                   )}
                   {reportFeedback && (
@@ -1032,60 +1032,60 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                   )}
                 </div>
                 <div className="info-card">
-                  <span className="eyebrow">Grafico</span>
+                  <span className="eyebrow">Gráfico</span>
                   <h3>Status dos pontos</h3>
                   {reportBreakdown?.status && reportBreakdown.status.length > 0 ? (
                     <Pie data={statusChart} />
                   ) : (
-                    <p className="muted">Gere o relatorio para visualizar.</p>
+                    <p className="muted">Gere o relatório para visualizar.</p>
                   )}
                 </div>
                 <div className="info-card">
-                  <span className="eyebrow">Grafico</span>
-                  <h3>Precisao dos pontos</h3>
+                  <span className="eyebrow">Gráfico</span>
+                  <h3>Precisão dos pontos</h3>
                   {reportBreakdown?.precision &&
                   reportBreakdown.precision.length > 0 ? (
                     <Bar data={precisionChart} />
                   ) : (
-                    <p className="muted">Gere o relatorio para visualizar.</p>
+                    <p className="muted">Gere o relatório para visualizar.</p>
                   )}
                 </div>
                 {reportInclude.indicators && (
                   <>
                     <div className="info-card">
-                      <span className="eyebrow">Grafico</span>
-                      <h3>Saude (1-10)</h3>
+                      <span className="eyebrow">Gráfico</span>
+                      <h3>Saúde (1-10)</h3>
                       {hasScoreData ? (
                         <Bar data={healthChart} />
                       ) : (
-                        <p className="muted">Gere o relatorio para visualizar.</p>
+                        <p className="muted">Gere o relatório para visualizar.</p>
                       )}
                     </div>
                     <div className="info-card">
-                      <span className="eyebrow">Grafico</span>
-                      <h3>Educacao (1-10)</h3>
+                      <span className="eyebrow">Gráfico</span>
+                      <h3>Educação (1-10)</h3>
                       {hasScoreData ? (
                         <Bar data={educationChart} />
                       ) : (
-                        <p className="muted">Gere o relatorio para visualizar.</p>
+                        <p className="muted">Gere o relatório para visualizar.</p>
                       )}
                     </div>
                     <div className="info-card">
-                      <span className="eyebrow">Grafico</span>
-                      <h3>Seguranca (1-10)</h3>
+                      <span className="eyebrow">Gráfico</span>
+                      <h3>Segurança (1-10)</h3>
                       {hasScoreData ? (
                         <Bar data={securityChart} />
                       ) : (
-                        <p className="muted">Gere o relatorio para visualizar.</p>
+                        <p className="muted">Gere o relatório para visualizar.</p>
                       )}
                     </div>
                     <div className="info-card">
-                      <span className="eyebrow">Grafico</span>
-                      <h3>Condicao media</h3>
+                      <span className="eyebrow">Gráfico</span>
+                      <h3>Condição média</h3>
                       {indicatorsPie ? (
                         <Pie data={indicatorsPie} />
                       ) : (
-                        <p className="muted">Gere o relatorio para visualizar.</p>
+                        <p className="muted">Gere o relatório para visualizar.</p>
                       )}
                     </div>
                   </>
@@ -1127,7 +1127,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
                   </table>
                 </div>
               ) : (
-                <p className="muted">Gere o relatorio para ver a tabela.</p>
+                <p className="muted">Gere o relatório para ver a tabela.</p>
               )}
             </div>
           )}

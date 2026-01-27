@@ -32,7 +32,7 @@ export default class ErrorBoundary extends Component<
             <span className="eyebrow">Erro</span>
             <h1>Falha ao carregar a interface</h1>
             <p>
-              Atualize a pagina e verifique a chave do Google Maps ou o console
+              Atualize a página e verifique a chave do Google Maps ou o console
               do navegador.
             </p>
             {this.state.message && <p>{this.state.message}</p>}

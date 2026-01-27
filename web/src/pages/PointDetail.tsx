@@ -13,7 +13,7 @@ export default function PointDetail() {
 
   useEffect(() => {
     if (!id) {
-      setError("Ponto nao encontrado.");
+      setError("Ponto não encontrado.");
       setLoading(false);
       return;
     }
@@ -59,7 +59,7 @@ export default function PointDetail() {
       <div className="page">
         <section className="empty-state">
           <h1>Carregando ponto</h1>
-          <p>Buscando informacoes publicas do ponto selecionado.</p>
+          <p>Buscando informações públicas do ponto selecionado.</p>
         </section>
       </div>
     );
@@ -69,8 +69,8 @@ export default function PointDetail() {
     return (
       <div className="page">
         <section className="empty-state">
-          <h1>Ponto nao encontrado</h1>
-          <p>{error ?? "O ponto solicitado nao existe ou foi removido."}</p>
+          <h1>Ponto não encontrado</h1>
+          <p>{error ?? "O ponto solicitado não existe ou foi removido."}</p>
           <Link className="btn btn-primary" to="/">
             Voltar ao mapa
           </Link>
@@ -83,10 +83,10 @@ export default function PointDetail() {
     <div className="page">
       <section className="detail-hero">
         <div>
-          <span className="eyebrow">Detalhe publico</span>
+          <span className="eyebrow">Detalhe público</span>
           <h1>{mapPoint.communityName ?? mapPoint.id}</h1>
           <p>
-            Este ponto exibe apenas dados publicos e coordenadas aproximadas.
+            Este ponto exibe apenas dados públicos e coordenadas aproximadas.
           </p>
         </div>
         <div className="detail-actions">
@@ -101,10 +101,10 @@ export default function PointDetail() {
 
       <section className="detail-grid">
         <div className="detail-card">
-          <h3>Informacoes publicas</h3>
+          <h3>Informações públicas</h3>
           <div className="detail-list">
             <div>
-              <span>Regiao</span>
+              <span>Região</span>
               <strong>{mapPoint.region}</strong>
             </div>
             {(mapPoint.city || mapPoint.state) && (
@@ -123,7 +123,7 @@ export default function PointDetail() {
             )}
             {mapPoint.publicNote && (
               <div>
-                <span>Descricao publica</span>
+                <span>Descrição pública</span>
                 <strong>{mapPoint.publicNote}</strong>
               </div>
             )}
@@ -132,7 +132,7 @@ export default function PointDetail() {
               <strong>{formatStatus(mapPoint.status)}</strong>
             </div>
             <div>
-              <span>Precisao</span>
+              <span>Precisão</span>
               <strong>{formatPrecision(mapPoint.precision)}</strong>
             </div>
             <div>

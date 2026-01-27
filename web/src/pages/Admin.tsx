@@ -85,7 +85,7 @@ export function AdminPanel() {
       setAllUsers(all.items);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Falha ao carregar usuarios.";
+        err instanceof Error ? err.message : "Falha ao carregar usuários.";
       setError(message);
     } finally {
       setLoading(false);
@@ -171,7 +171,7 @@ export function AdminPanel() {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao carregar relatorio individual.";
+          : "Falha ao carregar relatório individual.";
       setProductivityDetailsError(message);
     } finally {
       setProductivityDetailsLoadingId(null);
@@ -201,7 +201,7 @@ export function AdminPanel() {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao baixar relatorio individual.";
+          : "Falha ao baixar relatório individual.";
       setProductivityDetailsError(message);
     } finally {
       setProductivityDownloadId(null);
@@ -224,7 +224,7 @@ export function AdminPanel() {
       setManagedUserDetails((current) => ({ ...current, [userId]: detail }));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Falha ao carregar usuario.";
+        err instanceof Error ? err.message : "Falha ao carregar usuário.";
       setManagedUserError(message);
     } finally {
       setManagedUserLoadingId(null);
@@ -294,19 +294,19 @@ export function AdminPanel() {
           ? new Date(response.last_refresh).toLocaleString()
           : "agora";
         setRefreshFeedback(
-          `Atualizacao ja executada nas ultimas 24h (ultima: ${when}).`
+          `Atualização já executada nas últimas 24h (última: ${when}).`
         );
       } else {
         const when = response.refreshed_at
           ? new Date(response.refreshed_at).toLocaleString()
           : "agora";
-        setRefreshFeedback(`Atualizacao executada em ${when}.`);
+        setRefreshFeedback(`Atualização executada em ${when}.`);
       }
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao atualizar o mapa publico.";
+          : "Falha ao atualizar o mapa público.";
       setRefreshFeedback(message);
     } finally {
       setRefreshLoading(false);
@@ -320,13 +320,13 @@ export function AdminPanel() {
           <span className="eyebrow">{isAdmin ? "Admin" : "Professor"}</span>
           <h1>
             {isAdmin
-              ? "Gestao de equipes e auditoria"
-              : "Aprovacao de usuarios e relatorios"}
+              ? "Gestão de equipes e auditoria"
+              : "Aprovação de usuários e relatórios"}
           </h1>
           <p>
             {isAdmin
-              ? "Acompanhe acessos, aprove solicitacoes e garanta a integridade dos dados."
-              : "Acompanhe solicitacoes pendentes, aprove usuarios e consulte relatorios."}
+              ? "Acompanhe acessos, aprove solicitações e garanta a integridade dos dados."
+              : "Acompanhe solicitações pendentes, aprove usuários e consulte relatórios."}
           </p>
           {refreshFeedback && <div className="alert">{refreshFeedback}</div>}
         </div>
@@ -376,7 +376,7 @@ export function AdminPanel() {
               type="button"
               onClick={() => setActiveTab("management")}
             >
-              Gerenciar usuarios
+              Gerenciar usuários
             </button>
           )}
           {isAdmin && (
@@ -385,7 +385,7 @@ export function AdminPanel() {
               type="button"
               onClick={() => setActiveTab("complaints")}
             >
-              Denuncias
+              Denúncias
             </button>
           )}
           <button
@@ -393,7 +393,7 @@ export function AdminPanel() {
             type="button"
             onClick={() => setActiveTab("productivity")}
           >
-            Relatorio de usuario
+            Relatório de usuário
           </button>
           {isAdmin && (
             <button
@@ -401,7 +401,7 @@ export function AdminPanel() {
               type="button"
               onClick={() => setActiveTab("settings")}
             >
-              Configuracoes
+              Configurações
             </button>
           )}
           <button
@@ -409,7 +409,7 @@ export function AdminPanel() {
             type="button"
             onClick={() => setActiveTab("audit")}
           >
-            Minhas a&ccedil;&otilde;es
+            Minhas ações
           </button>
         </div>
         {error && <div className="alert">{error}</div>}
@@ -421,9 +421,9 @@ export function AdminPanel() {
                   <th>ID</th>
                   <th>Nome</th>
                   <th>Email</th>
-                  <th>Territorio</th>
+                  <th>Território</th>
                   <th>Status</th>
-                  <th>Opcoes</th>
+                  <th>Opções</th>
                 </tr>
               </thead>
               <tbody>
@@ -437,7 +437,7 @@ export function AdminPanel() {
                   <tr>
                     <td colSpan={6}>
                       <div className="table-empty">
-                        Nenhuma solicitacao pendente.
+                        Nenhuma solicitação pendente.
                       </div>
                     </td>
                   </tr>
@@ -479,7 +479,7 @@ export function AdminPanel() {
                   <th>Email</th>
                   <th>Perfil</th>
                   <th>Status</th>
-                  <th>Opcoes</th>
+                  <th>Opções</th>
                 </tr>
               </thead>
               <tbody>
@@ -493,7 +493,7 @@ export function AdminPanel() {
                   <tr>
                     <td colSpan={6}>
                       <div className="table-empty">
-                        Nenhum usuario cadastrado ainda.
+                        Nenhum usuário cadastrado ainda.
                       </div>
                     </td>
                   </tr>
@@ -554,7 +554,7 @@ export function AdminPanel() {
                   <th>Perfil</th>
                   <th>Status</th>
                   <th>Cidade/UF</th>
-                  <th>Opcoes</th>
+                  <th>Opções</th>
                 </tr>
               </thead>
               <tbody>
@@ -568,7 +568,7 @@ export function AdminPanel() {
                   <tr>
                     <td colSpan={6}>
                       <div className="table-empty">
-                        Nenhum usuario cadastrado ainda.
+                        Nenhum usuário cadastrado ainda.
                       </div>
                     </td>
                   </tr>
@@ -606,10 +606,10 @@ export function AdminPanel() {
                           <tr>
                             <td colSpan={6}>
                               <div className="table-empty" style={{ textAlign: "left" }}>
-                                <strong>Dados do usuario</strong>
+                                <strong>Dados do usuário</strong>
                                 <div className="summary-grid" style={{ marginTop: "0.8rem" }}>
                                   <div>
-                                    <span>Organizacao</span>
+                                    <span>Organização</span>
                                     <strong>{detail?.user.organization ?? "-"}</strong>
                                   </div>
                                   <div>
@@ -617,7 +617,7 @@ export function AdminPanel() {
                                     <strong>{detail?.user.phone ?? "-"}</strong>
                                   </div>
                                   <div>
-                                    <span>Territorio</span>
+                                    <span>Território</span>
                                     <strong>{detail?.user.territory ?? "-"}</strong>
                                   </div>
                                   <div>
@@ -692,7 +692,7 @@ export function AdminPanel() {
                   <th>Estado</th>
                   <th>Status</th>
                   <th>Data</th>
-                  <th>Opcoes</th>
+                  <th>Opções</th>
                 </tr>
               </thead>
               <tbody>
@@ -706,7 +706,7 @@ export function AdminPanel() {
                   <tr>
                     <td colSpan={7}>
                       <div className="table-empty">
-                        Nenhuma denuncia registrada.
+                        Nenhuma denúncia registrada.
                       </div>
                     </td>
                   </tr>
@@ -743,7 +743,7 @@ export function AdminPanel() {
                               }
                             >
                               <option value="new">Novo</option>
-                              <option value="reviewing">Em analise</option>
+                              <option value="reviewing">Em análise</option>
                               <option value="closed">Encerrado</option>
                             </select>
                             <button
@@ -751,7 +751,7 @@ export function AdminPanel() {
                               type="button"
                               onClick={() => handleToggleComplaint(complaint.id)}
                             >
-                              {isOpen ? "Fechar denuncia" : "Ver denuncia"}
+                              {isOpen ? "Fechar denúncia" : "Ver denúncia"}
                             </button>
                           </td>
                         </tr>
@@ -778,7 +778,7 @@ export function AdminPanel() {
         )}
         {activeTab === "productivity" && (
           <div className="dashboard-card">
-            <h3>Relatorio de usuarios</h3>
+            <h3>Relatório de usuários</h3>
             {productivityLoading && <p className="muted">Carregando...</p>}
             {!productivityLoading && !productivity && (
               <p className="muted">Sem dados disponiveis.</p>
@@ -807,12 +807,12 @@ export function AdminPanel() {
                         <th>Email</th>
                         <th>Cadastros</th>
                         <th>Pontos</th>
-                        <th>Media Saude</th>
-                        <th>Media Educacao</th>
-                        <th>Media Renda</th>
-                        <th>Media Moradia</th>
-                        <th>Media Seguranca</th>
-                        <th>Opcoes</th>
+                        <th>Média Saúde</th>
+                        <th>Média Educação</th>
+                        <th>Média Renda</th>
+                        <th>Média Moradia</th>
+                        <th>Média Segurança</th>
+                        <th>Opções</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -863,7 +863,7 @@ export function AdminPanel() {
                                   >
                                     {productivityDownloadId === item.user_id
                                       ? "Baixando..."
-                                      : "Baixar relatorio"}
+                                      : "Baixar relatório"}
                                   </button>
                                 </td>
                               </tr>
@@ -871,7 +871,7 @@ export function AdminPanel() {
                                 <tr>
                                   <td colSpan={10}>
                                     <div className="table-empty" style={{ textAlign: "left" }}>
-                                      <strong>Relatorio individual</strong>
+                                      <strong>Relatório individual</strong>
                                       {detailsLoading && (
                                         <p className="muted">Carregando detalhes...</p>
                                       )}
@@ -890,19 +890,19 @@ export function AdminPanel() {
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Renda media (R$)</span>
+                                              <span>Renda média (R$)</span>
                                               <strong>
                                                 {details.averages?.income_monthly ?? "-"}
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Saude</span>
+                                              <span>Saúde</span>
                                               <strong>
                                                 {details.averages?.health_score ?? "-"}
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Educacao</span>
+                                              <span>Educação</span>
                                               <strong>
                                                 {details.averages?.education_score ?? "-"}
                                               </strong>
@@ -914,7 +914,7 @@ export function AdminPanel() {
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Seguranca</span>
+                                              <span>Segurança</span>
                                               <strong>
                                                 {details.averages?.security_score ?? "-"}
                                               </strong>
@@ -951,7 +951,7 @@ export function AdminPanel() {
         )}
         {activeTab === "settings" && (
           <div className="dashboard-card">
-            <h3>Configuracoes</h3>
+            <h3>Configurações</h3>
             <p className="muted">
               Parametros territoriais e textos institucionais serao
               adicionados aqui.
@@ -965,8 +965,8 @@ export function AdminPanel() {
                 <span className="eyebrow">Registro</span>
                 <h3>
                   {auditView === "recent"
-                    ? "Minhas a&ccedil;&otilde;es recentes (ultimas 10)"
-                    : "Historico completo de a&ccedil;&otilde;es"}
+                    ? "Minhas ações recentes (últimas 10)"
+                    : "Histórico completo de ações"}
                 </h3>
               </div>
               {auditView === "recent" && auditEntries.length > auditPageSize && (
@@ -1030,7 +1030,7 @@ export function AdminPanel() {
             {auditView === "history" && auditEntries.length > auditPageSize && (
               <div className="table-footer">
                 <span className="muted">
-                  Pagina {auditPage + 1} de {auditTotalPages}
+                  Página {auditPage + 1} de {auditTotalPages}
                 </span>
                 <div className="pager">
                   <button
@@ -1051,7 +1051,7 @@ export function AdminPanel() {
                     }
                     disabled={auditPage >= auditTotalPages - 1}
                   >
-                    Proxima
+                    Próxima
                   </button>
                 </div>
               </div>

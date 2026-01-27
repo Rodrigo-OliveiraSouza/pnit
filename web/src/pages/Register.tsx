@@ -78,12 +78,12 @@ export default function Register() {
         </p>
         <div className="auth-highlights">
           <div>
-            <strong>Cadastro rapido</strong>
+            <strong>Cadastro rápido</strong>
             <span>Use email e senha para acessar o painel.</span>
           </div>
           <div>
             <strong>Perfis dedicados</strong>
-            <span>Permissoes por funcao e unidade.</span>
+            <span>Permissões por função e unidade.</span>
           </div>
         </div>
       </div>
@@ -134,10 +134,10 @@ export default function Register() {
                 />
               </label>
               <label>
-                Organizacao
+                Organização
                 <input
                   type="text"
-                  placeholder="Orgao, ONG, coletivo"
+                  placeholder="Órgão, ONG, coletivo"
                   value={organization}
                   onChange={(event) => setOrganization(event.target.value)}
                   required
@@ -181,10 +181,10 @@ export default function Register() {
                 </label>
               </div>
               <label>
-                Territorio de atuacao
+                Território de atuação
                 <input
                   type="text"
-                  placeholder="Territorio ou comunidade"
+                  placeholder="Território ou comunidade"
                   value={territory}
                   onChange={(event) => setTerritory(event.target.value)}
                   required
@@ -212,7 +212,7 @@ export default function Register() {
               </label>
               {error && <div className="alert">{error}</div>}
               <button className="btn btn-primary" type="submit" disabled={loading}>
-                {loading ? "Enviando..." : "Enviar solicitacao"}
+                {loading ? "Enviando..." : "Enviar solicitação"}
               </button>
             </form>
             <div className="auth-footer">

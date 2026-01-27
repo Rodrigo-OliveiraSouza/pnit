@@ -12,7 +12,7 @@ export function formatStatus(value: StatusLabel) {
   if (value === "active") return "Ativo";
   if (value === "inactive") return "Inativo";
   if (value === "disabled") return "Desativado";
-  if (value === "reviewing") return "Em analise";
+  if (value === "reviewing") return "Em análise";
   if (value === "closed") return "Encerrado";
   if (value === "new") return "Novo";
   return "Pendente";

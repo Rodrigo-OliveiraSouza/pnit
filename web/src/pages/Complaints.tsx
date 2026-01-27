@@ -18,7 +18,7 @@ export default function Complaints() {
     event.preventDefault();
     setStatus(null);
     if (!description.trim()) {
-      setStatus({ type: "error", message: "Descreva a denuncia." });
+      setStatus({ type: "error", message: "Descreva a denúncia." });
       return;
     }
     setLoading(true);
@@ -33,7 +33,7 @@ export default function Complaints() {
       });
       setStatus({
         type: "success",
-        message: "Denuncia registrada. Obrigado por contribuir.",
+        message: "Denúncia registrada. Obrigado por contribuir.",
       });
       setDescription("");
       setLocationText("");
@@ -42,7 +42,7 @@ export default function Complaints() {
       setFile(null);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Falha ao enviar denuncia.";
+        error instanceof Error ? error.message : "Falha ao enviar denúncia.";
       setStatus({ type: "error", message });
     } finally {
       setLoading(false);
@@ -53,10 +53,10 @@ export default function Complaints() {
     <div className="page">
       <section className="public-hero">
         <div>
-          <span className="eyebrow">Canal de denuncias</span>
-          <h1>Envie um relato publico com seguranca</h1>
+          <span className="eyebrow">Canal de denúncias</span>
+          <h1>Envie um relato público com segurança</h1>
           <p className="lead">
-            Este canal e aberto para qualquer pessoa. Dados sensiveis ficam
+            Este canal é aberto para qualquer pessoa. Dados sensíveis ficam
             protegidos.
           </p>
         </div>
@@ -64,7 +64,7 @@ export default function Complaints() {
 
       <section className="module-section">
         <div className="dashboard-card">
-          <h2>Registrar denuncia</h2>
+          <h2>Registrar denúncia</h2>
           <form className="form" onSubmit={handleSubmit}>
             <label>
               Tipo
@@ -74,16 +74,16 @@ export default function Complaints() {
                 onChange={(event) => setType(event.target.value)}
               >
                 <option value="Infraestrutura">Infraestrutura</option>
-                <option value="Violencia">Violencia</option>
-                <option value="Saude">Saude</option>
-                <option value="Educacao">Educacao</option>
+                <option value="Violencia">Violência</option>
+                <option value="Saude">Saúde</option>
+                <option value="Educacao">Educação</option>
                 <option value="Moradia">Moradia</option>
-                <option value="Seguranca">Seguranca</option>
+                <option value="Seguranca">Segurança</option>
                 <option value="Outros">Outros</option>
               </select>
             </label>
             <label>
-              Descricao
+              Descrição
               <textarea
                 rows={4}
                 placeholder="Descreva o ocorrido com detalhes."
@@ -93,7 +93,7 @@ export default function Complaints() {
               />
             </label>
             <label>
-              Localizacao (link ou coordenada)
+              Localização (link ou coordenada)
               <input
                 type="text"
                 placeholder="Cole o link do WhatsApp ou lat,lng"
@@ -137,7 +137,7 @@ export default function Complaints() {
               </div>
             )}
             <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? "Enviando..." : "Enviar denuncia"}
+              {loading ? "Enviando..." : "Enviar denúncia"}
             </button>
           </form>
         </div>
