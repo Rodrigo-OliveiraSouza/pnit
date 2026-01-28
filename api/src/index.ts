@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import { neon } from "@neondatabase/serverless";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import JSZip from "jszip";
 
 type Env = {
   DATABASE_URL: string;
@@ -2613,6 +2614,128 @@ app.post("/reports/export", async (c) => {
     });
   }
 
+  const needsFullCsv = body.format === "CSV" || body.format === "PDF";
+  const fullRows = needsFullCsv
+    ? await sql(
+        `
+        WITH filtered_points AS (
+          SELECT point_id
+          FROM public_map_cache
+          WHERE ${where}
+        )
+        SELECT
+          r.id AS resident_id,
+          r.full_name,
+          r.doc_id,
+          r.birth_date,
+          r.sex,
+          r.phone,
+          r.email,
+          r.address,
+          r.city,
+          r.state,
+          r.neighborhood,
+          r.community_name,
+          r.household_size,
+          r.children_count,
+          r.elderly_count,
+          r.pcd_count,
+          r.status AS resident_status,
+          r.created_at AS resident_created_at,
+          rp.health_score,
+          rp.health_has_clinic,
+          rp.health_has_emergency,
+          rp.health_has_community_agent,
+          rp.health_unit_distance_km,
+          rp.health_travel_time,
+          rp.health_has_regular_service,
+          rp.health_has_ambulance,
+          rp.health_difficulties,
+          rp.health_notes,
+          rp.education_score,
+          rp.education_level,
+          rp.education_has_school,
+          rp.education_has_transport,
+          rp.education_material_support,
+          rp.education_has_internet,
+          rp.education_notes,
+          rp.income_score,
+          rp.income_monthly,
+          rp.income_source,
+          rp.income_contributors,
+          rp.income_occupation_type,
+          rp.income_has_social_program,
+          rp.income_social_program,
+          rp.assets_has_car,
+          rp.assets_has_fridge,
+          rp.assets_has_furniture,
+          rp.assets_has_land,
+          rp.housing_score,
+          rp.housing_rooms,
+          rp.housing_area_m2,
+          rp.housing_land_m2,
+          rp.housing_type,
+          rp.housing_material,
+          rp.housing_has_bathroom,
+          rp.housing_has_water_treated,
+          rp.housing_condition,
+          rp.housing_risks,
+          rp.security_score,
+          rp.security_has_police_station,
+          rp.security_has_patrol,
+          rp.security_has_guard,
+          rp.security_occurrences,
+          rp.security_notes,
+          rp.race_identity,
+          rp.territory_narrative,
+          rp.territory_memories,
+          rp.territory_conflicts,
+          rp.territory_culture,
+          rp.energy_access,
+          rp.water_supply,
+          rp.water_treatment,
+          rp.sewage_type,
+          rp.garbage_collection,
+          rp.internet_access,
+          rp.transport_access,
+          rp.participation_types,
+          rp.participation_events,
+          rp.participation_engagement,
+          rp.demand_priorities,
+          rp.photo_types,
+          rp.vulnerability_level,
+          rp.technical_issues,
+          rp.referrals,
+          rp.agencies_contacted,
+          rp.consent_accepted,
+          mp.id AS point_id,
+          mp.lat AS point_lat,
+          mp.lng AS point_lng,
+          mp.public_lat,
+          mp.public_lng,
+          mp.accuracy_m,
+          mp.precision,
+          mp.status AS point_status,
+          mp.category,
+          mp.public_note,
+          mp.area_type,
+          mp.reference_point,
+          mp.city AS point_city,
+          mp.state AS point_state,
+          mp.community_name AS point_community_name,
+          mp.updated_at AS point_updated_at
+        FROM resident_point_assignments rpa
+        JOIN filtered_points fp ON fp.point_id = rpa.point_id
+        JOIN residents r ON r.id = rpa.resident_id AND r.deleted_at IS NULL
+        LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+        LEFT JOIN map_points mp ON mp.id = rpa.point_id
+        WHERE rpa.active = true
+        ORDER BY r.created_at DESC
+        `,
+        params
+      )
+    : [];
+
   const pointsForMap = rows
     .map((row) => ({
       lat: Number(row.public_lat),
@@ -2626,42 +2749,129 @@ app.post("/reports/export", async (c) => {
         Math.abs(point.lng) <= 180
     );
 
+  const csvHeader = [
+    "resident_id",
+    "full_name",
+    "doc_id",
+    "birth_date",
+    "sex",
+    "phone",
+    "email",
+    "address",
+    "city",
+    "state",
+    "neighborhood",
+    "community_name",
+    "household_size",
+    "children_count",
+    "elderly_count",
+    "pcd_count",
+    "resident_status",
+    "resident_created_at",
+    "health_score",
+    "health_has_clinic",
+    "health_has_emergency",
+    "health_has_community_agent",
+    "health_unit_distance_km",
+    "health_travel_time",
+    "health_has_regular_service",
+    "health_has_ambulance",
+    "health_difficulties",
+    "health_notes",
+    "education_score",
+    "education_level",
+    "education_has_school",
+    "education_has_transport",
+    "education_material_support",
+    "education_has_internet",
+    "education_notes",
+    "income_score",
+    "income_monthly",
+    "income_source",
+    "income_contributors",
+    "income_occupation_type",
+    "income_has_social_program",
+    "income_social_program",
+    "assets_has_car",
+    "assets_has_fridge",
+    "assets_has_furniture",
+    "assets_has_land",
+    "housing_score",
+    "housing_rooms",
+    "housing_area_m2",
+    "housing_land_m2",
+    "housing_type",
+    "housing_material",
+    "housing_has_bathroom",
+    "housing_has_water_treated",
+    "housing_condition",
+    "housing_risks",
+    "security_score",
+    "security_has_police_station",
+    "security_has_patrol",
+    "security_has_guard",
+    "security_occurrences",
+    "security_notes",
+    "race_identity",
+    "territory_narrative",
+    "territory_memories",
+    "territory_conflicts",
+    "territory_culture",
+    "energy_access",
+    "water_supply",
+    "water_treatment",
+    "sewage_type",
+    "garbage_collection",
+    "internet_access",
+    "transport_access",
+    "participation_types",
+    "participation_events",
+    "participation_engagement",
+    "demand_priorities",
+    "photo_types",
+    "vulnerability_level",
+    "technical_issues",
+    "referrals",
+    "agencies_contacted",
+    "consent_accepted",
+    "point_id",
+    "point_lat",
+    "point_lng",
+    "public_lat",
+    "public_lng",
+    "accuracy_m",
+    "precision",
+    "point_status",
+    "category",
+    "public_note",
+    "area_type",
+    "reference_point",
+    "point_city",
+    "point_state",
+    "point_community_name",
+    "point_updated_at",
+  ];
+  const csvLines = [
+    csvHeader.join(","),
+    ...(fullRows as Array<Record<string, unknown>>).map((row) =>
+      csvHeader
+        .map((key) => {
+          const value = row[key];
+          if (value === null || value === undefined) return "";
+          const text =
+            value instanceof Date
+              ? value.toISOString()
+              : String(value).replace(/"/g, '""');
+          return `"${text}"`;
+        })
+        .join(",")
+    ),
+  ];
+  const csvContent = csvLines.join("\n");
+
   if (body.format === "CSV") {
-    const header = [
-      "id",
-      "public_lat",
-      "public_lng",
-      "status",
-      "precision",
-      "region",
-      "city",
-      "state",
-      "community_name",
-      "residents",
-      "public_note",
-      "updated_at",
-      "boundary_geojson",
-    ];
-    const lines = [
-      header.join(","),
-      ...rows.map((row, index) =>
-        header
-          .map((key) => {
-            const value =
-              key === "boundary_geojson"
-                ? index === 0
-                  ? boundaryGeojson
-                  : ""
-                : row[key];
-            if (value === null || value === undefined) return "";
-            const text = String(value).replace(/"/g, '""');
-            return `"${text}"`;
-          })
-          .join(",")
-      ),
-    ];
     return c.json({
-      content: lines.join("\n"),
+      content: csvContent,
       content_type: "text/csv",
       filename: `relatorio-${Date.now()}.csv`,
     });
@@ -3581,11 +3791,16 @@ app.post("/reports/export", async (c) => {
     }
   }
   const bytes = await pdf.save();
-  const base64 = base64Encode(bytes);
+  const baseName = `relatorio-${Date.now()}`;
+  const zip = new JSZip();
+  zip.file(`${baseName}.pdf`, bytes);
+  zip.file(`${baseName}.csv`, csvContent);
+  const zipBytes = await zip.generateAsync({ type: "uint8array" });
+  const base64 = base64Encode(zipBytes);
   return c.json({
     content_base64: base64,
-    content_type: "application/pdf",
-    filename: `relatorio-${Date.now()}.pdf`,
+    content_type: "application/zip",
+    filename: `${baseName}.zip`,
   });
 } catch (error) {
   console.error("reports_export_pdf_failed", error);
@@ -3608,11 +3823,16 @@ app.post("/reports/export", async (c) => {
     color: rgb(0.1, 0.1, 0.1),
   });
   const bytes = await fallback.save();
-  const base64 = base64Encode(bytes);
+  const baseName = `relatorio-${Date.now()}`;
+  const zip = new JSZip();
+  zip.file(`${baseName}.pdf`, bytes);
+  zip.file(`${baseName}.csv`, csvContent);
+  const zipBytes = await zip.generateAsync({ type: "uint8array" });
+  const base64 = base64Encode(zipBytes);
   return c.json({
     content_base64: base64,
-    content_type: "application/pdf",
-    filename: `relatorio-${Date.now()}.pdf`,
+    content_type: "application/zip",
+    filename: `${baseName}.zip`,
   });
 }
 });
