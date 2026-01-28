@@ -8,6 +8,7 @@ import {
   fetchAdminUserDetails,
   fetchProductivity,
   fetchUserSummary,
+  fetchUserSummaryPdf,
   activateTheme,
   createTheme,
   deleteTheme,
@@ -622,21 +623,27 @@ export function AdminPanel() {
     setProductivityDownloadId(userId);
     setProductivityDetailsError(null);
     try {
-      const summary =
-        productivityDetails[userId] ?? (await fetchUserSummary(userId));
-      if (!productivityDetails[userId]) {
-        setProductivityDetails((current) => ({ ...current, [userId]: summary }));
-      }
-      const content = JSON.stringify(summary, null, 2);
-      const blob = new Blob([content], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const response = await fetchUserSummaryPdf(userId);
+      const contentType = response.content_type ?? "application/pdf";
       const fallback = `usuario-${userId}`;
       const baseName = safeFileName(label ?? "") || fallback;
-      link.href = url;
-      link.download = `${baseName}-relatorio.json`;
-      link.click();
-      URL.revokeObjectURL(url);
+      const filename = response.filename ?? `${baseName}-relatorio.pdf`;
+      if (response.content_base64) {
+        const binary = window.atob(response.content_base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+      throw new Error("PDF indisponível.");
     } catch (err) {
       const message =
         err instanceof Error

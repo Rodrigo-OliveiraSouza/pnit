@@ -1177,6 +1177,16 @@ export async function fetchUserSummary(userId?: string): Promise<UserSummaryResp
   return apiFetch<UserSummaryResponse>(`/reports/user-summary${query}`);
 }
 
+export async function fetchUserSummaryPdf(
+  userId?: string
+): Promise<ReportExportResponse> {
+  const query = new URLSearchParams();
+  if (userId) query.set("user_id", userId);
+  query.set("format", "PDF");
+  const suffix = query.toString();
+  return apiFetch<ReportExportResponse>(`/reports/user-summary?${suffix}`);
+}
+
 export async function refreshPublicMapCache(
   force?: boolean
 ): Promise<PublicCacheRefreshResponse> {

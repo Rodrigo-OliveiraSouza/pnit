@@ -2925,6 +2925,8 @@ app.get("/reports/user-summary", async (c) => {
     requireSupervisor(claims)
       ? c.req.query("user_id")
       : null;
+  const formatRaw = c.req.query("format") ?? "";
+  const format = formatRaw.toUpperCase();
   if (!isAdmin(claims) && requestedUser) {
     const allowed = await sql(
       "SELECT 1 FROM app_users WHERE id = $1 AND approved_by = $2",
@@ -3058,6 +3060,84 @@ app.get("/reports/user-summary", async (c) => {
     `,
     [userId]
   );
+  if (format === "PDF") {
+    const summary = summaryRows[0] as { total_residents?: number };
+    const averagesRow = averages[0] as Record<string, number | null>;
+    const pdf = await PDFDocument.create();
+    let page = pdf.addPage();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    let { width, height } = page.getSize();
+    let cursorY = height - 60;
+    const lineHeight = 16;
+
+    const drawLine = (label: string, value: string) => {
+      if (cursorY < 60) {
+        page = pdf.addPage();
+        ({ width, height } = page.getSize());
+        cursorY = height - 60;
+      }
+      page.drawText(`${label}: ${value}`, {
+        x: 50,
+        y: cursorY,
+        size: 11,
+        font,
+        color: rgb(0.12, 0.12, 0.12),
+      });
+      cursorY -= lineHeight;
+    };
+
+    page.drawText("Relatório do usuário", {
+      x: 50,
+      y: cursorY + 24,
+      size: 16,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
+    drawLine("Total de residentes", String(summary?.total_residents ?? 0));
+    drawLine("Média saúde", String(averagesRow?.health_score ?? "-"));
+    drawLine("Média educação", String(averagesRow?.education_score ?? "-"));
+    drawLine("Média renda", String(averagesRow?.income_score ?? "-"));
+    drawLine("Renda mensal média (R$)", String(averagesRow?.income_monthly ?? "-"));
+    drawLine("Média moradia", String(averagesRow?.housing_score ?? "-"));
+    drawLine("Média segurança", String(averagesRow?.security_score ?? "-"));
+
+    cursorY -= 8;
+    page.drawText("Últimos meses", {
+      x: 50,
+      y: cursorY,
+      size: 12,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    cursorY -= lineHeight;
+    monthly.slice(0, 8).forEach((row: { month: string; total: number }) => {
+      drawLine(row.month, String(row.total));
+    });
+
+    cursorY -= 8;
+    page.drawText("Amostra de residentes", {
+      x: 50,
+      y: cursorY,
+      size: 12,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    cursorY -= lineHeight;
+    residents
+      .slice(0, 12)
+      .forEach((row: { full_name?: string | null; community_name?: string | null }) => {
+        drawLine(row.full_name ?? "-", row.community_name ?? "-");
+      });
+
+    const bytes = await pdf.save();
+    const base64 = Buffer.from(bytes).toString("base64");
+    return c.json({
+      content_base64: base64,
+      content_type: "application/pdf",
+      filename: `relatorio-usuario-${Date.now()}.pdf`,
+    });
+  }
   const activeUsers =
     claims.role === "admin"
       ? await sql(
