@@ -3233,18 +3233,26 @@ app.post("/reports/export", async (c) => {
   }));
   const chartHeight = 70;
   ensureSpace(chartHeight + 120);
-  const barsOriginY = cursorY - chartHeight - 20;
-  drawAverageBars(page, "Indicadores medios (1-10)", indicatorAverages, barsOriginY, chartHeight);
   if (indicatorAverages.length > 0) {
-    page.drawText(`Media geral: ${averageOverall.toFixed(2)}`, {
-      x: 50,
-      y: barsOriginY + chartHeight + 12,
+    const avgText = `Media geral: ${averageOverall.toFixed(2)}`;
+    const avgWidth = font.widthOfTextAtSize(avgText, 9);
+    page.drawText(avgText, {
+      x: width - 50 - avgWidth,
+      y: cursorY + 6,
       size: 9,
       font,
       color: rgb(0.2, 0.2, 0.2),
     });
   }
-  const pieCenterY = barsOriginY - 110;
+  const barsOriginYAdjusted = cursorY - chartHeight - 40;
+  drawAverageBars(
+    page,
+    "Indicadores medios (1-10)",
+    indicatorAverages,
+    barsOriginYAdjusted,
+    chartHeight
+  );
+  const pieCenterY = barsOriginYAdjusted - 110;
   ensureSpace(160);
   drawPieChart(
     page,
