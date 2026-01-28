@@ -4,6 +4,8 @@ export type ThemeColors = {
   accent: string;
   background: string;
   text: string;
+  text_muted?: string;
+  heading?: string;
   border: string;
   header_start?: string;
   header_end?: string;
@@ -23,11 +25,18 @@ export type ThemeImageStyles = {
   shadow?: string;
 };
 
+export type ThemeTypography = {
+  body?: string;
+  heading?: string;
+  button?: string;
+};
+
 export type ThemePalette = {
   id: string;
   name: string;
   colors: ThemeColors | null;
   image_styles: ThemeImageStyles | null;
+  typography?: ThemeTypography | null;
   created_at?: string | null;
   updated_at?: string | null;
 };

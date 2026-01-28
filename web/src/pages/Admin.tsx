@@ -29,13 +29,20 @@ import {
   type LinkCode,
   type ProductivityResponse,
 } from "../services/api";
-import type { ThemeColors, ThemeImageStyles, ThemePalette } from "../types/theme";
+import type {
+  ThemeColors,
+  ThemeImageStyles,
+  ThemePalette,
+  ThemeTypography,
+} from "../types/theme";
 import {
   applyThemeToRoot,
   resolveThemeColors,
   resolveThemeImageStyles,
+  resolveThemeTypography,
   DEFAULT_THEME_COLORS,
   DEFAULT_THEME_IMAGE_STYLES,
+  DEFAULT_THEME_TYPOGRAPHY,
 } from "../utils/theme";
 import type { SiteCopy } from "../data/siteCopy";
 import { useSiteCopy } from "../providers/SiteCopyProvider";
@@ -115,12 +122,14 @@ export function AdminPanel() {
     name: string;
     colors: ThemeColors;
     image_styles: ThemeImageStyles;
+    typography: ThemeTypography;
   } | null>(null);
   const [themeSnapshot, setThemeSnapshot] = useState<{
     id: string | null;
     name: string;
     colors: ThemeColors;
     image_styles: ThemeImageStyles;
+    typography: ThemeTypography;
   } | null>(null);
   const {
     copy,
@@ -139,6 +148,9 @@ export function AdminPanel() {
     colors: resolveThemeColors(theme?.colors ?? DEFAULT_THEME_COLORS),
     image_styles: resolveThemeImageStyles(
       theme?.image_styles ?? DEFAULT_THEME_IMAGE_STYLES
+    ),
+    typography: resolveThemeTypography(
+      theme?.typography ?? DEFAULT_THEME_TYPOGRAPHY
     ),
   });
 
@@ -239,7 +251,11 @@ export function AdminPanel() {
 
   useEffect(() => {
     if (!themeDraft) return;
-    applyThemeToRoot(themeDraft.colors, themeDraft.image_styles);
+    applyThemeToRoot(
+      themeDraft.colors,
+      themeDraft.image_styles,
+      themeDraft.typography
+    );
   }, [themeDraft]);
 
   const handleApprove = async (id: string) => {
@@ -374,6 +390,7 @@ export function AdminPanel() {
       name: string;
       colors: Partial<ThemeColors>;
       image_styles: Partial<ThemeImageStyles>;
+      typography: Partial<ThemeTypography>;
     }>
   ) => {
     setThemeDraft((current) => {
@@ -385,6 +402,9 @@ export function AdminPanel() {
         image_styles: partial.image_styles
           ? { ...current.image_styles, ...partial.image_styles }
           : current.image_styles,
+        typography: partial.typography
+          ? { ...current.typography, ...partial.typography }
+          : current.typography,
       };
     });
   };
@@ -415,6 +435,14 @@ export function AdminPanel() {
       });
     };
 
+  const handleThemeTypographyChange =
+    (key: keyof ThemeTypography) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      updateThemeDraft({
+        typography: { [key]: event.target.value } as Partial<ThemeTypography>,
+      });
+    };
+
   const handleUndoTheme = () => {
     if (!themeSnapshot) return;
     setThemeDraft(themeSnapshot);
@@ -431,6 +459,7 @@ export function AdminPanel() {
           name: themeDraft.name,
           colors: themeDraft.colors,
           image_styles: themeDraft.image_styles,
+          typography: themeDraft.typography,
         });
         setThemeFeedback("Paleta atualizada.");
       } else {
@@ -438,6 +467,7 @@ export function AdminPanel() {
           name: themeDraft.name,
           colors: themeDraft.colors,
           image_styles: themeDraft.image_styles,
+          typography: themeDraft.typography,
         });
         setThemeFeedback("Paleta criada.");
         const created = toThemeDraft(response.item);
@@ -463,6 +493,7 @@ export function AdminPanel() {
         name: themeDraft.name || "Nova versão",
         colors: themeDraft.colors,
         image_styles: themeDraft.image_styles,
+        typography: themeDraft.typography,
       });
       setThemeFeedback("Nova versão criada.");
       const created = toThemeDraft(response.item);
@@ -1595,15 +1626,22 @@ export function AdminPanel() {
                           </div>
                         </div>
                         <div className="theme-swatches theme-card-swatches">
-                          {[resolved.primary, resolved.secondary, resolved.accent, resolved.background, resolved.text, resolved.border].map(
-                            (color) => (
-                              <span
-                                key={`${theme.id}-${color}`}
-                                className="theme-swatch"
-                                style={{ background: color }}
-                              />
-                            )
-                          )}
+                          {[
+                            resolved.primary,
+                            resolved.secondary,
+                            resolved.accent,
+                            resolved.background,
+                            resolved.text,
+                            resolved.text_muted ?? resolved.text,
+                            resolved.heading ?? resolved.text,
+                            resolved.border,
+                          ].map((color) => (
+                            <span
+                              key={`${theme.id}-${color}`}
+                              className="theme-swatch"
+                              style={{ background: color }}
+                            />
+                          ))}
                         </div>
                         <div className="theme-actions">
                           <button
@@ -1695,12 +1733,32 @@ export function AdminPanel() {
                         />
                       </div>
                       <div className="theme-control">
-                        <label>Texto</label>
+                        <label>Texto principal</label>
                         <input
                           className="theme-color"
                           type="color"
                           value={themeDraft.colors.text}
                           onChange={handleThemeColorChange("text")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Texto secundário</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={
+                            themeDraft.colors.text_muted ?? themeDraft.colors.text
+                          }
+                          onChange={handleThemeColorChange("text_muted")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Títulos</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={themeDraft.colors.heading ?? themeDraft.colors.text}
+                          onChange={handleThemeColorChange("heading")}
                         />
                       </div>
                       <div className="theme-control">
@@ -1728,6 +1786,86 @@ export function AdminPanel() {
                           type="color"
                           value={themeDraft.colors.header_end ?? themeDraft.colors.secondary}
                           onChange={handleThemeColorChange("header_end")}
+                        />
+                      </div>
+                    </div>
+
+                    <h4>Botões</h4>
+                    <div className="theme-editor-grid">
+                      <div className="theme-control">
+                        <label>Primário (fundo)</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={
+                            themeDraft.colors.button_primary_bg ??
+                            themeDraft.colors.primary
+                          }
+                          onChange={handleThemeColorChange("button_primary_bg")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Primário (texto)</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={
+                            themeDraft.colors.button_primary_text ??
+                            themeDraft.colors.text
+                          }
+                          onChange={handleThemeColorChange("button_primary_text")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Secundário (fundo)</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={
+                            themeDraft.colors.button_secondary_bg ??
+                            themeDraft.colors.background
+                          }
+                          onChange={handleThemeColorChange("button_secondary_bg")}
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Secundário (texto)</label>
+                        <input
+                          className="theme-color"
+                          type="color"
+                          value={
+                            themeDraft.colors.button_secondary_text ??
+                            themeDraft.colors.text
+                          }
+                          onChange={handleThemeColorChange("button_secondary_text")}
+                        />
+                      </div>
+                    </div>
+
+                    <h4>Tipografia</h4>
+                    <div className="theme-editor-grid">
+                      <div className="theme-control">
+                        <label>Fonte do texto</label>
+                        <input
+                          value={themeDraft.typography.body ?? ""}
+                          onChange={handleThemeTypographyChange("body")}
+                          placeholder="Ex: \"Source Sans 3\", sans-serif"
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Fonte dos títulos</label>
+                        <input
+                          value={themeDraft.typography.heading ?? ""}
+                          onChange={handleThemeTypographyChange("heading")}
+                          placeholder="Ex: \"Newsreader\", serif"
+                        />
+                      </div>
+                      <div className="theme-control">
+                        <label>Fonte dos botões</label>
+                        <input
+                          value={themeDraft.typography.button ?? ""}
+                          onChange={handleThemeTypographyChange("button")}
+                          placeholder="Ex: \"Source Sans 3\", sans-serif"
                         />
                       </div>
                     </div>

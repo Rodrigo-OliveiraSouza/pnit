@@ -54,9 +54,15 @@ type ThemeColors = {
   accent: string;
   background: string;
   text: string;
+  text_muted: string;
+  heading: string;
   border: string;
   header_start?: string;
   header_end?: string;
+  button_primary_bg?: string;
+  button_primary_text?: string;
+  button_secondary_bg?: string;
+  button_secondary_text?: string;
 };
 
 type ThemeImageStyles = {
@@ -67,6 +73,12 @@ type ThemeImageStyles = {
   brightness?: number;
   radius?: number;
   shadow?: string;
+};
+
+type ThemeTypography = {
+  body?: string;
+  heading?: string;
+  button?: string;
 };
 
 type UserClaims = {
@@ -471,7 +483,13 @@ const THEME_COLOR_KEYS = [
   "accent",
   "background",
   "text",
+  "text_muted",
+  "heading",
   "border",
+  "button_primary_bg",
+  "button_primary_text",
+  "button_secondary_bg",
+  "button_secondary_text",
 ] as const;
 
 const DEFAULT_THEME_IMAGE_STYLES: Required<ThemeImageStyles> = {
@@ -482,6 +500,12 @@ const DEFAULT_THEME_IMAGE_STYLES: Required<ThemeImageStyles> = {
   brightness: 1,
   radius: 24,
   shadow: "0 18px 40px rgba(43,26,18,0.14)",
+};
+
+const DEFAULT_THEME_TYPOGRAPHY: Required<ThemeTypography> = {
+  body: "\"Source Sans 3\", \"Segoe UI\", sans-serif",
+  heading: "\"Newsreader\", serif",
+  button: "\"Source Sans 3\", \"Segoe UI\", sans-serif",
 };
 
 function parseJsonField<T>(value: unknown): T | null {
@@ -520,9 +544,15 @@ function normalizeThemeColors(payload: Record<string, unknown> | null): ThemeCol
     accent: colors.accent,
     background: colors.background,
     text: colors.text,
+    text_muted: colors.text_muted,
+    heading: colors.heading,
     border: colors.border,
     header_start: headerStart,
     header_end: headerEnd,
+    button_primary_bg: colors.button_primary_bg,
+    button_primary_text: colors.button_primary_text,
+    button_secondary_bg: colors.button_secondary_bg,
+    button_secondary_text: colors.button_secondary_text,
   };
 }
 
@@ -584,6 +614,25 @@ function normalizeThemeImageStyles(
     radius,
     shadow,
   };
+}
+
+function normalizeThemeTypography(
+  payload: Record<string, unknown> | null
+): Required<ThemeTypography> {
+  if (!payload) return { ...DEFAULT_THEME_TYPOGRAPHY };
+  const body =
+    typeof payload.body === "string" && payload.body.trim()
+      ? payload.body.trim()
+      : DEFAULT_THEME_TYPOGRAPHY.body;
+  const heading =
+    typeof payload.heading === "string" && payload.heading.trim()
+      ? payload.heading.trim()
+      : DEFAULT_THEME_TYPOGRAPHY.heading;
+  const button =
+    typeof payload.button === "string" && payload.button.trim()
+      ? payload.button.trim()
+      : DEFAULT_THEME_TYPOGRAPHY.button;
+  return { body, heading, button };
 }
 
 function generateAccessCode() {
@@ -4857,7 +4906,7 @@ app.get("/theme/active", async (c) => {
   const sql = getSql(c.env);
   const rows = await sql(
     `
-    SELECT t.id, t.name, t.colors, t.image_styles, t.created_at, t.updated_at
+    SELECT t.id, t.name, t.colors, t.image_styles, t.typography, t.created_at, t.updated_at
     FROM theme_active a
     JOIN theme_palettes t ON t.id = a.theme_id
     LIMIT 1
@@ -4869,12 +4918,14 @@ app.get("/theme/active", async (c) => {
   const row = rows[0] as Record<string, unknown>;
   const colors = parseJsonField<ThemeColors>(row.colors);
   const imageStyles = parseJsonField<ThemeImageStyles>(row.image_styles);
+  const typography = parseJsonField<ThemeTypography>(row.typography);
   return c.json({
     theme: {
       id: row.id as string,
       name: row.name as string,
       colors: colors ?? null,
       image_styles: imageStyles ?? null,
+      typography: typography ?? null,
       created_at: row.created_at ?? null,
       updated_at: row.updated_at ?? null,
     },
@@ -4892,7 +4943,7 @@ app.get("/admin/themes", async (c) => {
   }
   const themes = await sql(
     `
-    SELECT id, name, colors, image_styles, created_at, updated_at
+    SELECT id, name, colors, image_styles, typography, created_at, updated_at
     FROM theme_palettes
     ORDER BY created_at DESC
     `
@@ -4906,6 +4957,7 @@ app.get("/admin/themes", async (c) => {
     name: row.name as string,
     colors: parseJsonField<ThemeColors>(row.colors),
     image_styles: parseJsonField<ThemeImageStyles>(row.image_styles),
+    typography: parseJsonField<ThemeTypography>(row.typography),
     created_at: row.created_at ?? null,
     updated_at: row.updated_at ?? null,
   }));
@@ -4926,6 +4978,7 @@ app.post("/admin/themes", async (c) => {
         name?: string;
         colors?: Record<string, unknown>;
         image_styles?: Record<string, unknown>;
+        typography?: Record<string, unknown>;
       }
     | null;
   const name = typeof body?.name === "string" ? body.name.trim() : "";
@@ -4937,13 +4990,20 @@ app.post("/admin/themes", async (c) => {
     return jsonError(c, 400, "colors are required");
   }
   const imageStyles = normalizeThemeImageStyles(body?.image_styles ?? null);
+  const typography = normalizeThemeTypography(body?.typography ?? null);
   const rows = await sql(
     `
-    INSERT INTO theme_palettes (name, colors, image_styles, created_by)
-    VALUES ($1, $2::jsonb, $3::jsonb, $4)
-    RETURNING id, name, colors, image_styles, created_at, updated_at
+    INSERT INTO theme_palettes (name, colors, image_styles, typography, created_by)
+    VALUES ($1, $2::jsonb, $3::jsonb, $4::jsonb, $5)
+    RETURNING id, name, colors, image_styles, typography, created_at, updated_at
     `,
-    [name, JSON.stringify(colors), JSON.stringify(imageStyles), claims.sub]
+    [
+      name,
+      JSON.stringify(colors),
+      JSON.stringify(imageStyles),
+      JSON.stringify(typography),
+      claims.sub,
+    ]
   );
   const item = rows[0] as Record<string, unknown>;
   await logAudit(sql, claims.sub, "theme_create", "theme_palettes", item.id as string, {
@@ -4955,6 +5015,7 @@ app.post("/admin/themes", async (c) => {
       name: item.name as string,
       colors: parseJsonField<ThemeColors>(item.colors),
       image_styles: parseJsonField<ThemeImageStyles>(item.image_styles),
+      typography: parseJsonField<ThemeTypography>(item.typography),
       created_at: item.created_at ?? null,
       updated_at: item.updated_at ?? null,
     },
@@ -4976,6 +5037,7 @@ app.put("/admin/themes/:id", async (c) => {
         name?: string;
         colors?: Record<string, unknown>;
         image_styles?: Record<string, unknown>;
+        typography?: Record<string, unknown>;
       }
     | null;
   const name = typeof body?.name === "string" ? body.name.trim() : "";
@@ -4987,16 +5049,18 @@ app.put("/admin/themes/:id", async (c) => {
     return jsonError(c, 400, "colors are required");
   }
   const imageStyles = normalizeThemeImageStyles(body?.image_styles ?? null);
+  const typography = normalizeThemeTypography(body?.typography ?? null);
   await sql(
     `
     UPDATE theme_palettes
     SET name = $2,
         colors = $3::jsonb,
         image_styles = $4::jsonb,
+        typography = $5::jsonb,
         updated_at = now()
     WHERE id = $1
     `,
-    [id, name, JSON.stringify(colors), JSON.stringify(imageStyles)]
+    [id, name, JSON.stringify(colors), JSON.stringify(imageStyles), JSON.stringify(typography)]
   );
   await logAudit(sql, claims.sub, "theme_update", "theme_palettes", id, {
     name,

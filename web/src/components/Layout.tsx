@@ -8,6 +8,7 @@ import {
   applyThemeToRoot,
   resolveThemeColors,
   resolveThemeImageStyles,
+  resolveThemeTypography,
 } from "../utils/theme";
 import { SiteCopyProvider } from "../providers/SiteCopyProvider";
 
@@ -22,7 +23,10 @@ export default function Layout() {
         const imageStyles = resolveThemeImageStyles(
           response.theme.image_styles ?? undefined
         );
-        applyThemeToRoot(colors, imageStyles);
+        const typography = resolveThemeTypography(
+          response.theme.typography ?? undefined
+        );
+        applyThemeToRoot(colors, imageStyles, typography);
       } catch {
         // Keep default theme on failure.
       }

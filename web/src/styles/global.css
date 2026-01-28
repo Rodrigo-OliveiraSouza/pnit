@@ -2,6 +2,8 @@
 
 :root {
   --color-ink: #2b1a12;
+  --color-heading: #2b1a12;
+  --color-text-muted: #6b6158;
   --color-forest: #c8651e;
   --color-emerald: #b85a16;
   --color-teal: #2b3a66;
@@ -15,6 +17,8 @@
   --color-header-end: #2b3a66;
   --color-earth: #d2a483;
   --color-ink-rgb: 43, 26, 18;
+  --color-heading-rgb: 43, 26, 18;
+  --color-text-muted-rgb: 107, 97, 88;
   --color-forest-rgb: 200, 101, 30;
   --color-emerald-rgb: 184, 90, 22;
   --color-teal-rgb: 43, 58, 102;
@@ -33,6 +37,9 @@
   --image-brightness: 1;
   --image-radius: 24px;
   --image-shadow: 0 18px 40px rgba(43, 26, 18, 0.14);
+  --font-body: "Source Sans 3", "Segoe UI", sans-serif;
+  --font-heading: "Newsreader", serif;
+  --font-button: "Source Sans 3", "Segoe UI", sans-serif;
   --radius-lg: 20px;
   --radius-md: 14px;
   --radius-sm: 10px;
@@ -45,10 +52,20 @@
 
 body {
   margin: 0;
-  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+  font-family: var(--font-body);
   color: var(--color-ink);
   background: var(--color-forest);
   min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+  color: var(--color-heading);
 }
 
 a {
@@ -293,6 +310,7 @@ img.theme-ignore,
   padding: 0.7rem 1.4rem;
   font-weight: 600;
   font-size: 0.95rem;
+  font-family: var(--font-button);
   cursor: pointer;
   transition: var(--transition);
   background: var(--button-secondary-bg, #fff);
@@ -349,13 +367,13 @@ img.theme-ignore,
 }
 
 .site-header .btn-ghost {
-  color: #000;
-  border-color: #000;
-  background: #fff;
+  color: var(--button-secondary-text, #000);
+  border-color: var(--button-secondary-text, #000);
+  background: var(--button-secondary-bg, #fff);
 }
 
 .site-header .btn-ghost:hover {
-  background: #fff;
+  background: var(--button-secondary-bg, #fff);
 }
 
 .btn-sm {
@@ -368,7 +386,7 @@ img.theme-ignore,
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  color: rgba(var(--color-ink-rgb), 0.6);
+  color: var(--color-text-muted);
   margin-bottom: 0.6rem;
 }
 
@@ -782,7 +800,7 @@ img.theme-ignore,
 }
 
 .muted {
-  color: rgba(var(--color-ink-rgb), 0.65);
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
