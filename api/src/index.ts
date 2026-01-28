@@ -3827,6 +3827,37 @@ app.get("/reports/user-summary", async (c) => {
       });
       cursorY -= lineHeight;
     };
+    const drawWrappedLine = (label: string, value: string) => {
+      const text = `${label}: ${value}`;
+      const maxWidth = width - 100;
+      const words = text.split(/\s+/);
+      let current = "";
+      const flush = (line: string) => {
+        if (cursorY < 60) {
+          page = pdf.addPage();
+          ({ width, height } = page.getSize());
+          cursorY = height - 60;
+        }
+        page.drawText(line, {
+          x: 50,
+          y: cursorY,
+          size: 11,
+          font,
+          color: rgb(0.12, 0.12, 0.12),
+        });
+        cursorY -= lineHeight;
+      };
+      words.forEach((word) => {
+        const test = current ? `${current} ${word}` : word;
+        if (font.widthOfTextAtSize(test, 11) > maxWidth) {
+          if (current) flush(current);
+          current = word;
+        } else {
+          current = test;
+        }
+      });
+      if (current) flush(current);
+    };
 
     page.drawText("Relatório do usuário", {
       x: 50,
@@ -3891,7 +3922,7 @@ app.get("/reports/user-summary", async (c) => {
       const translatedAction =
         actionTranslations[row.action] ?? `Acao: ${row.action}`;
       const label = `${translatedAction} (${row.entity_type ?? "-"})`;
-      drawLine(label, `${row.entity_id ?? "-"} | ${when}`);
+      drawWrappedLine(label, `${row.entity_id ?? "-"} | ${when}`);
     });
 
     const bytes = await pdf.save();
