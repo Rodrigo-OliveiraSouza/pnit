@@ -2693,6 +2693,120 @@ app.post("/reports/export", async (c) => {
       acc[key] = (acc[key] ?? 0) + 1;
       return acc;
     }, {});
+    const totalResidents = rows.reduce(
+      (sum, row) => sum + Number(row.residents ?? 0),
+      0
+    );
+    const bounds = body?.bounds ?? null;
+    const haversineKm = (
+      lat1: number,
+      lon1: number,
+      lat2: number,
+      lon2: number
+    ) => {
+      const toRad = (value: number) => (value * Math.PI) / 180;
+      const phi1 = toRad(lat1);
+      const phi2 = toRad(lat2);
+      const dPhi = toRad(lat2 - lat1);
+      const dLam = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dPhi / 2) ** 2 +
+        Math.cos(phi1) * Math.cos(phi2) * Math.sin(dLam / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return 6371.0088 * c;
+    };
+    const bboxAreaKm2 = (north: number, south: number, east: number, west: number) => {
+      const midLat = (north + south) / 2;
+      const widthKm = haversineKm(midLat, west, midLat, east);
+      const heightKm = haversineKm(south, west, north, west);
+      return Math.max(0, widthKm * heightKm);
+    };
+    const bboxCenter = (north: number, south: number, east: number, west: number) => ({
+      lat: (north + south) / 2,
+      lng: (east + west) / 2,
+    });
+    const areaKm2 =
+      bounds && Number.isFinite(bounds.north)
+        ? bboxAreaKm2(bounds.north, bounds.south, bounds.east, bounds.west)
+        : null;
+    const center =
+      bounds && Number.isFinite(bounds.north)
+        ? bboxCenter(bounds.north, bounds.south, bounds.east, bounds.west)
+        : null;
+    const infraRows = await sql(
+      `
+      WITH filtered_points AS (
+        SELECT point_id
+        FROM public_map_cache
+        WHERE ${where}
+      ),
+      area_residents AS (
+        SELECT
+          rp.energy_access,
+          rp.water_supply,
+          rp.sewage_type,
+          rp.garbage_collection,
+          rp.internet_access
+        FROM resident_point_assignments rpa
+        JOIN filtered_points fp ON fp.point_id = rpa.point_id
+        JOIN residents r ON r.id = rpa.resident_id AND r.deleted_at IS NULL
+        LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
+        WHERE rpa.active = true
+      )
+      SELECT
+        SUM(CASE WHEN energy_access = 'regular' THEN 1 ELSE 0 END)::int AS energia_sim,
+        SUM(CASE WHEN energy_access = 'irregular' THEN 1 ELSE 0 END)::int AS energia_parcial,
+        SUM(CASE WHEN energy_access = 'inexistente' THEN 1 ELSE 0 END)::int AS energia_nao,
+        SUM(CASE WHEN water_supply = 'rede_publica' THEN 1 ELSE 0 END)::int AS agua_sim,
+        SUM(CASE WHEN water_supply IN ('poco', 'rio', 'carro_pipa') THEN 1 ELSE 0 END)::int AS agua_parcial,
+        SUM(CASE WHEN water_supply IS NULL THEN 1 ELSE 0 END)::int AS agua_nao,
+        SUM(CASE WHEN sewage_type = 'rede' THEN 1 ELSE 0 END)::int AS esgoto_sim,
+        SUM(CASE WHEN sewage_type = 'fossa' THEN 1 ELSE 0 END)::int AS esgoto_parcial,
+        SUM(CASE WHEN sewage_type = 'inexistente' THEN 1 ELSE 0 END)::int AS esgoto_nao,
+        SUM(CASE WHEN garbage_collection = 'regular' THEN 1 ELSE 0 END)::int AS lixo_sim,
+        SUM(CASE WHEN garbage_collection = 'irregular' THEN 1 ELSE 0 END)::int AS lixo_parcial,
+        SUM(CASE WHEN garbage_collection = 'nao_existe' THEN 1 ELSE 0 END)::int AS lixo_nao,
+        SUM(CASE WHEN internet_access IS TRUE THEN 1 ELSE 0 END)::int AS internet_sim,
+        SUM(CASE WHEN internet_access IS FALSE THEN 1 ELSE 0 END)::int AS internet_nao,
+        SUM(CASE WHEN internet_access IS NULL THEN 1 ELSE 0 END)::int AS internet_parcial
+      FROM area_residents
+      `,
+      params
+    );
+    const infraRow = infraRows[0] ?? {};
+    const infraItems = [
+      {
+        label: "Energia",
+        sim: Number(infraRow.energia_sim ?? 0),
+        parcial: Number(infraRow.energia_parcial ?? 0),
+        nao: Number(infraRow.energia_nao ?? 0),
+      },
+      {
+        label: "Agua",
+        sim: Number(infraRow.agua_sim ?? 0),
+        parcial: Number(infraRow.agua_parcial ?? 0),
+        nao: Number(infraRow.agua_nao ?? 0),
+      },
+      {
+        label: "Esgoto",
+        sim: Number(infraRow.esgoto_sim ?? 0),
+        parcial: Number(infraRow.esgoto_parcial ?? 0),
+        nao: Number(infraRow.esgoto_nao ?? 0),
+      },
+      {
+        label: "Internet",
+        sim: Number(infraRow.internet_sim ?? 0),
+        parcial: Number(infraRow.internet_parcial ?? 0),
+        nao: Number(infraRow.internet_nao ?? 0),
+      },
+      {
+        label: "Lixo",
+        sim: Number(infraRow.lixo_sim ?? 0),
+        parcial: Number(infraRow.lixo_parcial ?? 0),
+        nao: Number(infraRow.lixo_nao ?? 0),
+      },
+    ];
+  const generatedAt = new Date().toISOString().slice(0, 19);
   page.drawText(title, {
     x: 50,
     y: height - 70,
@@ -2700,52 +2814,225 @@ app.post("/reports/export", async (c) => {
     font,
     color: rgb(0.1, 0.1, 0.1),
   });
-  page.drawText(`Total de pontos: ${rows.length}`, {
+  page.drawText(`Gerado em: ${generatedAt}`, {
     x: 50,
-    y: height - 100,
-    size: 12,
+    y: height - 92,
+    size: 10,
     font,
-    color: rgb(0.1, 0.1, 0.1),
+    color: rgb(0.2, 0.2, 0.2),
   });
+  if (bounds) {
+    page.drawText(
+      `Area analisada (BBox): N ${bounds.north} | S ${bounds.south} | E ${bounds.east} | W ${bounds.west}`,
+      {
+        x: 50,
+        y: height - 110,
+        size: 9,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      }
+    );
+  }
+  if (center) {
+    page.drawText(
+      `Centro estimado: lat ${center.lat.toFixed(5)}, lng ${center.lng.toFixed(5)}`,
+      {
+        x: 50,
+        y: height - 126,
+        size: 9,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      }
+    );
+  }
   page.drawText(
-    `Cidades: ${Object.keys(cityCounts).length} | Estados: ${Object.keys(stateCounts).length}`,
+    `Area estimada: ${areaKm2 !== null ? areaKm2.toFixed(2) : "-"} km2`,
     {
       x: 50,
-      y: height - 120,
-      size: 11,
+      y: height - 142,
+      size: 9,
       font,
-      color: rgb(0.1, 0.1, 0.1),
+      color: rgb(0.2, 0.2, 0.2),
     }
   );
-  const boundaryText = boundaryGeojson
-    ? `Malha (GeoJSON): ${boundaryGeojson.slice(0, 160)}${
-        boundaryGeojson.length > 160 ? "..." : ""
-      }`
-    : "Malha (GeoJSON): nao disponivel";
-  page.drawText(boundaryText, {
-    x: 50,
-    y: height - 140,
-    size: 9,
-    font,
-    color: rgb(0.1, 0.1, 0.1),
+  const statusMessage =
+    rows.length > 0 ? "Relatorio pronto para exportar." : "Sem pontos na area.";
+  page.drawText(
+    `Status: ${statusMessage} | Pontos: ${rows.length} | Residentes (agregado): ${totalResidents}`,
+    {
+      x: 50,
+      y: height - 158,
+      size: 9,
+      font,
+      color: rgb(0.2, 0.2, 0.2),
+    }
+  );
+  page.drawLine({
+    start: { x: 50, y: height - 170 },
+    end: { x: width - 50, y: height - 170 },
+    thickness: 1,
+    color: rgb(0.9, 0.85, 0.8),
   });
 
-    const drawBarBlock = (
-      targetPage: typeof page,
-      titleText: string,
-      entries: Array<{ label: string; value: number }>,
-      originY: number
-    ) => {
-      if (!entries.length) {
-        targetPage.drawText(`${titleText}: sem dados`, {
-          x: 50,
-          y: originY + 6,
-          size: 9,
-          font,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        return;
-      }
+  const drawAverageBars = (
+    targetPage: typeof page,
+    titleText: string,
+    entries: Array<{ label: string; value: number }>,
+    originY: number,
+    chartHeight: number
+  ) => {
+    if (!entries.length) {
+      targetPage.drawText(`${titleText}: sem dados`, {
+        x: 50,
+        y: originY,
+        size: 9,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      return;
+    }
+    const chartWidth = width - 100;
+    const maxValue = 10;
+    targetPage.drawText(titleText, {
+      x: 50,
+      y: originY + chartHeight + 10,
+      size: 11,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+    entries.forEach((entry, index) => {
+      const barWidth = (chartWidth / entries.length) * 0.7;
+      const barGap = (chartWidth / entries.length) * 0.3;
+      const barHeight = (entry.value / maxValue) * chartHeight;
+      const barX = 50 + index * (barWidth + barGap);
+      targetPage.drawRectangle({
+        x: barX,
+        y: originY,
+        width: barWidth,
+        height: barHeight,
+        color: rgb(0.84, 0.55, 0.22),
+        opacity: 0.85,
+      });
+      targetPage.drawText(entry.label, {
+        x: barX,
+        y: originY - 12,
+        size: 8,
+        font,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+      targetPage.drawText(entry.value.toFixed(1), {
+        x: barX,
+        y: originY + barHeight + 2,
+        size: 8,
+        font,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+    });
+  };
+
+  const drawPieChart = (
+    targetPage: typeof page,
+    titleText: string,
+    entries: Array<{ label: string; value: number; color: ReturnType<typeof rgb> }>,
+    centerX: number,
+    centerY: number,
+    radius: number
+  ) => {
+    const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+    if (total <= 0) {
+      targetPage.drawText(`${titleText}: sem dados`, {
+        x: centerX - 80,
+        y: centerY,
+        size: 9,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      return;
+    }
+    targetPage.drawText(titleText, {
+      x: centerX - radius,
+      y: centerY + radius + 12,
+      size: 11,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+    let startAngle = 0;
+    const polar = (angle: number) => ({
+      x: centerX + radius * Math.cos(angle),
+      y: centerY + radius * Math.sin(angle),
+    });
+    entries.forEach((entry) => {
+      const sliceAngle = (entry.value / total) * Math.PI * 2;
+      const endAngle = startAngle + sliceAngle;
+      const start = polar(startAngle);
+      const end = polar(endAngle);
+      const largeArc = sliceAngle > Math.PI ? 1 : 0;
+      const path = `M ${centerX} ${centerY} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+      targetPage.drawSvgPath(path, {
+        color: entry.color,
+        opacity: 0.85,
+      });
+      startAngle = endAngle;
+    });
+    let legendX = centerX - radius;
+    let legendY = centerY - radius - 14;
+    entries.forEach((entry) => {
+      targetPage.drawRectangle({
+        x: legendX,
+        y: legendY,
+        width: 10,
+        height: 10,
+        color: entry.color,
+      });
+      targetPage.drawText(entry.label, {
+        x: legendX + 14,
+        y: legendY + 2,
+        size: 8,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      legendX += 90;
+    });
+  };
+
+  const indicatorAverages = [
+    { label: "Saude", value: Number(indicatorSummary?.health_avg ?? 0) },
+    { label: "Educacao", value: Number(indicatorSummary?.education_avg ?? 0) },
+    { label: "Renda", value: Number(indicatorSummary?.income_avg ?? 0) },
+    { label: "Moradia", value: Number(indicatorSummary?.housing_avg ?? 0) },
+    { label: "Seguranca", value: Number(indicatorSummary?.security_avg ?? 0) },
+  ].filter((entry) => Number.isFinite(entry.value) && entry.value > 0);
+  const precisionEntries = Object.entries(precisionCounts).map(([label, value]) => ({
+    label,
+    value,
+    color: label === "exact" ? rgb(0.16, 0.52, 0.32) : rgb(0.84, 0.55, 0.22),
+  }));
+  drawAverageBars(page, "Indicadores medios (1-10)", indicatorAverages, height - 290, 70);
+  drawPieChart(
+    page,
+    "Precisao dos pontos",
+    precisionEntries,
+    width / 2,
+    height - 420,
+    60
+  );
+
+  const drawBarBlock = (
+    targetPage: typeof page,
+    titleText: string,
+    entries: Array<{ label: string; value: number }>,
+    originY: number
+  ) => {
+    if (!entries.length) {
+      targetPage.drawText(`${titleText}: sem dados`, {
+        x: 50,
+        y: originY + 6,
+        size: 9,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      return;
+    }
       const chartWidth = width - 100;
       const chartHeight = 60;
       const maxValue = Math.max(...entries.map((entry) => entry.value), 1);
@@ -2783,82 +3070,252 @@ app.post("/reports/export", async (c) => {
           font,
           color: rgb(0.25, 0.25, 0.25),
         });
-      });
-    };
-
-    const breakdownPage = pdf.addPage();
-    ({ width, height } = breakdownPage.getSize());
-    breakdownPage.drawText("Resumo por cidade e estado", {
-      x: 50,
-      y: height - 60,
-      size: 16,
-      font,
-      color: rgb(0.1, 0.1, 0.1),
     });
-
-    const cityRowsSorted = Object.entries(cityCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12);
-    const stateRowsSorted = Object.entries(stateCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12);
-
-    let cursorY = height - 90;
-    breakdownPage.drawText("Top cidades", {
+  };
+  const drawStackedBarBlock = (
+    targetPage: typeof page,
+    titleText: string,
+    items: Array<{ label: string; sim: number; parcial: number; nao: number }>,
+    originY: number
+  ) => {
+    if (!items.length) {
+      targetPage.drawText(`${titleText}: sem dados`, {
+        x: 50,
+        y: originY + 6,
+        size: 9,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      return;
+    }
+    const chartWidth = width - 100;
+    const chartHeight = 90;
+    const maxValue = Math.max(
+      ...items.map((item) => item.sim + item.parcial + item.nao),
+      1
+    );
+    targetPage.drawText(titleText, {
       x: 50,
-      y: cursorY,
+      y: originY + chartHeight + 10,
       size: 11,
       font,
       color: rgb(0.12, 0.12, 0.12),
     });
-    cursorY -= 14;
-    cityRowsSorted.forEach(([city, count]) => {
-      breakdownPage.drawText(`${city} - ${count}`, {
-        x: 50,
-        y: cursorY,
-        size: 9,
-        font,
-        color: rgb(0.2, 0.2, 0.2),
+    items.forEach((item, index) => {
+      const barWidth = (chartWidth / items.length) * 0.7;
+      const barGap = (chartWidth / items.length) * 0.3;
+      const barX = 50 + index * (barWidth + barGap);
+      const totalHeight = ((item.sim + item.parcial + item.nao) / maxValue) * chartHeight;
+      const simHeight = totalHeight * (item.sim / Math.max(item.sim + item.parcial + item.nao, 1));
+      const parcialHeight =
+        totalHeight * (item.parcial / Math.max(item.sim + item.parcial + item.nao, 1));
+      const naoHeight =
+        totalHeight * (item.nao / Math.max(item.sim + item.parcial + item.nao, 1));
+      let yCursor = originY;
+      targetPage.drawRectangle({
+        x: barX,
+        y: yCursor,
+        width: barWidth,
+        height: simHeight,
+        color: rgb(0.2, 0.6, 0.3),
+        opacity: 0.85,
       });
-      cursorY -= 12;
+      yCursor += simHeight;
+      targetPage.drawRectangle({
+        x: barX,
+        y: yCursor,
+        width: barWidth,
+        height: parcialHeight,
+        color: rgb(0.85, 0.6, 0.2),
+        opacity: 0.85,
+      });
+      yCursor += parcialHeight;
+      targetPage.drawRectangle({
+        x: barX,
+        y: yCursor,
+        width: barWidth,
+        height: naoHeight,
+        color: rgb(0.75, 0.2, 0.2),
+        opacity: 0.85,
+      });
+      targetPage.drawText(item.label, {
+        x: barX,
+        y: originY - 12,
+        size: 8,
+        font,
+        color: rgb(0.25, 0.25, 0.25),
+      });
     });
-
-    cursorY -= 10;
-    breakdownPage.drawText("Top estados", {
+    targetPage.drawRectangle({
       x: 50,
-      y: cursorY,
-      size: 11,
-      font,
-      color: rgb(0.12, 0.12, 0.12),
+      y: originY - 34,
+      width: 10,
+      height: 10,
+      color: rgb(0.2, 0.6, 0.3),
     });
-    cursorY -= 14;
-    stateRowsSorted.forEach(([state, count]) => {
-      breakdownPage.drawText(`${state} - ${count}`, {
-        x: 50,
+    targetPage.drawText("sim", {
+      x: 64,
+      y: originY - 32,
+      size: 8,
+      font,
+      color: rgb(0.25, 0.25, 0.25),
+    });
+    targetPage.drawRectangle({
+      x: 100,
+      y: originY - 34,
+      width: 10,
+      height: 10,
+      color: rgb(0.85, 0.6, 0.2),
+    });
+    targetPage.drawText("parcial", {
+      x: 114,
+      y: originY - 32,
+      size: 8,
+      font,
+      color: rgb(0.25, 0.25, 0.25),
+    });
+    targetPage.drawRectangle({
+      x: 170,
+      y: originY - 34,
+      width: 10,
+      height: 10,
+      color: rgb(0.75, 0.2, 0.2),
+    });
+    targetPage.drawText("nao", {
+      x: 184,
+      y: originY - 32,
+      size: 8,
+      font,
+      color: rgb(0.25, 0.25, 0.25),
+    });
+  };
+  const drawTable = (
+    targetPage: typeof page,
+    x: number,
+    y: number,
+    colWidths: number[],
+    rowHeight: number,
+    header: string[],
+    rows: Array<Array<string | number>>,
+    titleText?: string
+  ) => {
+    let cursorY = y;
+    if (titleText) {
+      targetPage.drawText(titleText, {
+        x,
         y: cursorY,
+        size: 11,
+        font,
+        color: rgb(0.12, 0.12, 0.12),
+      });
+      cursorY -= rowHeight;
+    }
+    targetPage.drawRectangle({
+      x,
+      y: cursorY - rowHeight,
+      width: colWidths.reduce((sum, w) => sum + w, 0),
+      height: rowHeight,
+      color: rgb(0.95, 0.95, 0.95),
+      opacity: 1,
+    });
+    let cx = x;
+    header.forEach((text, index) => {
+      targetPage.drawText(text, {
+        x: cx + 6,
+        y: cursorY - rowHeight + 6,
         size: 9,
         font,
         color: rgb(0.2, 0.2, 0.2),
       });
-      cursorY -= 12;
+      cx += colWidths[index];
     });
+    cursorY -= rowHeight;
+    rows.forEach((row) => {
+      targetPage.drawRectangle({
+        x,
+        y: cursorY - rowHeight,
+        width: colWidths.reduce((sum, w) => sum + w, 0),
+        height: rowHeight,
+        color: rgb(1, 1, 1),
+        opacity: 1,
+        borderColor: rgb(0.9, 0.9, 0.9),
+        borderWidth: 0.5,
+      });
+      let cellX = x;
+      row.forEach((cell, idx) => {
+        targetPage.drawText(String(cell), {
+          x: cellX + 6,
+          y: cursorY - rowHeight + 6,
+          size: 9,
+          font,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        cellX += colWidths[idx];
+      });
+      cursorY -= rowHeight;
+    });
+    return cursorY;
+  };
 
-    const statusEntries = Object.entries(statusCounts).map(
-      ([label, value]) => ({
-        label,
-        value,
-      })
-    );
-    const precisionEntries = Object.entries(precisionCounts).map(
-      ([label, value]) => ({ label, value })
-    );
-    drawBarBlock(breakdownPage, "Status dos pontos", statusEntries, 140);
-    drawBarBlock(
-      breakdownPage,
-      "Precisao dos pontos",
-      precisionEntries,
-      40
-    );
+  const breakdownPage = pdf.addPage();
+  ({ width, height } = breakdownPage.getSize());
+  breakdownPage.drawText("Analise territorial — Infraestrutura e resumo", {
+    x: 50,
+    y: height - 60,
+    size: 16,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  breakdownPage.drawText(
+    `Area estimada: ${areaKm2 !== null ? areaKm2.toFixed(2) : "-"} km2`,
+    {
+      x: 50,
+      y: height - 80,
+      size: 10,
+      font,
+      color: rgb(0.2, 0.2, 0.2),
+    }
+  );
+  breakdownPage.drawText(`Total de pontos na area: ${rows.length}`, {
+    x: 50,
+    y: height - 96,
+    size: 10,
+    font,
+    color: rgb(0.2, 0.2, 0.2),
+  });
+  breakdownPage.drawLine({
+    start: { x: 50, y: height - 110 },
+    end: { x: width - 50, y: height - 110 },
+    thickness: 1,
+    color: rgb(0.9, 0.85, 0.8),
+  });
+  drawStackedBarBlock(
+    breakdownPage,
+    "Infraestrutura basica (por ponto)",
+    infraItems,
+    height - 220
+  );
+
+  const cityRowsSorted = Object.entries(cityCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
+  const stateRowsSorted = Object.entries(stateCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
+  const summaryRows = [
+    ...cityRowsSorted.map(([city, count]) => ["Cidade", city, count]),
+    ...stateRowsSorted.map(([state, count]) => ["Estado", state, count]),
+  ].slice(0, 18);
+  drawTable(
+    breakdownPage,
+    50,
+    height - 340,
+    [70, 320, 90],
+    22,
+    ["Tipo", "Local", "Quantidade"],
+    summaryRows,
+    "Tabela — Resumo por cidade e estado"
+  );
 
   if (includePoints) {
     const pointsTitleY = height - 150;
