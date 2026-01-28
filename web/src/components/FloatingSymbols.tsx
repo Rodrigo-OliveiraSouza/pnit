@@ -12,8 +12,8 @@ const symbolUrls = Object.values(symbolModules) as string[];
 
 const CONFIG = {
   symbolSize: 70,
-  driftSpeed: 0.25,
-  floatAmplitude: 14,
+  driftSpeed: 0.55,
+  floatAmplitude: 18,
   rotationAmplitude: 0.1,
   edgePadding: 60,
 };
@@ -125,10 +125,10 @@ export default function FloatingSymbols() {
         vx: rand(-1, 1) * CONFIG.driftSpeed,
         vy: rand(-1, 1) * CONFIG.driftSpeed,
         phase: rand(0, Math.PI * 2),
-        floatSpeed: rand(0.6, 1.6),
+        floatSpeed: rand(1.1, 2.4),
         floatAmp: rand(CONFIG.floatAmplitude * 0.6, CONFIG.floatAmplitude * 1.2),
         rotPhase: rand(0, Math.PI * 2),
-        rotSpeed: rand(0.4, 1.4),
+        rotSpeed: rand(0.9, 2.0),
         rotAmp: rand(-CONFIG.rotationAmplitude, CONFIG.rotationAmplitude),
         size: rand(CONFIG.symbolSize * 0.85, CONFIG.symbolSize * 1.1),
       }));
@@ -147,8 +147,8 @@ export default function FloatingSymbols() {
         const pad = CONFIG.edgePadding * dpr;
 
         symbols.forEach((symbol) => {
-          symbol.x += symbol.vx * (w * 0.02) * dt;
-          symbol.y += symbol.vy * (h * 0.02) * dt;
+          symbol.x += symbol.vx * (w * 0.04) * dt;
+          symbol.y += symbol.vy * (h * 0.04) * dt;
 
           if (symbol.x < pad) {
             symbol.x = pad;

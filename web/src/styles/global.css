@@ -433,7 +433,7 @@ img.theme-ignore,
 
 .landing-hero {
   position: relative;
-  z-index: 0;
+  z-index: -1;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   gap: 3rem;
@@ -628,7 +628,7 @@ img.theme-ignore,
   border-radius: 50%;
   background: radial-gradient(circle, rgba(var(--color-emerald-rgb), 0.35), transparent 70%);
   opacity: 0.9;
-  z-index: 0;
+  z-index: -1;
 }
 
 .landing-hero::after {
@@ -639,7 +639,7 @@ img.theme-ignore,
   height: 220px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(var(--color-amber-rgb), 0.35), transparent 70%);
-  z-index: 0;
+  z-index: -1;
 }
 
 .floating-canvas {
@@ -648,7 +648,7 @@ img.theme-ignore,
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
   opacity: 0.6;
 }
 
