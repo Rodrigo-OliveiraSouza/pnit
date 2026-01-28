@@ -290,8 +290,8 @@ export function AdminPanel() {
   const updateThemeDraft = (
     partial: Partial<{
       name: string;
-      colors: ThemeColors;
-      image_styles: ThemeImageStyles;
+      colors: Partial<ThemeColors>;
+      image_styles: Partial<ThemeImageStyles>;
     }>
   ) => {
     setThemeDraft((current) => {
