@@ -33,6 +33,15 @@ export default function AccessCodeRegister() {
   const [publicNote, setPublicNote] = useState("");
   const [precision, setPrecision] = useState<"approx" | "exact">("approx");
   const [locationText, setLocationText] = useState("");
+  const [docId, setDocId] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [sex, setSex] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
+  const [householdSize, setHouseholdSize] = useState("");
+  const [childrenCount, setChildrenCount] = useState("");
+  const [elderlyCount, setElderlyCount] = useState("");
+  const [pcdCount, setPcdCount] = useState("");
+  const [status, setStatus] = useState<"active" | "inactive">("active");
   const [codeValidated, setCodeValidated] = useState(false);
   const [codeLoading, setCodeLoading] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -128,10 +137,18 @@ export default function AccessCodeRegister() {
         phone: phone.trim() || null,
         email: email.trim() || null,
         address: address.trim() || null,
+        doc_id: docId.trim() || null,
+        birth_date: birthDate.trim() || null,
+        sex: sex || null,
+        neighborhood: neighborhood.trim() || null,
         city: city.trim(),
         state: state.trim(),
         community_name: communityName.trim(),
-        status: "active",
+        household_size: householdSize ? Number(householdSize) : null,
+        children_count: childrenCount ? Number(childrenCount) : null,
+        elderly_count: elderlyCount ? Number(elderlyCount) : null,
+        pcd_count: pcdCount ? Number(pcdCount) : null,
+        status,
       },
       profile: {
         health_score: Number(scores.health),
@@ -253,89 +270,175 @@ export default function AccessCodeRegister() {
             <div className="form-grid">
               <label>
                 Nome completo
-              <input
-                type="text"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-              />
-            </label>
-            <label>
-              Telefone
-              <input
-                type="text"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-              />
-            </label>
-            <label>
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
-            <label>
-              Endereço
-              <input
-                type="text"
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-              />
-            </label>
-            <label>
-              Comunidade
-              <input
-                type="text"
-                value={communityName}
-                onChange={(event) => setCommunityName(event.target.value)}
-              />
-            </label>
-            <label>
-              Estado
-              <select
-                className="select"
-                value={state}
-                onChange={(event) => {
-                  setState(event.target.value);
-                  setCity("");
-                }}
-              >
-                <option value="">Selecione</option>
-                {BRAZIL_STATES.map((item) => (
-                  <option key={item.code} value={item.code}>
-                    {item.code} - {item.name}
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                />
+              </label>
+              <label>
+                CPF / Documento
+                <input
+                  type="text"
+                  value={docId}
+                  onChange={(event) => setDocId(event.target.value)}
+                />
+              </label>
+              <label>
+                Data de nascimento
+                <input
+                  type="date"
+                  value={birthDate}
+                  onChange={(event) => setBirthDate(event.target.value)}
+                />
+              </label>
+              <label>
+                Sexo
+                <select
+                  className="select"
+                  value={sex}
+                  onChange={(event) => setSex(event.target.value)}
+                >
+                  <option value="">Selecione</option>
+                  <option value="female">Feminino</option>
+                  <option value="male">Masculino</option>
+                  <option value="other">Outro</option>
+                </select>
+              </label>
+              <label>
+                Telefone
+                <input
+                  type="text"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                />
+              </label>
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
+              </label>
+              <label>
+                Endereço
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(event) => setAddress(event.target.value)}
+                />
+              </label>
+              <label>
+                Bairro
+                <input
+                  type="text"
+                  value={neighborhood}
+                  onChange={(event) => setNeighborhood(event.target.value)}
+                />
+              </label>
+              <label>
+                Comunidade
+                <input
+                  type="text"
+                  value={communityName}
+                  onChange={(event) => setCommunityName(event.target.value)}
+                />
+              </label>
+              <label>
+                Estado
+                <select
+                  className="select"
+                  value={state}
+                  onChange={(event) => {
+                    setState(event.target.value);
+                    setCity("");
+                  }}
+                >
+                  <option value="">Selecione</option>
+                  {BRAZIL_STATES.map((item) => (
+                    <option key={item.code} value={item.code}>
+                      {item.code} - {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Cidade
+                <select
+                  className="select"
+                  value={city}
+                  onChange={(event) => setCity(event.target.value)}
+                  disabled={!state}
+                >
+                  <option value="">
+                    {state ? "Selecione" : "Selecione o estado primeiro"}
                   </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Cidade
-              <select
-                className="select"
-                value={city}
-                onChange={(event) => setCity(event.target.value)}
-                disabled={!state}
-              >
-                <option value="">
-                  {state ? "Selecione" : "Selecione o estado primeiro"}
-                </option>
-                {availableCities.map((item) => (
-                  <option key={`${item.state}-${item.name}`} value={item.name}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="full">
-              Observações públicas
-              <textarea
-                rows={2}
-                value={publicNote}
-                onChange={(event) => setPublicNote(event.target.value)}
-              />
-            </label>
-          </div>
+                  {availableCities.map((item) => (
+                    <option key={`${item.state}-${item.name}`} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Tamanho da família
+                <input
+                  type="number"
+                  min="1"
+                  value={householdSize}
+                  onChange={(event) => setHouseholdSize(event.target.value)}
+                />
+              </label>
+              <label>
+                Crianças
+                <input
+                  type="number"
+                  min="0"
+                  value={childrenCount}
+                  onChange={(event) => setChildrenCount(event.target.value)}
+                />
+              </label>
+              <label>
+                Idosos
+                <input
+                  type="number"
+                  min="0"
+                  value={elderlyCount}
+                  onChange={(event) => setElderlyCount(event.target.value)}
+                />
+              </label>
+              <label>
+                Pessoas com deficiência
+                <input
+                  type="number"
+                  min="0"
+                  value={pcdCount}
+                  onChange={(event) => setPcdCount(event.target.value)}
+                />
+              </label>
+              <label>
+                Status
+                <select
+                  className="select"
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(event.target.value as "active" | "inactive")
+                  }
+                >
+                  <option value="active">Ativo</option>
+                  <option value="inactive">Inativo</option>
+                </select>
+              </label>
+              <label className="full">
+                Observações públicas
+                <textarea
+                  rows={2}
+                  value={publicNote}
+                  onChange={(event) => setPublicNote(event.target.value)}
+                />
+              </label>
+            </div>
 
           <div className="form-note">
             <strong>Notas sociais (1-10)</strong>
