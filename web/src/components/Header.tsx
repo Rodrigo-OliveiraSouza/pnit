@@ -123,10 +123,6 @@ export default function Header() {
           )}
         </nav>
           <img
-            src={`${baseUrl}logos/mir.png`}
-            alt="MIR - Ministério da Igualdade Racial"
-            className="logo logo-mir theme-ignore"
-          />
         </div>
       </div>
     </header>
