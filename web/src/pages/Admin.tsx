@@ -823,13 +823,13 @@ export function AdminPanel() {
             >
               {refreshLoading ? "Atualizando..." : "Atualizar mapa geral"}
             </button>
-            <Link className="btn btn-outline" to="/painel?tab=register">
+            <Link className="btn btn-primary" to="/painel?tab=register">
               Cadastro de pessoas
             </Link>
-            <Link className="btn btn-outline" to="/painel?tab=people">
+            <Link className="btn btn-primary" to="/painel?tab=people">
               Gerenciar pessoas
             </Link>
-            <button className="btn btn-outline" type="button">
+            <button className="btn btn-primary" type="button">
               Exportar auditoria
             </button>
           </div>
