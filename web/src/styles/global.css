@@ -1248,16 +1248,25 @@ textarea {
 
 .auth-carousel {
   width: 100%;
+  width: 100%;
   display: flex;
   justify-content: center;
 }
 
 .auth-carousel-focus {
-  width: min(720px, 94vw);
+  width: 100%;
+  max-width: 820px;
+  display: flex;
+  justify-content: center;
 }
 
 .auth-carousel .news-card-media {
   height: clamp(320px, 60vh, 560px);
+}
+
+.auth-carousel .news-card {
+  width: 100%;
+  max-width: 820px;
 }
 
 .auth-highlights {
