@@ -9,6 +9,10 @@ export const DEFAULT_THEME_COLORS: ThemeColors = {
   border: "#d6d6d6",
   header_start: "#1f2a4a",
   header_end: "#2b3a66",
+  button_primary_bg: "#c8651e",
+  button_primary_text: "#ffffff",
+  button_secondary_bg: "#ffffff",
+  button_secondary_text: "#2b1a12",
 };
 
 export const DEFAULT_THEME_IMAGE_STYLES: ThemeImageStyles = {
@@ -44,10 +48,28 @@ export const resolveThemeColors = (
   header_start: normalizeHex(
     colors?.header_start ?? DEFAULT_THEME_COLORS.header_start ?? ""
   ),
-  header_end: normalizeHex(
-    colors?.header_end ?? DEFAULT_THEME_COLORS.header_end ?? ""
-  ),
-});
+    header_end: normalizeHex(
+      colors?.header_end ?? DEFAULT_THEME_COLORS.header_end ?? ""
+    ),
+    button_primary_bg: normalizeHex(
+      colors?.button_primary_bg ?? DEFAULT_THEME_COLORS.button_primary_bg ?? ""
+    ),
+    button_primary_text: normalizeHex(
+      colors?.button_primary_text ??
+        DEFAULT_THEME_COLORS.button_primary_text ??
+        ""
+    ),
+    button_secondary_bg: normalizeHex(
+      colors?.button_secondary_bg ??
+        DEFAULT_THEME_COLORS.button_secondary_bg ??
+        ""
+    ),
+    button_secondary_text: normalizeHex(
+      colors?.button_secondary_text ??
+        DEFAULT_THEME_COLORS.button_secondary_text ??
+        ""
+    ),
+  });
 
 export const resolveThemeImageStyles = (
   styles?: ThemeImageStyles | null
@@ -120,6 +142,14 @@ export const applyThemeToRoot = (
   const headerStart = resolved.header_start ?? resolved.primary;
   const headerStartRgb = rgbFromHex(headerStart) ?? primaryRgb;
   const headerEndRgb = rgbFromHex(headerEnd) ?? secondaryRgb;
+  const buttonPrimaryBg =
+    resolved.button_primary_bg ?? resolved.primary ?? DEFAULT_THEME_COLORS.primary;
+  const buttonPrimaryText =
+    resolved.button_primary_text ?? resolved.text ?? DEFAULT_THEME_COLORS.text;
+  const buttonSecondaryBg =
+    resolved.button_secondary_bg ?? resolved.background ?? DEFAULT_THEME_COLORS.background;
+  const buttonSecondaryText =
+    resolved.button_secondary_text ?? resolved.text ?? DEFAULT_THEME_COLORS.text;
 
   root.style.setProperty("--color-forest", resolved.primary);
   root.style.setProperty("--color-amber", resolved.primary);
@@ -153,6 +183,10 @@ export const applyThemeToRoot = (
     "--shadow-card",
     `0 12px 24px rgba(${inkRgb}, 0.1)`
   );
+  root.style.setProperty("--button-primary-bg", buttonPrimaryBg);
+  root.style.setProperty("--button-primary-text", buttonPrimaryText);
+  root.style.setProperty("--button-secondary-bg", buttonSecondaryBg);
+  root.style.setProperty("--button-secondary-text", buttonSecondaryText);
 
   root.style.setProperty("--image-overlay", resolvedImages.overlay ?? "#000");
   root.style.setProperty(

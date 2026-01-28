@@ -1528,25 +1528,73 @@ export function AdminPanel() {
                     );
                     const isActive = theme.id === activeThemeId;
                     const isSelected = themeDraft?.id === theme.id;
+                    const previewGradient = `linear-gradient(135deg, ${resolved.primary}, ${resolved.secondary})`;
+                    const previewPrimaryBg =
+                      resolved.button_primary_bg ?? resolved.primary;
+                    const previewPrimaryText =
+                      resolved.button_primary_text ?? resolved.text;
+                    const previewSecondaryBg =
+                      resolved.button_secondary_bg ?? resolved.background;
+                    const previewSecondaryText =
+                      resolved.button_secondary_text ?? resolved.text;
                     return (
                       <div
                         key={theme.id}
-                        className={`theme-item ${isSelected ? "active" : ""}`}
+                        className={`theme-card ${isSelected ? "active" : ""}`}
                         role="button"
                         tabIndex={0}
                         onClick={() => handleSelectTheme(theme)}
                         onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
+                          if (event.key === "Enter" || event.key === " " ) {
                             event.preventDefault();
                             handleSelectTheme(theme);
                           }
                         }}
                       >
-                        <strong>{theme.name}</strong>
-                        <span className="muted">
-                          {isActive ? "Ativa" : "DisponÃ­vel"}
-                        </span>
-                        <div className="theme-swatches">
+                        <div className="theme-card-header">
+                          <div>
+                            <strong>{theme.name}</strong>
+                            <span className="muted">
+                              {isActive ? "Ativa" : "Disponível"}
+                            </span>
+                          </div>
+                          {isActive && (
+                            <span className="theme-card-badge">Ativa</span>
+                          )}
+                        </div>
+                        <div className="theme-card-preview">
+                          <div
+                            className="theme-card-gradient"
+                            style={{ background: previewGradient }}
+                          />
+                          <div className="theme-card-buttons">
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              disabled
+                              style={{
+                                background: previewPrimaryBg,
+                                color: previewPrimaryText,
+                                borderColor: previewPrimaryBg,
+                              }}
+                            >
+                              Primária
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost ghost"
+                              disabled
+                              style={{
+                                background: previewSecondaryBg,
+                                color: previewSecondaryText,
+                                borderColor: previewSecondaryText,
+                              }}
+                            >
+                              Secundária
+                            </button>
+                          </div>
+                        </div>
+                        <div className="theme-swatches theme-card-swatches">
                           {[resolved.primary, resolved.secondary, resolved.accent, resolved.background, resolved.text, resolved.border].map(
                             (color) => (
                               <span
@@ -1585,7 +1633,6 @@ export function AdminPanel() {
                     );
                   })}
               </div>
-
               <div className="theme-editor">
                 {!themeDraft && <p className="muted">Selecione uma paleta.</p>}
                 {themeDraft && (
@@ -1827,6 +1874,13 @@ export function AdminPanel() {
                     <input
                       value={textDraft.header.loginButton}
                       onChange={handleHeaderTextChange("loginButton")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Botão de saída</label>
+                    <input
+                      value={textDraft.header.logoutButton}
+                      onChange={handleHeaderTextChange("logoutButton")}
                     />
                   </div>
                 </div>

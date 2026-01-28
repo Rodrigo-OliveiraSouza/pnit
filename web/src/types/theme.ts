@@ -7,6 +7,10 @@ export type ThemeColors = {
   border: string;
   header_start?: string;
   header_end?: string;
+  button_primary_bg?: string;
+  button_primary_text?: string;
+  button_secondary_bg?: string;
+  button_secondary_text?: string;
 };
 
 export type ThemeImageStyles = {
