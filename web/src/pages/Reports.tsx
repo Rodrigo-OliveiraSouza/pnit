@@ -45,6 +45,49 @@ export default function Reports() {
     });
   }, [filterCity, filterState, userSummary]);
 
+  const toNumber = (value?: string | number | null) => {
+    if (value === null || value === undefined) return null;
+    const numeric = Number(String(value).replace(",", "."));
+    return Number.isFinite(numeric) ? numeric : null;
+  };
+
+  const reportMeta = useMemo(() => {
+    const scores = [
+      userSummary?.averages?.health_score,
+      userSummary?.averages?.education_score,
+      userSummary?.averages?.income_score,
+      userSummary?.averages?.housing_score,
+      userSummary?.averages?.security_score,
+    ]
+      .map(toNumber)
+      .filter((value): value is number => value !== null);
+
+    const averageScore =
+      scores.length > 0
+        ? (scores.reduce((total, value) => total + value, 0) / scores.length).toFixed(1)
+        : "-";
+
+    const latestDate = userSummary?.residents?.reduce((latest, resident) => {
+      if (!resident.created_at) return latest;
+      const current = new Date(resident.created_at);
+      if (!latest || current > latest) return current;
+      return latest;
+    }, null as Date | null);
+
+    return {
+      totalResidents: userSummary?.summary?.total_residents ?? 0,
+      filteredResidents: filteredResidents.length,
+      averageScore,
+      activeUsers: userSummary?.active_users ?? "Disponível para admins",
+      lastUpdate: latestDate ? latestDate.toLocaleDateString() : "-",
+      filterLabel:
+        filterState && filterCity
+          ? `${filterCity} / ${filterState}`
+          : "Todos os registros",
+    };
+  }, [filterCity, filterState, filteredResidents.length, userSummary]);
+
+
   useEffect(() => {
     if (!isLoggedIn) {
       return;
@@ -174,8 +217,30 @@ export default function Reports() {
           <span className="eyebrow">Relatório individual</span>
           <h2>Resumo do usuário logado</h2>
           <p className="muted">
-            Consolidado de cadastros, médias e distribuição mensal.
+            Visão executiva do desempenho de cadastros e indicadores do seu perfil.
           </p>
+        </div>
+        <div className="info-grid">
+          <div className="info-card">
+            <h3>Registros filtrados</h3>
+            <p className="muted">{reportMeta.filteredResidents} registros</p>
+            <p className="muted">Filtro: {reportMeta.filterLabel}</p>
+          </div>
+          <div className="info-card">
+            <h3>Total de cadastros</h3>
+            <p className="muted">{reportMeta.totalResidents} registros</p>
+            <p className="muted">Cobertura geral do usuário.</p>
+          </div>
+          <div className="info-card">
+            <h3>Usuários ativos</h3>
+            <p className="muted">{reportMeta.activeUsers}</p>
+            <p className="muted">Acompanhamento de acesso ao painel.</p>
+          </div>
+          <div className="info-card">
+            <h3>Última atualização</h3>
+            <p className="muted">{reportMeta.lastUpdate}</p>
+            <p className="muted">Dados mais recentes cadastrados.</p>
+          </div>
         </div>
         <div className="form-row" style={{ alignItems: "flex-end" }}>
           <label>
@@ -229,7 +294,7 @@ export default function Reports() {
             Nome do arquivo
             <input
               type="text"
-              placeholder="relatorio-cidade"
+              placeholder="relatorio-usuario"
               value={exportName}
               onChange={(event) => setExportName(event.target.value)}
             />
@@ -240,27 +305,13 @@ export default function Reports() {
             onClick={handleExportUserReport}
             disabled={exportLoading}
           >
-            {exportLoading ? "Exportando..." : "Exportar pontos filtrados"}
+            {exportLoading ? "Exportando..." : "Exportar relatório filtrado"}
           </button>
         </div>
         {exportFeedback && <div className="alert">{exportFeedback}</div>}
         {summaryError && <div className="alert">{summaryError}</div>}
         {userSummary && (
           <>
-            <div className="info-grid">
-              <div className="info-card">
-                <h3>Total de cadastros</h3>
-                <p className="muted">
-                  {userSummary.summary?.total_residents ?? 0} registros
-                </p>
-              </div>
-              <div className="info-card">
-                <h3>Usuários ativos</h3>
-                <p className="muted">
-                  {userSummary.active_users ?? "Disponível para admins"}
-                </p>
-              </div>
-            </div>
             <div className="info-grid">
               <div className="info-card">
                 <h3>Médias dos indicadores</h3>
