@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import NewsCarousel from "../components/NewsCarousel";
 import { registerUser, setAuthToken } from "../services/api";
 import citiesData from "../data/brazil-cities.json";
 import { BRAZIL_STATES } from "../data/brazil-states";
@@ -74,21 +75,13 @@ export default function Register() {
   return (
     <div className="page auth-page">
       <div className="auth-visual">
-        <span className="eyebrow">Cadastro</span>
-        <h1>Criar acesso ao painel</h1>
-        <p>
-          Crie seu acesso para registrar cadastros territoriais e pontos no
-          mapa.
-        </p>
-        <div className="auth-highlights">
-          <div>
-            <strong>Cadastro rápido</strong>
-            <span>Use email e senha para acessar o painel.</span>
-          </div>
-          <div>
-            <strong>Perfis dedicados</strong>
-            <span>Permissões por função e unidade.</span>
-          </div>
+        <div className="auth-carousel auth-carousel-focus">
+          <NewsCarousel
+            className="news-carousel-media"
+            imageOnly
+            showDots={false}
+            collection="reports"
+          />
         </div>
       </div>
       <div className="auth-card">
