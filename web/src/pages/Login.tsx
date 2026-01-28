@@ -31,29 +31,13 @@ export default function Login() {
   return (
     <div className="page auth-page">
       <div className="auth-visual">
-        <span className="eyebrow">Acesso restrito</span>
-        <h1>Entrar no painel</h1>
-        <p>
-          Credenciais de funcionário garantem acesso completo a cadastro,
-          edição, associações e auditoria.
-        </p>
-        <div className="auth-carousel">
+        <div className="auth-carousel auth-carousel-focus">
           <NewsCarousel
             className="news-carousel-media"
             imageOnly
             showDots={false}
             collection="reports"
           />
-        </div>
-        <div className="auth-highlights">
-          <div>
-            <strong>JWT + Cognito</strong>
-            <span>Autenticação segura e grupos de permissão.</span>
-          </div>
-          <div>
-            <strong>Auditoria automática</strong>
-            <span>Todos os acessos ficam registrados.</span>
-          </div>
         </div>
       </div>
       <div className="auth-card">

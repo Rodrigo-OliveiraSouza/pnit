@@ -1238,22 +1238,32 @@ textarea {
 .auth-visual {
   background: linear-gradient(160deg, var(--color-sky), var(--color-white));
   border-radius: var(--radius-lg);
-  padding: 2.5rem;
+  padding: clamp(1.8rem, 2vw, 2.5rem);
   box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(420px, 70vh, 640px);
+}
+
+.auth-carousel {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.auth-carousel-focus {
+  width: min(720px, 94vw);
+}
+
+.auth-carousel .news-card-media {
+  height: clamp(320px, 60vh, 560px);
 }
 
 .auth-highlights {
   margin-top: 2rem;
   display: grid;
   gap: 1rem;
-}
-
-.auth-carousel {
-  margin-top: 1.6rem;
-}
-
-.auth-carousel .news-card-media {
-  height: clamp(220px, 40vh, 360px);
 }
 
 .auth-card {
