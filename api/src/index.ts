@@ -3039,12 +3039,7 @@ app.post("/reports/export", async (c) => {
     }
   }
   const bytes = await pdf.save();
-  let binary = "";
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-  }
-  const base64 = btoa(binary);
+  const base64 = base64Encode(bytes);
   return c.json({
     content_base64: base64,
     content_type: "application/pdf",
@@ -3268,12 +3263,7 @@ app.get("/reports/user-summary", async (c) => {
       });
 
     const bytes = await pdf.save();
-    let binary = "";
-    const chunkSize = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-    }
-    const base64 = btoa(binary);
+    const base64 = base64Encode(bytes);
     return c.json({
       content_base64: base64,
       content_type: "application/pdf",
