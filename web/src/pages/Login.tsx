@@ -73,7 +73,6 @@ export default function Login() {
           </button>
         </form>
         <div className="auth-footer">
-          <span>Primeiro acesso?</span>
           <Link to="/cadastro">{loginCopy.createAccountLabel}</Link>
         </div>
       </div>
