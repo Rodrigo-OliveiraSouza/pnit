@@ -27,6 +27,7 @@ import {
   updateResident,
   uploadAttachment,
   type AccessCode,
+  type PendingSubmissionItem,
   type CreatePointPayload,
   type CreateResidentPayload,
   type CommunityInfo,
@@ -44,17 +45,7 @@ type DashboardResident = {
   created_at: string;
 };
 
-type PendingSubmission = {
-  id: string;
-  full_name: string;
-  city?: string | null;
-  state?: string | null;
-  community_name?: string | null;
-  created_at: string;
-  point_id?: string | null;
-  public_lat?: number | null;
-  public_lng?: number | null;
-};
+type PendingSubmission = PendingSubmissionItem;
 
 type BrazilCity = { name: string; state: string };
 const BRAZIL_CITIES = citiesData as BrazilCity[];
@@ -335,6 +326,17 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
       note: securityParts.join(", ") || "sem informações",
     },
   };
+}
+
+function formatBoolean(value: boolean | null | undefined) {
+  if (value === true) return "Sim";
+  if (value === false) return "Nao";
+  return "-";
+}
+
+function formatValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return "-";
+  return String(value);
 }
 
 function formatLinkCodeStatus(status: LinkCode["status"]) {
@@ -3156,52 +3158,514 @@ export default function EmployeeDashboard() {
                     Nenhum cadastro pendente no momento.
                   </div>
                 ) : (
-                  <div className="table-card">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Nome</th>
-                          <th>Cidade</th>
-                          <th>Estado</th>
-                          <th>Comunidade</th>
-                          <th>Enviado em</th>
-                          <th>Acoes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pendingSubmissions.map((item) => (
-                          <tr key={item.id}>
-                            <td>{item.full_name}</td>
-                            <td>{item.city ?? "-"}</td>
-                            <td>{item.state ?? "-"}</td>
-                            <td>{item.community_name ?? "-"}</td>
-                            <td>
+                  <div className="pending-list">
+                    {pendingSubmissions.map((item) => (
+                      <div key={item.id} className="card">
+                        <div className="card-header">
+                          <div>
+                            <h3>{item.full_name}</h3>
+                            <p className="muted">
+                              Enviado em{" "}
                               {new Date(item.created_at).toLocaleDateString(
                                 "pt-BR"
                               )}
-                            </td>
-                            <td>
-                              <div className="table-actions">
-                                <button
-                                  className="btn btn-primary"
-                                  type="button"
-                                  onClick={() => void handleApprovePending(item.id)}
-                                >
-                                  Aprovar
-                                </button>
-                                <button
-                                  className="btn btn-ghost"
-                                  type="button"
-                                  onClick={() => void handleRejectPending(item.id)}
-                                >
-                                  Rejeitar
-                                </button>
+                            </p>
+                          </div>
+                          <div className="table-actions">
+                            <button
+                              className="btn btn-primary"
+                              type="button"
+                              onClick={() => void handleApprovePending(item.id)}
+                            >
+                              Aprovar
+                            </button>
+                            <button
+                              className="btn btn-ghost"
+                              type="button"
+                              onClick={() => void handleRejectPending(item.id)}
+                            >
+                              Rejeitar
+                            </button>
+                          </div>
+                        </div>
+                        <div className="card-body">
+                          <details>
+                            <summary>Ver detalhes</summary>
+                            <div className="form-note">
+                              <strong>Dados pessoais</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>CPF</strong>
+                                <p>{formatValue(item.doc_id)}</p>
                               </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                              <div>
+                                <strong>Data de nascimento</strong>
+                                <p>
+                                  {item.birth_date
+                                    ? new Date(item.birth_date).toLocaleDateString(
+                                        "pt-BR"
+                                      )
+                                    : "-"}
+                                </p>
+                              </div>
+                              <div>
+                                <strong>Sexo</strong>
+                                <p>{formatValue(item.sex)}</p>
+                              </div>
+                              <div>
+                                <strong>Telefone</strong>
+                                <p>{formatValue(item.phone)}</p>
+                              </div>
+                              <div>
+                                <strong>Email</strong>
+                                <p>{formatValue(item.email)}</p>
+                              </div>
+                              <div>
+                                <strong>Endereco</strong>
+                                <p>{formatValue(item.address)}</p>
+                              </div>
+                              <div>
+                                <strong>Bairro</strong>
+                                <p>{formatValue(item.neighborhood)}</p>
+                              </div>
+                              <div>
+                                <strong>Cidade</strong>
+                                <p>{formatValue(item.city)}</p>
+                              </div>
+                              <div>
+                                <strong>Estado</strong>
+                                <p>{formatValue(item.state)}</p>
+                              </div>
+                              <div>
+                                <strong>Comunidade</strong>
+                                <p>{formatValue(item.community_name)}</p>
+                              </div>
+                              <div>
+                                <strong>Status</strong>
+                                <p>{formatValue(item.status)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Composicao familiar</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Moradores</strong>
+                                <p>{formatValue(item.household_size)}</p>
+                              </div>
+                              <div>
+                                <strong>Criancas</strong>
+                                <p>{formatValue(item.children_count)}</p>
+                              </div>
+                              <div>
+                                <strong>Idosos</strong>
+                                <p>{formatValue(item.elderly_count)}</p>
+                              </div>
+                              <div>
+                                <strong>PCD</strong>
+                                <p>{formatValue(item.pcd_count)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Mapa</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Categoria</strong>
+                                <p>{formatValue(item.category)}</p>
+                              </div>
+                              <div>
+                                <strong>Precisao</strong>
+                                <p>{formatValue(item.precision)}</p>
+                              </div>
+                              <div>
+                                <strong>Tipo de area</strong>
+                                <p>{formatValue(item.area_type)}</p>
+                              </div>
+                              <div>
+                                <strong>Ponto de referencia</strong>
+                                <p>{formatValue(item.reference_point)}</p>
+                              </div>
+                              <div>
+                                <strong>Nota publica</strong>
+                                <p>{formatValue(item.public_note)}</p>
+                              </div>
+                              <div>
+                                <strong>Localizacao</strong>
+                                <p>{formatValue(item.location_text)}</p>
+                              </div>
+                              <div>
+                                <strong>Latitude</strong>
+                                <p>
+                                  {item.public_lat !== null &&
+                                  item.public_lat !== undefined
+                                    ? item.public_lat.toFixed(5)
+                                    : "-"}
+                                </p>
+                              </div>
+                              <div>
+                                <strong>Longitude</strong>
+                                <p>
+                                  {item.public_lng !== null &&
+                                  item.public_lng !== undefined
+                                    ? item.public_lng.toFixed(5)
+                                    : "-"}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Indicadores</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Saude</strong>
+                                <p>{formatValue(item.health_score)}</p>
+                              </div>
+                              <div>
+                                <strong>Educacao</strong>
+                                <p>{formatValue(item.education_score)}</p>
+                              </div>
+                              <div>
+                                <strong>Renda</strong>
+                                <p>{formatValue(item.income_score)}</p>
+                              </div>
+                              <div>
+                                <strong>Moradia</strong>
+                                <p>{formatValue(item.housing_score)}</p>
+                              </div>
+                              <div>
+                                <strong>Seguranca</strong>
+                                <p>{formatValue(item.security_score)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Infraestrutura</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Energia</strong>
+                                <p>{formatValue(item.energy_access)}</p>
+                              </div>
+                              <div>
+                                <strong>Agua</strong>
+                                <p>{formatValue(item.water_supply)}</p>
+                              </div>
+                              <div>
+                                <strong>Tratamento</strong>
+                                <p>{formatValue(item.water_treatment)}</p>
+                              </div>
+                              <div>
+                                <strong>Esgoto</strong>
+                                <p>{formatValue(item.sewage_type)}</p>
+                              </div>
+                              <div>
+                                <strong>Coleta de lixo</strong>
+                                <p>{formatValue(item.garbage_collection)}</p>
+                              </div>
+                              <div>
+                                <strong>Internet</strong>
+                                <p>{formatBoolean(item.internet_access)}</p>
+                              </div>
+                              <div>
+                                <strong>Transporte publico</strong>
+                                <p>{formatBoolean(item.transport_access)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Saude</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Posto proximo</strong>
+                                <p>{formatBoolean(item.health_has_clinic)}</p>
+                              </div>
+                              <div>
+                                <strong>Emergencia</strong>
+                                <p>{formatBoolean(item.health_has_emergency)}</p>
+                              </div>
+                              <div>
+                                <strong>Agente comunitario</strong>
+                                <p>
+                                  {formatBoolean(item.health_has_community_agent)}
+                                </p>
+                              </div>
+                              <div>
+                                <strong>Atendimento regular</strong>
+                                <p>
+                                  {formatBoolean(item.health_has_regular_service)}
+                                </p>
+                              </div>
+                              <div>
+                                <strong>Ambulancia</strong>
+                                <p>{formatBoolean(item.health_has_ambulance)}</p>
+                              </div>
+                              <div>
+                                <strong>Distancia (km)</strong>
+                                <p>{formatValue(item.health_unit_distance_km)}</p>
+                              </div>
+                              <div>
+                                <strong>Tempo de deslocamento</strong>
+                                <p>{formatValue(item.health_travel_time)}</p>
+                              </div>
+                              <div>
+                                <strong>Dificuldades</strong>
+                                <p>{formatValue(item.health_difficulties)}</p>
+                              </div>
+                              <div>
+                                <strong>Observacoes</strong>
+                                <p>{formatValue(item.health_notes)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Educacao</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Escolaridade</strong>
+                                <p>{formatValue(item.education_level)}</p>
+                              </div>
+                              <div>
+                                <strong>Escola proxima</strong>
+                                <p>{formatBoolean(item.education_has_school)}</p>
+                              </div>
+                              <div>
+                                <strong>Transporte escolar</strong>
+                                <p>{formatBoolean(item.education_has_transport)}</p>
+                              </div>
+                              <div>
+                                <strong>Material escolar</strong>
+                                <p>
+                                  {formatBoolean(item.education_material_support)}
+                                </p>
+                              </div>
+                              <div>
+                                <strong>Internet para estudo</strong>
+                                <p>{formatBoolean(item.education_has_internet)}</p>
+                              </div>
+                              <div>
+                                <strong>Observacoes</strong>
+                                <p>{formatValue(item.education_notes)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Renda e bens</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Renda mensal</strong>
+                                <p>{formatValue(item.income_monthly)}</p>
+                              </div>
+                              <div>
+                                <strong>Fonte de renda</strong>
+                                <p>{formatValue(item.income_source)}</p>
+                              </div>
+                              <div>
+                                <strong>Contribuintes</strong>
+                                <p>{formatValue(item.income_contributors)}</p>
+                              </div>
+                              <div>
+                                <strong>Ocupacao</strong>
+                                <p>{formatValue(item.income_occupation_type)}</p>
+                              </div>
+                              <div>
+                                <strong>Programas sociais</strong>
+                                <p>
+                                  {formatBoolean(item.income_has_social_program)}
+                                </p>
+                              </div>
+                              <div>
+                                <strong>Qual programa</strong>
+                                <p>{formatValue(item.income_social_program)}</p>
+                              </div>
+                              <div>
+                                <strong>Carro</strong>
+                                <p>{formatBoolean(item.assets_has_car)}</p>
+                              </div>
+                              <div>
+                                <strong>Geladeira</strong>
+                                <p>{formatBoolean(item.assets_has_fridge)}</p>
+                              </div>
+                              <div>
+                                <strong>Moveis</strong>
+                                <p>{formatBoolean(item.assets_has_furniture)}</p>
+                              </div>
+                              <div>
+                                <strong>Terreno</strong>
+                                <p>{formatBoolean(item.assets_has_land)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Moradia</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Quartos</strong>
+                                <p>{formatValue(item.housing_rooms)}</p>
+                              </div>
+                              <div>
+                                <strong>Area da casa</strong>
+                                <p>{formatValue(item.housing_area_m2)}</p>
+                              </div>
+                              <div>
+                                <strong>Area do terreno</strong>
+                                <p>{formatValue(item.housing_land_m2)}</p>
+                              </div>
+                              <div>
+                                <strong>Tipo</strong>
+                                <p>{formatValue(item.housing_type)}</p>
+                              </div>
+                              <div>
+                                <strong>Material</strong>
+                                <p>{formatValue(item.housing_material)}</p>
+                              </div>
+                              <div>
+                                <strong>Banheiro interno</strong>
+                                <p>{formatBoolean(item.housing_has_bathroom)}</p>
+                              </div>
+                              <div>
+                                <strong>Agua tratada</strong>
+                                <p>
+                                  {formatBoolean(item.housing_has_water_treated)}
+                                </p>
+                              </div>
+                              <div>
+                                <strong>Condicao</strong>
+                                <p>{formatValue(item.housing_condition)}</p>
+                              </div>
+                              <div>
+                                <strong>Riscos</strong>
+                                <p>{formatValue(item.housing_risks)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Seguranca</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Delegacia</strong>
+                                <p>
+                                  {formatBoolean(
+                                    item.security_has_police_station
+                                  )}
+                                </p>
+                              </div>
+                              <div>
+                                <strong>Patrulhamento</strong>
+                                <p>{formatBoolean(item.security_has_patrol)}</p>
+                              </div>
+                              <div>
+                                <strong>Guarda municipal</strong>
+                                <p>{formatBoolean(item.security_has_guard)}</p>
+                              </div>
+                              <div>
+                                <strong>Ocorrencias</strong>
+                                <p>{formatValue(item.security_occurrences)}</p>
+                              </div>
+                              <div>
+                                <strong>Observacoes</strong>
+                                <p>{formatValue(item.security_notes)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Identidade e territorio</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Identificacao racial</strong>
+                                <p>{formatValue(item.race_identity)}</p>
+                              </div>
+                              <div>
+                                <strong>Narrativa</strong>
+                                <p>{formatValue(item.territory_narrative)}</p>
+                              </div>
+                              <div>
+                                <strong>Memorias</strong>
+                                <p>{formatValue(item.territory_memories)}</p>
+                              </div>
+                              <div>
+                                <strong>Conflitos</strong>
+                                <p>{formatValue(item.territory_conflicts)}</p>
+                              </div>
+                              <div>
+                                <strong>Cultura</strong>
+                                <p>{formatValue(item.territory_culture)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Participacao</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Participa de</strong>
+                                <p>{formatValue(item.participation_types)}</p>
+                              </div>
+                              <div>
+                                <strong>Ja participou</strong>
+                                <p>{formatValue(item.participation_events)}</p>
+                              </div>
+                              <div>
+                                <strong>Engajamento</strong>
+                                <p>
+                                  {formatValue(item.participation_engagement)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Demandas</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Prioridades</strong>
+                                <p>{formatValue(item.demand_priorities)}</p>
+                              </div>
+                            </div>
+
+                            <div className="form-note">
+                              <strong>Avaliacao tecnica</strong>
+                            </div>
+                            <div className="details-grid">
+                              <div>
+                                <strong>Vulnerabilidade</strong>
+                                <p>{formatValue(item.vulnerability_level)}</p>
+                              </div>
+                              <div>
+                                <strong>Problemas</strong>
+                                <p>{formatValue(item.technical_issues)}</p>
+                              </div>
+                              <div>
+                                <strong>Encaminhamentos</strong>
+                                <p>{formatValue(item.referrals)}</p>
+                              </div>
+                              <div>
+                                <strong>Orgaos acionados</strong>
+                                <p>{formatValue(item.agencies_contacted)}</p>
+                              </div>
+                              <div>
+                                <strong>Consentimento</strong>
+                                <p>{formatBoolean(item.consent_accepted)}</p>
+                              </div>
+                              <div>
+                                <strong>Observacoes</strong>
+                                <p>{formatValue(item.notes)}</p>
+                              </div>
+                            </div>
+                          </details>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

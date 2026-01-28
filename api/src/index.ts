@@ -1347,6 +1347,88 @@ app.post("/public/access-code/submit", async (c) => {
   if (scoreValues.some((value) => !Number.isFinite(value))) {
     return jsonError(c, 400, "scores 1-10 are required");
   }
+  const scoreOverrides = {
+    health_score: scores.health_score,
+    education_score: scores.education_score,
+    income_score: scores.income_score,
+    housing_score: scores.housing_score,
+    security_score: scores.security_score,
+  };
+  const profileFields = [
+    "health_score",
+    "health_has_clinic",
+    "health_has_emergency",
+    "health_has_community_agent",
+    "health_unit_distance_km",
+    "health_travel_time",
+    "health_has_regular_service",
+    "health_has_ambulance",
+    "health_difficulties",
+    "health_notes",
+    "education_score",
+    "education_level",
+    "education_has_school",
+    "education_has_transport",
+    "education_material_support",
+    "education_has_internet",
+    "education_notes",
+    "income_score",
+    "income_monthly",
+    "income_source",
+    "income_contributors",
+    "income_occupation_type",
+    "income_has_social_program",
+    "income_social_program",
+    "assets_has_car",
+    "assets_has_fridge",
+    "assets_has_furniture",
+    "assets_has_land",
+    "housing_score",
+    "housing_rooms",
+    "housing_area_m2",
+    "housing_land_m2",
+    "housing_type",
+    "housing_material",
+    "housing_has_bathroom",
+    "housing_has_water_treated",
+    "housing_condition",
+    "housing_risks",
+    "security_score",
+    "security_has_police_station",
+    "security_has_patrol",
+    "security_has_guard",
+    "security_occurrences",
+    "security_notes",
+    "race_identity",
+    "territory_narrative",
+    "territory_memories",
+    "territory_conflicts",
+    "territory_culture",
+    "energy_access",
+    "water_supply",
+    "water_treatment",
+    "sewage_type",
+    "garbage_collection",
+    "internet_access",
+    "transport_access",
+    "participation_types",
+    "participation_events",
+    "participation_engagement",
+    "demand_priorities",
+    "photo_types",
+    "vulnerability_level",
+    "technical_issues",
+    "referrals",
+    "agencies_contacted",
+    "consent_accepted",
+  ];
+  const profileValues = profileFields.map((field) => {
+    if (field in scoreOverrides) {
+      return scoreOverrides[field as keyof typeof scoreOverrides];
+    }
+    return (profile as Record<string, unknown>)[field] ?? null;
+  });
+  const profilePlaceholders = profileFields.map((_, idx) => `$${idx + 2}`);
 
   const actorId = accessCode.created_by;
   const publicCoords =
@@ -1456,24 +1538,10 @@ app.post("/public/access-code/submit", async (c) => {
 
     await sql(
       `
-      INSERT INTO resident_profiles (
-        resident_id,
-        health_score,
-        education_score,
-        income_score,
-        housing_score,
-        security_score
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO resident_profiles (resident_id, ${profileFields.join(", ")})
+      VALUES ($1, ${profilePlaceholders.join(", ")})
       `,
-      [
-        residentId,
-        scores.health_score,
-        scores.education_score,
-        scores.income_score,
-        scores.housing_score,
-        scores.security_score,
-      ]
+      [residentId, ...profileValues]
     );
 
     await sql(
@@ -1520,17 +1588,103 @@ app.get("/user/pending-submissions", async (c) => {
     SELECT
       r.id,
       r.full_name,
+      r.doc_id,
+      r.birth_date,
+      r.sex,
+      r.phone,
+      r.email,
+      r.address,
       r.city,
       r.state,
+      r.neighborhood,
       r.community_name,
+      r.household_size,
+      r.children_count,
+      r.elderly_count,
+      r.pcd_count,
+      r.notes,
+      r.status,
       r.created_at,
       mp.id AS point_id,
       mp.public_lat,
-      mp.public_lng
+      mp.public_lng,
+      mp.precision,
+      mp.category,
+      mp.public_note,
+      mp.area_type,
+      mp.reference_point,
+      mp.location_text,
+      rp.health_score,
+      rp.health_has_clinic,
+      rp.health_has_emergency,
+      rp.health_has_community_agent,
+      rp.health_unit_distance_km,
+      rp.health_travel_time,
+      rp.health_has_regular_service,
+      rp.health_has_ambulance,
+      rp.health_difficulties,
+      rp.health_notes,
+      rp.education_score,
+      rp.education_level,
+      rp.education_has_school,
+      rp.education_has_transport,
+      rp.education_material_support,
+      rp.education_has_internet,
+      rp.education_notes,
+      rp.income_score,
+      rp.income_monthly,
+      rp.income_source,
+      rp.income_contributors,
+      rp.income_occupation_type,
+      rp.income_has_social_program,
+      rp.income_social_program,
+      rp.assets_has_car,
+      rp.assets_has_fridge,
+      rp.assets_has_furniture,
+      rp.assets_has_land,
+      rp.housing_score,
+      rp.housing_rooms,
+      rp.housing_area_m2,
+      rp.housing_land_m2,
+      rp.housing_type,
+      rp.housing_material,
+      rp.housing_has_bathroom,
+      rp.housing_has_water_treated,
+      rp.housing_condition,
+      rp.housing_risks,
+      rp.security_score,
+      rp.security_has_police_station,
+      rp.security_has_patrol,
+      rp.security_has_guard,
+      rp.security_occurrences,
+      rp.security_notes,
+      rp.race_identity,
+      rp.territory_narrative,
+      rp.territory_memories,
+      rp.territory_conflicts,
+      rp.territory_culture,
+      rp.energy_access,
+      rp.water_supply,
+      rp.water_treatment,
+      rp.sewage_type,
+      rp.garbage_collection,
+      rp.internet_access,
+      rp.transport_access,
+      rp.participation_types,
+      rp.participation_events,
+      rp.participation_engagement,
+      rp.demand_priorities,
+      rp.photo_types,
+      rp.vulnerability_level,
+      rp.technical_issues,
+      rp.referrals,
+      rp.agencies_contacted,
+      rp.consent_accepted
     FROM residents r
     LEFT JOIN resident_point_assignments rpa
       ON rpa.resident_id = r.id AND rpa.active = true
     LEFT JOIN map_points mp ON mp.id = rpa.point_id
+    LEFT JOIN resident_profiles rp ON rp.resident_id = r.id
     WHERE r.created_by = $1
       AND r.approval_status = 'pending'
       AND r.deleted_at IS NULL

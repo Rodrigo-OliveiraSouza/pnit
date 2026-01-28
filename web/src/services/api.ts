@@ -20,6 +20,9 @@ export function setAuthToken(token: string | null) {
   } else {
     localStorage.removeItem(AUTH_TOKEN_KEY);
   }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("pnit_auth_change"));
+  }
 }
 
 export function getAuthToken() {
@@ -767,6 +770,103 @@ export type AccessCodeSubmissionPayload = {
   point: Record<string, unknown>;
 };
 
+export type PendingSubmissionItem = {
+  id: string;
+  full_name: string;
+  doc_id?: string | null;
+  birth_date?: string | null;
+  sex?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  neighborhood?: string | null;
+  community_name?: string | null;
+  household_size?: number | null;
+  children_count?: number | null;
+  elderly_count?: number | null;
+  pcd_count?: number | null;
+  notes?: string | null;
+  status?: string | null;
+  created_at: string;
+  point_id?: string | null;
+  public_lat?: number | null;
+  public_lng?: number | null;
+  precision?: string | null;
+  category?: string | null;
+  public_note?: string | null;
+  area_type?: string | null;
+  reference_point?: string | null;
+  location_text?: string | null;
+  health_score?: number | null;
+  health_has_clinic?: boolean | null;
+  health_has_emergency?: boolean | null;
+  health_has_community_agent?: boolean | null;
+  health_unit_distance_km?: number | null;
+  health_travel_time?: string | null;
+  health_has_regular_service?: boolean | null;
+  health_has_ambulance?: boolean | null;
+  health_difficulties?: string | null;
+  health_notes?: string | null;
+  education_score?: number | null;
+  education_level?: string | null;
+  education_has_school?: boolean | null;
+  education_has_transport?: boolean | null;
+  education_material_support?: boolean | null;
+  education_has_internet?: boolean | null;
+  education_notes?: string | null;
+  income_score?: number | null;
+  income_monthly?: number | null;
+  income_source?: string | null;
+  income_contributors?: number | null;
+  income_occupation_type?: string | null;
+  income_has_social_program?: boolean | null;
+  income_social_program?: string | null;
+  assets_has_car?: boolean | null;
+  assets_has_fridge?: boolean | null;
+  assets_has_furniture?: boolean | null;
+  assets_has_land?: boolean | null;
+  housing_score?: number | null;
+  housing_rooms?: number | null;
+  housing_area_m2?: number | null;
+  housing_land_m2?: number | null;
+  housing_type?: string | null;
+  housing_material?: string | null;
+  housing_has_bathroom?: boolean | null;
+  housing_has_water_treated?: boolean | null;
+  housing_condition?: string | null;
+  housing_risks?: string | null;
+  security_score?: number | null;
+  security_has_police_station?: boolean | null;
+  security_has_patrol?: boolean | null;
+  security_has_guard?: boolean | null;
+  security_occurrences?: string | null;
+  security_notes?: string | null;
+  race_identity?: string | null;
+  territory_narrative?: string | null;
+  territory_memories?: string | null;
+  territory_conflicts?: string | null;
+  territory_culture?: string | null;
+  energy_access?: string | null;
+  water_supply?: string | null;
+  water_treatment?: string | null;
+  sewage_type?: string | null;
+  garbage_collection?: string | null;
+  internet_access?: boolean | null;
+  transport_access?: boolean | null;
+  participation_types?: string | null;
+  participation_events?: string | null;
+  participation_engagement?: string | null;
+  demand_priorities?: string | null;
+  photo_types?: string | null;
+  vulnerability_level?: string | null;
+  technical_issues?: string | null;
+  referrals?: string | null;
+  agencies_contacted?: string | null;
+  consent_accepted?: boolean | null;
+};
+
 export async function submitAccessCodeRegistration(
   payload: AccessCodeSubmissionPayload
 ): Promise<{ ok: boolean; resident_id: string; point_id: string; status: string }> {
@@ -780,31 +880,9 @@ export async function submitAccessCodeRegistration(
 }
 
 export async function listPendingSubmissions(): Promise<{
-  items: Array<{
-    id: string;
-    full_name: string;
-    city?: string | null;
-    state?: string | null;
-    community_name?: string | null;
-    created_at: string;
-    point_id?: string | null;
-    public_lat?: number | null;
-    public_lng?: number | null;
-  }>;
+  items: PendingSubmissionItem[];
 }> {
-  return apiFetch<{
-    items: Array<{
-      id: string;
-      full_name: string;
-      city?: string | null;
-      state?: string | null;
-      community_name?: string | null;
-      created_at: string;
-      point_id?: string | null;
-      public_lat?: number | null;
-      public_lng?: number | null;
-    }>;
-  }>("/user/pending-submissions");
+  return apiFetch<{ items: PendingSubmissionItem[] }>("/user/pending-submissions");
 }
 
 export async function approvePendingSubmission(id: string) {
