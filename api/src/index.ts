@@ -2667,11 +2667,32 @@ app.post("/reports/export", async (c) => {
     });
   }
 
-  const pdf = await PDFDocument.create();
-  let page = pdf.addPage();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  let { width, height } = page.getSize();
-  const title = "Relatorio publico";
+  try {
+    const pdf = await PDFDocument.create();
+    let page = pdf.addPage();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    let { width, height } = page.getSize();
+    const title = "Relatorio publico";
+    const cityCounts = rows.reduce<Record<string, number>>((acc, row) => {
+      const key = String(row.city ?? "Sem cidade");
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+    const stateCounts = rows.reduce<Record<string, number>>((acc, row) => {
+      const key = String(row.state ?? "Sem estado");
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+    const statusCounts = rows.reduce<Record<string, number>>((acc, row) => {
+      const key = String(row.status ?? "Sem status");
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+    const precisionCounts = rows.reduce<Record<string, number>>((acc, row) => {
+      const key = String(row.precision ?? "Sem precisao");
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
   page.drawText(title, {
     x: 50,
     y: height - 70,
@@ -2709,127 +2730,135 @@ app.post("/reports/export", async (c) => {
     color: rgb(0.1, 0.1, 0.1),
   });
 
-  const drawBarBlock = (
-    targetPage: typeof page,
-    titleText: string,
-    entries: Array<{ label: string; value: number }>,
-    originY: number
-  ) => {
-    const chartWidth = width - 100;
-    const chartHeight = 60;
-    const maxValue = Math.max(...entries.map((entry) => entry.value), 1);
-    targetPage.drawText(titleText, {
+    const drawBarBlock = (
+      targetPage: typeof page,
+      titleText: string,
+      entries: Array<{ label: string; value: number }>,
+      originY: number
+    ) => {
+      if (!entries.length) {
+        targetPage.drawText(`${titleText}: sem dados`, {
+          x: 50,
+          y: originY + 6,
+          size: 9,
+          font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+        return;
+      }
+      const chartWidth = width - 100;
+      const chartHeight = 60;
+      const maxValue = Math.max(...entries.map((entry) => entry.value), 1);
+      targetPage.drawText(titleText, {
+        x: 50,
+        y: originY + chartHeight + 10,
+        size: 11,
+        font,
+        color: rgb(0.12, 0.12, 0.12),
+      });
+      entries.forEach((entry, index) => {
+        const barWidth = (chartWidth / entries.length) * 0.7;
+        const barGap = (chartWidth / entries.length) * 0.3;
+        const barHeight = (entry.value / maxValue) * chartHeight;
+        const barX = 50 + index * (barWidth + barGap);
+        targetPage.drawRectangle({
+          x: barX,
+          y: originY,
+          width: barWidth,
+          height: barHeight,
+          color: rgb(0.2, 0.36, 0.72),
+          opacity: 0.85,
+        });
+        targetPage.drawText(entry.label, {
+          x: barX,
+          y: originY - 12,
+          size: 8,
+          font,
+          color: rgb(0.25, 0.25, 0.25),
+        });
+        targetPage.drawText(String(entry.value), {
+          x: barX,
+          y: originY + barHeight + 2,
+          size: 8,
+          font,
+          color: rgb(0.25, 0.25, 0.25),
+        });
+      });
+    };
+
+    const breakdownPage = pdf.addPage();
+    ({ width, height } = breakdownPage.getSize());
+    breakdownPage.drawText("Resumo por cidade e estado", {
       x: 50,
-      y: originY + chartHeight + 10,
+      y: height - 60,
+      size: 16,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+
+    const cityRowsSorted = Object.entries(cityCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12);
+    const stateRowsSorted = Object.entries(stateCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12);
+
+    let cursorY = height - 90;
+    breakdownPage.drawText("Top cidades", {
+      x: 50,
+      y: cursorY,
       size: 11,
       font,
       color: rgb(0.12, 0.12, 0.12),
     });
-    entries.forEach((entry, index) => {
-      const barWidth = (chartWidth / entries.length) * 0.7;
-      const barGap = (chartWidth / entries.length) * 0.3;
-      const barHeight = (entry.value / maxValue) * chartHeight;
-      const barX = 50 + index * (barWidth + barGap);
-      targetPage.drawRectangle({
-        x: barX,
-        y: originY,
-        width: barWidth,
-        height: barHeight,
-        color: rgb(0.2, 0.36, 0.72),
-        opacity: 0.85,
-      });
-      targetPage.drawText(entry.label, {
-        x: barX,
-        y: originY - 12,
-        size: 8,
+    cursorY -= 14;
+    cityRowsSorted.forEach(([city, count]) => {
+      breakdownPage.drawText(`${city} - ${count}`, {
+        x: 50,
+        y: cursorY,
+        size: 9,
         font,
-        color: rgb(0.25, 0.25, 0.25),
+        color: rgb(0.2, 0.2, 0.2),
       });
-      targetPage.drawText(String(entry.value), {
-        x: barX,
-        y: originY + barHeight + 2,
-        size: 8,
-        font,
-        color: rgb(0.25, 0.25, 0.25),
-      });
+      cursorY -= 12;
     });
-  };
 
-  const breakdownPage = pdf.addPage();
-  ({ width, height } = breakdownPage.getSize());
-  breakdownPage.drawText("Resumo por cidade e estado", {
-    x: 50,
-    y: height - 60,
-    size: 16,
-    font,
-    color: rgb(0.1, 0.1, 0.1),
-  });
-
-  const cityRowsSorted = Object.entries(cityCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 12);
-  const stateRowsSorted = Object.entries(stateCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 12);
-
-  let cursorY = height - 90;
-  breakdownPage.drawText("Top cidades", {
-    x: 50,
-    y: cursorY,
-    size: 11,
-    font,
-    color: rgb(0.12, 0.12, 0.12),
-  });
-  cursorY -= 14;
-  cityRowsSorted.forEach(([city, count]) => {
-    breakdownPage.drawText(`${city} - ${count}`, {
+    cursorY -= 10;
+    breakdownPage.drawText("Top estados", {
       x: 50,
       y: cursorY,
-      size: 9,
+      size: 11,
       font,
-      color: rgb(0.2, 0.2, 0.2),
+      color: rgb(0.12, 0.12, 0.12),
     });
-    cursorY -= 12;
-  });
-
-  cursorY -= 10;
-  breakdownPage.drawText("Top estados", {
-    x: 50,
-    y: cursorY,
-    size: 11,
-    font,
-    color: rgb(0.12, 0.12, 0.12),
-  });
-  cursorY -= 14;
-  stateRowsSorted.forEach(([state, count]) => {
-    breakdownPage.drawText(`${state} - ${count}`, {
-      x: 50,
-      y: cursorY,
-      size: 9,
-      font,
-      color: rgb(0.2, 0.2, 0.2),
+    cursorY -= 14;
+    stateRowsSorted.forEach(([state, count]) => {
+      breakdownPage.drawText(`${state} - ${count}`, {
+        x: 50,
+        y: cursorY,
+        size: 9,
+        font,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+      cursorY -= 12;
     });
-    cursorY -= 12;
-  });
 
-  const statusEntries = Object.entries(statusCounts).map(([label, value]) => ({
-    label,
-    value,
-  }));
-  const precisionEntries = Object.entries(precisionCounts).map(
-    ([label, value]) => ({ label, value })
-  );
-  if (statusEntries.length > 0) {
+    const statusEntries = Object.entries(statusCounts).map(
+      ([label, value]) => ({
+        label,
+        value,
+      })
+    );
+    const precisionEntries = Object.entries(precisionCounts).map(
+      ([label, value]) => ({ label, value })
+    );
     drawBarBlock(breakdownPage, "Status dos pontos", statusEntries, 140);
-  }
-  if (precisionEntries.length > 0) {
     drawBarBlock(
       breakdownPage,
       "Precisao dos pontos",
       precisionEntries,
       40
     );
-  }
 
   if (includePoints) {
     const pointsTitleY = height - 150;
@@ -3045,6 +3074,34 @@ app.post("/reports/export", async (c) => {
     content_type: "application/pdf",
     filename: `relatorio-${Date.now()}.pdf`,
   });
+} catch (error) {
+  console.error("reports_export_pdf_failed", error);
+  const fallback = await PDFDocument.create();
+  const page = fallback.addPage();
+  const font = await fallback.embedFont(StandardFonts.Helvetica);
+  const { height } = page.getSize();
+  page.drawText("Relatorio publico (fallback)", {
+    x: 50,
+    y: height - 70,
+    size: 16,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  page.drawText(`Total de pontos: ${rows.length}`, {
+    x: 50,
+    y: height - 95,
+    size: 11,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+  const bytes = await fallback.save();
+  const base64 = base64Encode(bytes);
+  return c.json({
+    content_base64: base64,
+    content_type: "application/pdf",
+    filename: `relatorio-${Date.now()}.pdf`,
+  });
+}
 });
 
 app.get("/reports/user-summary", async (c) => {
