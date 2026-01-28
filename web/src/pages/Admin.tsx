@@ -611,7 +611,7 @@ export function AdminPanel() {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao carregar relatÃ³rio individual.";
+          : "Falha ao carregar relatório individual.";
       setProductivityDetailsError(message);
     } finally {
       setProductivityDetailsLoadingId(null);
@@ -641,7 +641,7 @@ export function AdminPanel() {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao baixar relatÃ³rio individual.";
+          : "Falha ao baixar relatório individual.";
       setProductivityDetailsError(message);
     } finally {
       setProductivityDownloadId(null);
@@ -734,19 +734,19 @@ export function AdminPanel() {
           ? new Date(response.last_refresh).toLocaleString()
           : "agora";
         setRefreshFeedback(
-          `AtualizaÃ§Ã£o jÃ¡ executada nas Ãºltimas 24h (Ãºltima: ${when}).`
+          `Atualização já executada nas últimas 24h (última: ${when}).`
         );
       } else {
         const when = response.refreshed_at
           ? new Date(response.refreshed_at).toLocaleString()
           : "agora";
-        setRefreshFeedback(`AtualizaÃ§Ã£o executada em ${when}.`);
+        setRefreshFeedback(`Atualização executada em ${when}.`);
       }
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao atualizar o mapa pÃºblico.";
+          : "Falha ao atualizar o mapa público.";
       setRefreshFeedback(message);
     } finally {
       setRefreshLoading(false);
@@ -1173,7 +1173,7 @@ export function AdminPanel() {
                                 <strong>Dados do usuário</strong>
                                 <div className="summary-grid" style={{ marginTop: "0.8rem" }}>
                                   <div>
-                                    <span>OrganizaÃ§Ã£o</span>
+                                    <span>Organização</span>
                                     <strong>{detail?.user.organization ?? "-"}</strong>
                                   </div>
                                   <div>
@@ -1270,7 +1270,7 @@ export function AdminPanel() {
                   <tr>
                     <td colSpan={7}>
                       <div className="table-empty">
-                        Nenhuma denÃºncia registrada.
+                        Nenhuma denúncia registrada.
                       </div>
                     </td>
                   </tr>
@@ -1307,7 +1307,7 @@ export function AdminPanel() {
                               }
                             >
                               <option value="new">Novo</option>
-                              <option value="reviewing">Em anÃ¡lise</option>
+                              <option value="reviewing">Em análise</option>
                               <option value="closed">Encerrado</option>
                             </select>
                             <button
@@ -1315,7 +1315,7 @@ export function AdminPanel() {
                               type="button"
                               onClick={() => handleToggleComplaint(complaint.id)}
                             >
-                              {isOpen ? "Fechar denÃºncia" : "Ver denÃºncia"}
+                              {isOpen ? "Fechar denúncia" : "Ver denúncia"}
                             </button>
                           </td>
                         </tr>
@@ -1371,11 +1371,11 @@ export function AdminPanel() {
                         <th>Email</th>
                         <th>Cadastros</th>
                         <th>Pontos</th>
-                        <th>MÃ©dia SaÃºde</th>
-                        <th>MÃ©dia EducaÃ§Ã£o</th>
-                        <th>MÃ©dia Renda</th>
-                        <th>MÃ©dia Moradia</th>
-                        <th>MÃ©dia SeguranÃ§a</th>
+                        <th>Média Saúde</th>
+                        <th>Média Educação</th>
+                        <th>Média Renda</th>
+                        <th>Média Moradia</th>
+                        <th>Média Segurança</th>
                         <th>Opções</th>
                       </tr>
                     </thead>
@@ -1427,7 +1427,7 @@ export function AdminPanel() {
                                   >
                                     {productivityDownloadId === item.user_id
                                       ? "Baixando..."
-                                      : "Baixar relatÃ³rio"}
+                                      : "Baixar relatório"}
                                   </button>
                                 </td>
                               </tr>
@@ -1435,7 +1435,7 @@ export function AdminPanel() {
                                 <tr>
                                   <td colSpan={10}>
                                     <div className="table-empty" style={{ textAlign: "left" }}>
-                                      <strong>RelatÃ³rio individual</strong>
+                                      <strong>Relatório individual</strong>
                                       {detailsLoading && (
                                         <p className="muted">Carregando detalhes...</p>
                                       )}
@@ -1454,19 +1454,19 @@ export function AdminPanel() {
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>Renda mÃ©dia (R$)</span>
+                                              <span>Renda média (R$)</span>
                                               <strong>
                                                 {details.averages?.income_monthly ?? "-"}
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>SaÃºde</span>
+                                              <span>Saúde</span>
                                               <strong>
                                                 {details.averages?.health_score ?? "-"}
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>EducaÃ§Ã£o</span>
+                                              <span>Educação</span>
                                               <strong>
                                                 {details.averages?.education_score ?? "-"}
                                               </strong>
@@ -1478,7 +1478,7 @@ export function AdminPanel() {
                                               </strong>
                                             </div>
                                             <div>
-                                              <span>SeguranÃ§a</span>
+                                              <span>Segurança</span>
                                               <strong>
                                                 {details.averages?.security_score ?? "-"}
                                               </strong>
@@ -1521,7 +1521,7 @@ export function AdminPanel() {
                 <h3>Perfil admin</h3>
                 <p className="muted">
                   Ajuste cores, paletas e estilos globais de imagem com
-                  prÃ©-visualizaÃ§Ã£o instantÃ¢nea.
+                  pré-visualização instantânea.
                 </p>
               </div>
               <div className="theme-actions">
@@ -1538,7 +1538,7 @@ export function AdminPanel() {
                   onClick={() => void handleResetTheme()}
                   disabled={themeResetting}
                 >
-                  {themeResetting ? "Resetando..." : "Resetar padrÃ£o"}
+                  {themeResetting ? "Resetando..." : "Resetar padrão"}
                 </button>
               </div>
             </div>
@@ -1697,7 +1697,7 @@ export function AdminPanel() {
                     <h4>Paleta global</h4>
                     <div className="theme-editor-grid">
                       <div className="theme-control">
-                        <label>PrimÃ¡ria</label>
+                        <label>Primária</label>
                         <input
                           className="theme-color"
                           type="color"
@@ -1706,7 +1706,7 @@ export function AdminPanel() {
                         />
                       </div>
                       <div className="theme-control">
-                        <label>SecundÃ¡ria</label>
+                        <label>Secundária</label>
                         <input
                           className="theme-color"
                           type="color"
@@ -1771,7 +1771,7 @@ export function AdminPanel() {
                         />
                       </div>
                       <div className="theme-control">
-                        <label>Header (inÃ­cio)</label>
+                        <label>Header (início)</label>
                         <input
                           className="theme-color"
                           type="color"
@@ -1893,7 +1893,7 @@ export function AdminPanel() {
                         />
                       </div>
                       <div className="theme-control">
-                        <label>SaturaÃ§Ã£o</label>
+                        <label>Saturação</label>
                         <input
                           type="range"
                           min="0.3"
@@ -1959,7 +1959,7 @@ export function AdminPanel() {
                         onClick={() => void handleSaveThemeVersion()}
                         disabled={themeSaving}
                       >
-                        Salvar como versÃ£o
+                        Salvar como versão
                       </button>
                       <button
                         className="btn btn-primary"
@@ -1967,7 +1967,7 @@ export function AdminPanel() {
                         onClick={() => void handleSaveTheme()}
                         disabled={themeSaving}
                       >
-                        {themeSaving ? "Salvando..." : "Salvar alteraÃ§Ãµes"}
+                        {themeSaving ? "Salvando..." : "Salvar alterações"}
                       </button>
                       <button
                         className="btn btn-ghost"
@@ -1981,7 +1981,7 @@ export function AdminPanel() {
                       </button>
                     </div>
                     <p className="theme-preview-note">
-                      As alteraÃ§Ãµes sÃ£o aplicadas em tempo real. VocÃª pode desfazer
+                      As alterações são aplicadas em tempo real. Você pode desfazer
                       antes de salvar.
                     </p>
                   </>
@@ -2193,8 +2193,8 @@ export function AdminPanel() {
                 <span className="eyebrow">Registro</span>
                 <h3>
                   {auditView === "recent"
-                    ? "Minhas ações recentes (Ãºltimas 10)"
-                    : "HistÃ³rico completo de aÃ§Ãµes"}
+                    ? "Minhas ações recentes (últimas 10)"
+                    : "Histórico completo de ações"}
                 </h3>
               </div>
               {auditView === "recent" && auditEntries.length > auditPageSize && (
@@ -2258,7 +2258,7 @@ export function AdminPanel() {
             {auditView === "history" && auditEntries.length > auditPageSize && (
               <div className="table-footer">
                 <span className="muted">
-                  PÃ¡gina {auditPage + 1} de {auditTotalPages}
+                  Página {auditPage + 1} de {auditTotalPages}
                 </span>
                 <div className="pager">
                   <button
@@ -2279,7 +2279,7 @@ export function AdminPanel() {
                     }
                     disabled={auditPage >= auditTotalPages - 1}
                   >
-                    PrÃ³xima
+                    Próxima
                   </button>
                 </div>
               </div>
