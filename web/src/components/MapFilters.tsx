@@ -22,16 +22,12 @@ type MapFiltersProps = {
   includeIndicators: boolean;
   includePoints: boolean;
   includeNarratives: boolean;
-  searchValue: string;
-  searchFeedback: string | null;
   statusFilter: "all" | "active" | "inactive";
   precisionFilter: "all" | "approx" | "exact";
   updatedWithinDays: number | null;
   cityFilter: string;
   stateFilter: string;
   regionFilter: string;
-  onSearchChange: (value: string) => void;
-  onSearchSubmit: () => void;
   onReportFormatChange: (value: "PDF" | "CSV" | "JSON") => void;
   onReportNameChange: (value: string) => void;
   onIncludeChange: (
@@ -66,16 +62,12 @@ export default function MapFilters({
   includeIndicators,
   includePoints,
   includeNarratives,
-  searchValue,
-  searchFeedback,
   statusFilter,
   precisionFilter,
   updatedWithinDays,
   cityFilter,
   stateFilter,
   regionFilter,
-  onSearchChange,
-  onSearchSubmit,
   onReportFormatChange,
   onReportNameChange,
   onIncludeChange,
@@ -122,27 +114,6 @@ export default function MapFilters({
           Navegue pelo mapa, selecione uma área e gere relatórios agregados sem
           dados sensíveis.
         </p>
-        <label className="filter-label">Busca territorial</label>
-        <div className="search-row">
-          <input
-            type="search"
-            placeholder="Buscar por endereço ou região"
-            value={searchValue}
-            onChange={(event) => onSearchChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                onSearchSubmit();
-              }
-            }}
-          />
-          <button className="btn btn-outline" type="button" onClick={onSearchSubmit}>
-            Buscar
-          </button>
-        </div>
-        {searchFeedback && (
-          <div className="search-feedback">{searchFeedback}</div>
-        )}
       </div>
 
       <div className="filter-block">

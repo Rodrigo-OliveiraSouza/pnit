@@ -18,7 +18,6 @@ import {
   exportReport,
   fetchPublicPoints,
   fetchPublicCommunities,
-  geocodeAddress,
   generateReportPreview,
   type PublicPointDto,
 } from "../services/api";
@@ -134,8 +133,6 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   const [pointsLoading, setPointsLoading] = useState(false);
   const [pointsError, setPointsError] = useState<string | null>(null);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
-  const [searchValue, setSearchValue] = useState("");
-  const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
   const [filterDraft, setFilterDraft] =
     useState<PointFilters>(defaultFilters);
   const [appliedFilters, setAppliedFilters] =
@@ -462,28 +459,6 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
     void loadPointsForBounds(bounds, activeFiltersRef.current, true);
   }, [loadPointsForBounds]);
 
-  const handleSearchSubmit = useCallback(() => {
-    const query = searchValue.trim();
-    if (!query) {
-      setSearchFeedback("Informe um endereço ou região.");
-      return;
-    }
-    if (!mapRef.current) {
-      setSearchFeedback("Mapa ainda carregando. Tente novamente.");
-      return;
-    }
-    geocodeAddress(query)
-      .then((response) => {
-        mapRef.current?.panTo({ lat: response.lat, lng: response.lng });
-        mapRef.current?.setZoom(12);
-        setSearchFeedback(null);
-      })
-      .catch((error) => {
-        const message =
-          error instanceof Error ? error.message : "Não foi possível localizar.";
-        setSearchFeedback(message);
-      });
-  }, [searchValue]);
 
   const handleStatusFilterChange = useCallback(
     (value: PointFilters["status"]) => {
@@ -695,9 +670,6 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
     };
   }, []);
 
-  useEffect(() => {
-    setSearchFeedback(null);
-  }, [searchValue]);
 
   useEffect(() => {
     if (!mapRef.current) {
@@ -931,16 +903,12 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
             includeIndicators={reportInclude.indicators}
             includePoints={reportInclude.points}
             includeNarratives={reportInclude.narratives}
-            searchValue={searchValue}
-            searchFeedback={searchFeedback}
             statusFilter={filterDraft.status}
             precisionFilter={filterDraft.precision}
             updatedWithinDays={filterDraft.updatedWithinDays}
             cityFilter={filterDraft.city}
             stateFilter={filterDraft.state}
             regionFilter={filterDraft.region}
-            onSearchChange={setSearchValue}
-            onSearchSubmit={handleSearchSubmit}
             onReportFormatChange={setReportFormat}
             onReportNameChange={setReportName}
             onIncludeChange={handleIncludeChange}
