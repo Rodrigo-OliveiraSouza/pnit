@@ -3709,6 +3709,16 @@ app.get("/reports/user-summary", async (c) => {
   if (format === "PDF") {
     const summary = summaryRows[0] as { total_residents?: number };
     const averagesRow = averages[0] as Record<string, number | null>;
+    const auditRows = await sql(
+      `
+      SELECT action, entity_type, entity_id, created_at
+      FROM audit_log
+      WHERE actor_user_id = $1
+      ORDER BY created_at DESC
+      LIMIT 20
+      `,
+      [userId]
+    );
     const pdf = await PDFDocument.create();
     let page = pdf.addPage();
     const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -3775,6 +3785,26 @@ app.get("/reports/user-summary", async (c) => {
       .forEach((row: { full_name?: string | null; community_name?: string | null }) => {
         drawLine(row.full_name ?? "-", row.community_name ?? "-");
       });
+
+    cursorY -= 8;
+    page.drawText("Historico de acoes do usuario", {
+      x: 50,
+      y: cursorY,
+      size: 12,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    cursorY -= lineHeight;
+    (auditRows as Array<{
+      action: string;
+      entity_type: string;
+      entity_id: string;
+      created_at: string;
+    }>).forEach((row) => {
+      const when = row.created_at ? new Date(row.created_at).toISOString() : "-";
+      const label = `${row.action} (${row.entity_type ?? "-"})`;
+      drawLine(label, `${row.entity_id ?? "-"} | ${when}`);
+    });
 
     const bytes = await pdf.save();
     const base64 = base64Encode(bytes);
