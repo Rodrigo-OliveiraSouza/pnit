@@ -4,6 +4,7 @@ import type {
   ThemeImageStyles,
   ThemeListResponse,
   ThemePalette,
+  ThemeTypography,
 } from "../types/theme";
 
 const API_BASE_URL =
@@ -137,6 +138,7 @@ export async function createTheme(payload: {
   name: string;
   colors: ThemeColors;
   image_styles: ThemeImageStyles;
+  typography?: ThemeTypography;
 }): Promise<{ item: ThemePalette }> {
   return apiFetch<{ item: ThemePalette }>("/admin/themes", {
     method: "POST",
@@ -150,6 +152,7 @@ export async function updateTheme(
     name: string;
     colors: ThemeColors;
     image_styles: ThemeImageStyles;
+    typography: ThemeTypography;
   }>
 ): Promise<{ item: ThemePalette }> {
   return apiFetch<{ item: ThemePalette }>(`/admin/themes/${id}`, {
