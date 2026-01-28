@@ -85,7 +85,7 @@ export default function NewsImages() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Remover esta imagem do catÃ¡logo?")) {
+    if (!window.confirm("Remover esta imagem do cat\u00e1logo?")) {
       return;
     }
     try {
@@ -117,7 +117,7 @@ export default function NewsImages() {
       </section>
       {isAdmin && (
         <section className="dashboard-card">
-          <div className="tabs" role="tablist" aria-label="Coleções de carrossel">
+          <div className="tabs" role="tablist" aria-label="Cole\u00e7\u00f5es de carrossel">
             <button
               type="button"
               role="tab"
@@ -129,7 +129,7 @@ export default function NewsImages() {
                 setError(null);
               }}
             >
-              Carrossel público
+              Carrossel p\u00fablico
             </button>
             <button
               type="button"
@@ -142,17 +142,17 @@ export default function NewsImages() {
                 setError(null);
               }}
             >
-              Carrossel de relatórios
+              Carrossel de conta
             </button>
           </div>
           <div className="form-header">
             <div>
-              <span className="eyebrow">CatÃ¡logo</span>
+              <span className="eyebrow">Cat\u00e1logo</span>
               <h2>Gerenciar imagens do carrossel</h2>
               <p className="muted">
                 {collection === "reports"
-                  ? "Adicione ou remova imagens do carrossel exibido na área restrita de relatórios."
-                  : "Adicione ou remova imagens que aparecem no carrossel público."}
+                  ? "Adicione ou remova imagens do carrossel exibido na cria\u00e7\u00e3o de conta."
+                  : "Adicione ou remova imagens que aparecem no carrossel p\u00fablico."}
               </p>
             </div>
           </div>
@@ -174,7 +174,7 @@ export default function NewsImages() {
                 onClick={handleUpload}
                 disabled={uploading}
               >
-                {uploading ? "Enviando..." : "Adicionar ao catÃ¡logo"}
+                {uploading ? "Enviando..." : "Adicionar ao cat\u00e1logo"}
               </button>
             </div>
           </div>
