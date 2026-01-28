@@ -795,6 +795,114 @@ export function AdminPanel() {
   };
 
   const isThemeActive = Boolean(themeDraft?.id && themeDraft.id === activeThemeId);
+  const activeTheme = themes.find((theme) => theme.id === activeThemeId) ?? null;
+  const savedThemes = themes.filter((theme) => theme.id !== activeThemeId);
+
+  const renderThemeCard = (theme: ThemePalette, pinned = false) => {
+    const resolved = resolveThemeColors(theme.colors ?? DEFAULT_THEME_COLORS);
+    const isActive = theme.id === activeThemeId;
+    const isSelected = themeDraft?.id === theme.id;
+    const previewGradient = `linear-gradient(135deg, ${resolved.primary}, ${resolved.secondary})`;
+    const previewPrimaryBg = resolved.button_primary_bg ?? resolved.primary;
+    const previewPrimaryText = resolved.button_primary_text ?? resolved.text;
+    const previewSecondaryBg = resolved.button_secondary_bg ?? resolved.background;
+    const previewSecondaryText = resolved.button_secondary_text ?? resolved.text;
+
+    return (
+      <div
+        key={theme.id}
+        className={`theme-card ${isSelected ? "active" : ""} ${pinned ? "theme-card-pinned" : ""}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => handleSelectTheme(theme)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleSelectTheme(theme);
+          }
+        }}
+      >
+        <div className="theme-card-header">
+          <div>
+            <strong>{theme.name}</strong>
+            <span className="muted">{isActive ? "Ativa" : "Dispon?vel"}</span>
+          </div>
+          {isActive && <span className="theme-card-badge">Ativa</span>}
+        </div>
+        <div className="theme-card-preview">
+          <div className="theme-card-gradient" style={{ background: previewGradient }} />
+          <div className="theme-card-buttons">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled
+              style={{
+                background: previewPrimaryBg,
+                color: previewPrimaryText,
+                borderColor: previewPrimaryBg,
+              }}
+            >
+              Prim?ria
+            </button>
+            <button
+              type="button"
+              className="btn btn-ghost ghost"
+              disabled
+              style={{
+                background: previewSecondaryBg,
+                color: previewSecondaryText,
+                borderColor: previewSecondaryText,
+              }}
+            >
+              Secund?ria
+            </button>
+          </div>
+        </div>
+        <div className="theme-swatches theme-card-swatches">
+          {[
+            resolved.primary,
+            resolved.secondary,
+            resolved.accent,
+            resolved.background,
+            resolved.text,
+            resolved.text_muted ?? resolved.text,
+            resolved.heading ?? resolved.text,
+            resolved.border,
+          ].map((color) => (
+            <span
+              key={`${theme.id}-${color}`}
+              className="theme-swatch"
+              style={{ background: color }}
+            />
+          ))}
+        </div>
+        <div className="theme-actions">
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setThemeDraft(toThemeDraft(theme));
+              setThemeSnapshot(toThemeDraft(theme));
+            }}
+          >
+            Editar
+          </button>
+          <button
+            className="btn btn-ghost"
+            type="button"
+            disabled={isActive || themeDeletingId === theme.id}
+            onClick={(event) => {
+              event.stopPropagation();
+              void handleDeleteTheme(theme.id);
+            }}
+          >
+            {themeDeletingId === theme.id ? "Excluindo..." : "Excluir"}
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -1559,124 +1667,22 @@ export function AdminPanel() {
                 {!themeLoading && themes.length === 0 && (
                   <p className="muted">Nenhuma paleta cadastrada.</p>
                 )}
-                {!themeLoading &&
-                  themes.map((theme) => {
-                    const resolved = resolveThemeColors(
-                      theme.colors ?? DEFAULT_THEME_COLORS
-                    );
-                    const isActive = theme.id === activeThemeId;
-                    const isSelected = themeDraft?.id === theme.id;
-                    const previewGradient = `linear-gradient(135deg, ${resolved.primary}, ${resolved.secondary})`;
-                    const previewPrimaryBg =
-                      resolved.button_primary_bg ?? resolved.primary;
-                    const previewPrimaryText =
-                      resolved.button_primary_text ?? resolved.text;
-                    const previewSecondaryBg =
-                      resolved.button_secondary_bg ?? resolved.background;
-                    const previewSecondaryText =
-                      resolved.button_secondary_text ?? resolved.text;
-                    return (
-                      <div
-                        key={theme.id}
-                        className={`theme-card ${isSelected ? "active" : ""}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleSelectTheme(theme)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " " ) {
-                            event.preventDefault();
-                            handleSelectTheme(theme);
-                          }
-                        }}
-                      >
-                        <div className="theme-card-header">
-                          <div>
-                            <strong>{theme.name}</strong>
-                            <span className="muted">
-                              {isActive ? "Ativa" : "Disponível"}
-                            </span>
-                          </div>
-                          {isActive && (
-                            <span className="theme-card-badge">Ativa</span>
-                          )}
-                        </div>
-                        <div className="theme-card-preview">
-                          <div
-                            className="theme-card-gradient"
-                            style={{ background: previewGradient }}
-                          />
-                          <div className="theme-card-buttons">
-                            <button
-                              type="button"
-                              className="btn btn-primary"
-                              disabled
-                              style={{
-                                background: previewPrimaryBg,
-                                color: previewPrimaryText,
-                                borderColor: previewPrimaryBg,
-                              }}
-                            >
-                              Primária
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost ghost"
-                              disabled
-                              style={{
-                                background: previewSecondaryBg,
-                                color: previewSecondaryText,
-                                borderColor: previewSecondaryText,
-                              }}
-                            >
-                              Secundária
-                            </button>
-                          </div>
-                        </div>
-                        <div className="theme-swatches theme-card-swatches">
-                          {[
-                            resolved.primary,
-                            resolved.secondary,
-                            resolved.accent,
-                            resolved.background,
-                            resolved.text,
-                            resolved.text_muted ?? resolved.text,
-                            resolved.heading ?? resolved.text,
-                            resolved.border,
-                          ].map((color) => (
-                            <span
-                              key={`${theme.id}-${color}`}
-                              className="theme-swatch"
-                              style={{ background: color }}
-                            />
-                          ))}
-                        </div>
-                        <div className="theme-actions">
-                          <button
-                            className="btn btn-ghost"
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setThemeDraft(toThemeDraft(theme));
-                              setThemeSnapshot(toThemeDraft(theme));
-                            }}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            className="btn btn-ghost"
-                            type="button"
-                            disabled={isActive || themeDeletingId === theme.id}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void handleDeleteTheme(theme.id);
-                            }}
-                          >
-                            {themeDeletingId === theme.id ? "Excluindo..." : "Excluir"}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                {!themeLoading && activeTheme && (
+                  <div className="theme-list-pinned">
+                    <span className="eyebrow">Paleta ativa</span>
+                    {renderThemeCard(activeTheme, true)}
+                  </div>
+                )}
+                {!themeLoading && savedThemes.length > 0 && (
+                  <div className="theme-carousel">
+                    {savedThemes.map((theme) => renderThemeCard(theme))}
+                  </div>
+                )}
+                {!themeLoading && !activeTheme && savedThemes.length === 0 && themes.length > 0 && (
+                  <div className="theme-carousel">
+                    {themes.map((theme) => renderThemeCard(theme))}
+                  </div>
+                )}
               </div>
               <div className="theme-editor">
                 {!themeDraft && <p className="muted">Selecione uma paleta.</p>}
