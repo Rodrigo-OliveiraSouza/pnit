@@ -7,16 +7,26 @@ import {
   setAuthUserId,
 } from "../services/api";
 import { useSiteCopy } from "../providers/SiteCopyProvider";
+import { useEffect, useState } from "react";
 
 export default function Header() {
   const navigate = useNavigate();
   const baseUrl = import.meta.env.BASE_URL || "/";
-  const isLoggedIn = Boolean(getAuthToken());
+  const [authToken, setAuthTokenState] = useState(getAuthToken());
   const role = getAuthRole();
   const isAdmin = role === "admin";
   const isTeacher = role === "teacher";
   const panelLink = "/painel?tab=register";
   const { copy } = useSiteCopy();
+  const isLoggedIn = Boolean(authToken);
+
+  useEffect(() => {
+    const handler = () => setAuthTokenState(getAuthToken());
+    window.addEventListener("pnit_auth_change", handler);
+    return () => {
+      window.removeEventListener("pnit_auth_change", handler);
+    };
+  }, []);
 
   const handleLogout = () => {
     setAuthToken(null);
