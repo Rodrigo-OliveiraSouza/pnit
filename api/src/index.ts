@@ -3017,72 +3017,74 @@ app.post("/reports/export", async (c) => {
       },
     ];
   const generatedAt = new Date().toISOString().slice(0, 19);
+  let cursorY = height - 70;
+  const headerLineHeight = 14;
+  const ensureSpace = (space: number) => {
+    if (cursorY - space < 60) {
+      page = pdf.addPage();
+      ({ width, height } = page.getSize());
+      cursorY = height - 70;
+    }
+  };
+  const drawWrappedHeader = (text: string, size: number) => {
+    const maxWidth = width - 100;
+    const words = text.split(/\s+/);
+    let line = "";
+    words.forEach((word) => {
+      const test = line ? `${line} ${word}` : word;
+      if (font.widthOfTextAtSize(test, size) > maxWidth) {
+        page.drawText(line, { x: 50, y: cursorY, size, font, color: rgb(0.2, 0.2, 0.2) });
+        cursorY -= headerLineHeight;
+        line = word;
+      } else {
+        line = test;
+      }
+    });
+    if (line) {
+      page.drawText(line, { x: 50, y: cursorY, size, font, color: rgb(0.2, 0.2, 0.2) });
+      cursorY -= headerLineHeight;
+    }
+  };
+
   page.drawText(title, {
     x: 50,
-    y: height - 70,
+    y: cursorY,
     size: 18,
     font,
     color: rgb(0.1, 0.1, 0.1),
   });
-  page.drawText(`Gerado em: ${generatedAt}`, {
-    x: 50,
-    y: height - 92,
-    size: 10,
-    font,
-    color: rgb(0.2, 0.2, 0.2),
-  });
+  cursorY -= 22;
+  drawWrappedHeader(`Gerado em: ${generatedAt}`, 10);
   if (bounds) {
-    page.drawText(
+    drawWrappedHeader(
       `Area analisada (BBox): N ${bounds.north} | S ${bounds.south} | E ${bounds.east} | W ${bounds.west}`,
-      {
-        x: 50,
-        y: height - 110,
-        size: 9,
-        font,
-        color: rgb(0.2, 0.2, 0.2),
-      }
+      9
     );
   }
   if (center) {
-    page.drawText(
+    drawWrappedHeader(
       `Centro estimado: lat ${center.lat.toFixed(5)}, lng ${center.lng.toFixed(5)}`,
-      {
-        x: 50,
-        y: height - 126,
-        size: 9,
-        font,
-        color: rgb(0.2, 0.2, 0.2),
-      }
+      9
     );
   }
-  page.drawText(
+  drawWrappedHeader(
     `Area estimada: ${areaKm2 !== null ? areaKm2.toFixed(2) : "-"} km2`,
-    {
-      x: 50,
-      y: height - 142,
-      size: 9,
-      font,
-      color: rgb(0.2, 0.2, 0.2),
-    }
+    9
   );
   const statusMessage =
     rows.length > 0 ? "Relatorio pronto para exportar." : "Sem pontos na area.";
-  page.drawText(
+  drawWrappedHeader(
     `Status: ${statusMessage} | Pontos: ${rows.length} | Residentes (agregado): ${totalResidents}`,
-    {
-      x: 50,
-      y: height - 158,
-      size: 9,
-      font,
-      color: rgb(0.2, 0.2, 0.2),
-    }
+    9
   );
+  ensureSpace(20);
   page.drawLine({
-    start: { x: 50, y: height - 170 },
-    end: { x: width - 50, y: height - 170 },
+    start: { x: 50, y: cursorY },
+    end: { x: width - 50, y: cursorY },
     thickness: 1,
     color: rgb(0.9, 0.85, 0.8),
   });
+  cursorY -= 24;
 
   const drawAverageBars = (
     targetPage: typeof page,
@@ -3229,22 +3231,27 @@ app.post("/reports/export", async (c) => {
     value,
     color: label === "exact" ? rgb(0.16, 0.52, 0.32) : rgb(0.84, 0.55, 0.22),
   }));
-  drawAverageBars(page, "Indicadores medios (1-10)", indicatorAverages, height - 290, 70);
+  const chartHeight = 70;
+  ensureSpace(chartHeight + 120);
+  const barsOriginY = cursorY - chartHeight - 20;
+  drawAverageBars(page, "Indicadores medios (1-10)", indicatorAverages, barsOriginY, chartHeight);
   if (indicatorAverages.length > 0) {
     page.drawText(`Media geral: ${averageOverall.toFixed(2)}`, {
       x: 50,
-      y: height - 206,
+      y: barsOriginY + chartHeight + 12,
       size: 9,
       font,
       color: rgb(0.2, 0.2, 0.2),
     });
   }
+  const pieCenterY = barsOriginY - 110;
+  ensureSpace(160);
   drawPieChart(
     page,
     "Precisao dos pontos",
     precisionEntries,
     width / 2,
-    height - 420,
+    pieCenterY,
     60
   );
 
