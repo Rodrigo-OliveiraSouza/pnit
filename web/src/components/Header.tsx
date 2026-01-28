@@ -113,7 +113,7 @@ export default function Header() {
                 type="button"
                 onClick={handleLogout}
               >
-                {copy.header.loginButton}
+                {copy.header.logoutButton}
               </button>
             </>
           ) : (

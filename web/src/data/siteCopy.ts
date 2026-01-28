@@ -8,6 +8,7 @@ export type SiteCopy = {
     navComplaints: string;
     panelLabel: string;
     loginButton: string;
+    logoutButton: string;
   };
   login: {
     eyebrow: string;
@@ -36,6 +37,7 @@ export const DEFAULT_SITE_COPY: SiteCopy = {
     navComplaints: "Denúncias",
     panelLabel: "Painel",
     loginButton: "Entrar",
+    logoutButton: "Sair",
   },
   login: {
     eyebrow: "Acesso restrito",
