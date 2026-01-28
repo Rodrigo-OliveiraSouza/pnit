@@ -1849,7 +1849,7 @@ export function AdminPanel() {
                         <input
                           value={themeDraft.typography.body ?? ""}
                           onChange={handleThemeTypographyChange("body")}
-                          placeholder="Ex: \"Source Sans 3\", sans-serif"
+                          placeholder='Ex: "Source Sans 3", sans-serif'
                         />
                       </div>
                       <div className="theme-control">
@@ -1857,7 +1857,7 @@ export function AdminPanel() {
                         <input
                           value={themeDraft.typography.heading ?? ""}
                           onChange={handleThemeTypographyChange("heading")}
-                          placeholder="Ex: \"Newsreader\", serif"
+                          placeholder='Ex: "Newsreader", serif'
                         />
                       </div>
                       <div className="theme-control">
@@ -1865,7 +1865,7 @@ export function AdminPanel() {
                         <input
                           value={themeDraft.typography.button ?? ""}
                           onChange={handleThemeTypographyChange("button")}
-                          placeholder="Ex: \"Source Sans 3\", sans-serif"
+                          placeholder='Ex: "Source Sans 3", sans-serif'
                         />
                       </div>
                     </div>
