@@ -1507,8 +1507,11 @@ textarea {
   border: 1px solid rgba(var(--color-forest-rgb), 0.16);
   background: rgba(var(--color-sky-rgb), 0.6);
   position: sticky;
-  top: 0;
-  z-index: 2;
+  top: 1rem;
+  z-index: 1;
+  align-self: start;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
 }
 
 .theme-carousel {
