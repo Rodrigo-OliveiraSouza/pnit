@@ -2668,9 +2668,9 @@ app.post("/reports/export", async (c) => {
   }
 
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage();
+  let page = pdf.addPage();
   const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const { width, height } = page.getSize();
+  let { width, height } = page.getSize();
   const title = "Relatorio publico";
   page.drawText(title, {
     x: 50,
@@ -2686,6 +2686,16 @@ app.post("/reports/export", async (c) => {
     font,
     color: rgb(0.1, 0.1, 0.1),
   });
+  page.drawText(
+    `Cidades: ${Object.keys(cityCounts).length} | Estados: ${Object.keys(stateCounts).length}`,
+    {
+      x: 50,
+      y: height - 120,
+      size: 11,
+      font,
+      color: rgb(0.1, 0.1, 0.1),
+    }
+  );
   const boundaryText = boundaryGeojson
     ? `Malha (GeoJSON): ${boundaryGeojson.slice(0, 160)}${
         boundaryGeojson.length > 160 ? "..." : ""
@@ -2693,11 +2703,133 @@ app.post("/reports/export", async (c) => {
     : "Malha (GeoJSON): nao disponivel";
   page.drawText(boundaryText, {
     x: 50,
-    y: height - 120,
+    y: height - 140,
     size: 9,
     font,
     color: rgb(0.1, 0.1, 0.1),
   });
+
+  const drawBarBlock = (
+    targetPage: typeof page,
+    titleText: string,
+    entries: Array<{ label: string; value: number }>,
+    originY: number
+  ) => {
+    const chartWidth = width - 100;
+    const chartHeight = 60;
+    const maxValue = Math.max(...entries.map((entry) => entry.value), 1);
+    targetPage.drawText(titleText, {
+      x: 50,
+      y: originY + chartHeight + 10,
+      size: 11,
+      font,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+    entries.forEach((entry, index) => {
+      const barWidth = (chartWidth / entries.length) * 0.7;
+      const barGap = (chartWidth / entries.length) * 0.3;
+      const barHeight = (entry.value / maxValue) * chartHeight;
+      const barX = 50 + index * (barWidth + barGap);
+      targetPage.drawRectangle({
+        x: barX,
+        y: originY,
+        width: barWidth,
+        height: barHeight,
+        color: rgb(0.2, 0.36, 0.72),
+        opacity: 0.85,
+      });
+      targetPage.drawText(entry.label, {
+        x: barX,
+        y: originY - 12,
+        size: 8,
+        font,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+      targetPage.drawText(String(entry.value), {
+        x: barX,
+        y: originY + barHeight + 2,
+        size: 8,
+        font,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+    });
+  };
+
+  const breakdownPage = pdf.addPage();
+  ({ width, height } = breakdownPage.getSize());
+  breakdownPage.drawText("Resumo por cidade e estado", {
+    x: 50,
+    y: height - 60,
+    size: 16,
+    font,
+    color: rgb(0.1, 0.1, 0.1),
+  });
+
+  const cityRowsSorted = Object.entries(cityCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
+  const stateRowsSorted = Object.entries(stateCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12);
+
+  let cursorY = height - 90;
+  breakdownPage.drawText("Top cidades", {
+    x: 50,
+    y: cursorY,
+    size: 11,
+    font,
+    color: rgb(0.12, 0.12, 0.12),
+  });
+  cursorY -= 14;
+  cityRowsSorted.forEach(([city, count]) => {
+    breakdownPage.drawText(`${city} - ${count}`, {
+      x: 50,
+      y: cursorY,
+      size: 9,
+      font,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    cursorY -= 12;
+  });
+
+  cursorY -= 10;
+  breakdownPage.drawText("Top estados", {
+    x: 50,
+    y: cursorY,
+    size: 11,
+    font,
+    color: rgb(0.12, 0.12, 0.12),
+  });
+  cursorY -= 14;
+  stateRowsSorted.forEach(([state, count]) => {
+    breakdownPage.drawText(`${state} - ${count}`, {
+      x: 50,
+      y: cursorY,
+      size: 9,
+      font,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    cursorY -= 12;
+  });
+
+  const statusEntries = Object.entries(statusCounts).map(([label, value]) => ({
+    label,
+    value,
+  }));
+  const precisionEntries = Object.entries(precisionCounts).map(
+    ([label, value]) => ({ label, value })
+  );
+  if (statusEntries.length > 0) {
+    drawBarBlock(breakdownPage, "Status dos pontos", statusEntries, 140);
+  }
+  if (precisionEntries.length > 0) {
+    drawBarBlock(
+      breakdownPage,
+      "Precisao dos pontos",
+      precisionEntries,
+      40
+    );
+  }
 
   if (includePoints) {
     const pointsTitleY = height - 150;
