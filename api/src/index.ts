@@ -2920,7 +2920,7 @@ app.post("/reports/export", async (c) => {
         font,
         color: rgb(0.25, 0.25, 0.25),
       });
-      targetPage.drawText(entry.value.toFixed(1), {
+      targetPage.drawText(`${entry.value.toFixed(1)} (media)`, {
         x: barX,
         y: originY + barHeight + 2,
         size: 8,
@@ -2930,25 +2930,25 @@ app.post("/reports/export", async (c) => {
     });
   };
 
-  const drawPieChart = (
-    targetPage: typeof page,
-    titleText: string,
-    entries: Array<{ label: string; value: number; color: ReturnType<typeof rgb> }>,
-    centerX: number,
-    centerY: number,
-    radius: number
-  ) => {
-    const total = entries.reduce((sum, entry) => sum + entry.value, 0);
-    if (total <= 0) {
-      targetPage.drawText(`${titleText}: sem dados`, {
-        x: centerX - 80,
-        y: centerY,
-        size: 9,
-        font,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-      return;
-    }
+    const drawPieChart = (
+      targetPage: typeof page,
+      titleText: string,
+      entries: Array<{ label: string; value: number; color: ReturnType<typeof rgb> }>,
+      centerX: number,
+      centerY: number,
+      radius: number
+    ) => {
+      const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+      if (total <= 0) {
+        targetPage.drawText(`${titleText}: sem dados`, {
+          x: centerX - 80,
+          y: centerY,
+          size: 9,
+          font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+        return;
+      }
     targetPage.drawText(titleText, {
       x: centerX - radius,
       y: centerY + radius + 12,
@@ -2974,26 +2974,33 @@ app.post("/reports/export", async (c) => {
       });
       startAngle = endAngle;
     });
-    let legendX = centerX - radius;
-    let legendY = centerY - radius - 14;
-    entries.forEach((entry) => {
-      targetPage.drawRectangle({
-        x: legendX,
-        y: legendY,
-        width: 10,
-        height: 10,
-        color: entry.color,
+      let legendX = centerX - radius;
+      let legendY = centerY - radius - 14;
+      entries.forEach((entry) => {
+        targetPage.drawRectangle({
+          x: legendX,
+          y: legendY,
+          width: 10,
+          height: 10,
+          color: entry.color,
+        });
+        targetPage.drawText(`${entry.label} (${entry.value})`, {
+          x: legendX + 14,
+          y: legendY + 2,
+          size: 8,
+          font,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        legendX += 90;
       });
-      targetPage.drawText(entry.label, {
-        x: legendX + 14,
-        y: legendY + 2,
-        size: 8,
+      targetPage.drawText(`Total: ${total}`, {
+        x: centerX - 18,
+        y: centerY - 4,
+        size: 9,
         font,
-        color: rgb(0.2, 0.2, 0.2),
+        color: rgb(0.25, 0.25, 0.25),
       });
-      legendX += 90;
-    });
-  };
+    };
 
   const indicatorAverages = [
     { label: "Saude", value: Number(indicatorSummary?.health_avg ?? 0) },
@@ -3002,12 +3009,26 @@ app.post("/reports/export", async (c) => {
     { label: "Moradia", value: Number(indicatorSummary?.housing_avg ?? 0) },
     { label: "Seguranca", value: Number(indicatorSummary?.security_avg ?? 0) },
   ].filter((entry) => Number.isFinite(entry.value) && entry.value > 0);
+  const averageOverall =
+    indicatorAverages.length > 0
+      ? indicatorAverages.reduce((sum, entry) => sum + entry.value, 0) /
+        indicatorAverages.length
+      : 0;
   const precisionEntries = Object.entries(precisionCounts).map(([label, value]) => ({
     label,
     value,
     color: label === "exact" ? rgb(0.16, 0.52, 0.32) : rgb(0.84, 0.55, 0.22),
   }));
   drawAverageBars(page, "Indicadores medios (1-10)", indicatorAverages, height - 290, 70);
+  if (indicatorAverages.length > 0) {
+    page.drawText(`Media geral: ${averageOverall.toFixed(2)}`, {
+      x: 50,
+      y: height - 206,
+      size: 9,
+      font,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+  }
   drawPieChart(
     page,
     "Precisao dos pontos",
@@ -3120,6 +3141,15 @@ app.post("/reports/export", async (c) => {
         color: rgb(0.2, 0.6, 0.3),
         opacity: 0.85,
       });
+      if (simHeight > 10 && item.sim > 0) {
+        targetPage.drawText(String(item.sim), {
+          x: barX + 4,
+          y: yCursor + simHeight / 2 - 4,
+          size: 7,
+          font,
+          color: rgb(1, 1, 1),
+        });
+      }
       yCursor += simHeight;
       targetPage.drawRectangle({
         x: barX,
@@ -3129,6 +3159,15 @@ app.post("/reports/export", async (c) => {
         color: rgb(0.85, 0.6, 0.2),
         opacity: 0.85,
       });
+      if (parcialHeight > 10 && item.parcial > 0) {
+        targetPage.drawText(String(item.parcial), {
+          x: barX + 4,
+          y: yCursor + parcialHeight / 2 - 4,
+          size: 7,
+          font,
+          color: rgb(1, 1, 1),
+        });
+      }
       yCursor += parcialHeight;
       targetPage.drawRectangle({
         x: barX,
@@ -3138,9 +3177,25 @@ app.post("/reports/export", async (c) => {
         color: rgb(0.75, 0.2, 0.2),
         opacity: 0.85,
       });
+      if (naoHeight > 10 && item.nao > 0) {
+        targetPage.drawText(String(item.nao), {
+          x: barX + 4,
+          y: yCursor + naoHeight / 2 - 4,
+          size: 7,
+          font,
+          color: rgb(1, 1, 1),
+        });
+      }
       targetPage.drawText(item.label, {
         x: barX,
         y: originY - 12,
+        size: 8,
+        font,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+      targetPage.drawText(String(item.sim + item.parcial + item.nao), {
+        x: barX,
+        y: originY + totalHeight + 2,
         size: 8,
         font,
         color: rgb(0.25, 0.25, 0.25),
@@ -3318,29 +3373,30 @@ app.post("/reports/export", async (c) => {
   );
 
   if (includePoints) {
-    const pointsTitleY = height - 150;
-    page.drawText("Pontos (amostra)", {
+    const pointsPage = pdf.addPage();
+    const { height: pointsHeight } = pointsPage.getSize();
+    pointsPage.drawText("Pontos (amostra)", {
       x: 50,
-      y: pointsTitleY,
-      size: 12,
+      y: pointsHeight - 60,
+      size: 14,
       font,
       color: rgb(0.1, 0.1, 0.1),
     });
-    let lineY = pointsTitleY - 16;
-    const maxLines = 10;
+    let lineY = pointsHeight - 84;
+    const maxLines = 18;
     rows.slice(0, maxLines).forEach((row, index) => {
-      if (lineY < 80) return;
+      if (lineY < 60) return;
       const label = `${index + 1}. ${row.community_name ?? "-"} | ${row.city ?? "-"} / ${
         row.state ?? "-"
       } | residentes: ${row.residents ?? 0}`;
-      page.drawText(label, {
+      pointsPage.drawText(label, {
         x: 50,
         y: lineY,
-        size: 9,
+        size: 10,
         font,
         color: rgb(0.15, 0.15, 0.15),
       });
-      lineY -= 12;
+      lineY -= 14;
     });
   }
 
