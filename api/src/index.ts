@@ -3771,10 +3771,40 @@ app.get("/reports/user-summary", async (c) => {
       FROM audit_log
       WHERE actor_user_id = $1
       ORDER BY created_at DESC
-      LIMIT 20
+      LIMIT 50
       `,
       [userId]
     );
+    const actionTranslations: Record<string, string> = {
+      login: "Login",
+      register: "Cadastro de usuario",
+      access_code_create: "Gerou codigo de acesso",
+      access_code_submission: "Cadastro via codigo",
+      access_code_approve: "Aprovou cadastro via codigo",
+      access_code_reject: "Rejeitou cadastro via codigo",
+      link_code_create: "Gerou codigo de vinculo",
+      link_code_revoke: "Revogou codigo de vinculo",
+      community_create: "Cadastrou comunidade",
+      resident_create: "Cadastrou pessoa",
+      resident_update: "Atualizou pessoa",
+      resident_profile_update: "Atualizou perfil da pessoa",
+      point_create: "Criou ponto no mapa",
+      point_update: "Atualizou ponto no mapa",
+      assignment_create: "Vinculou pessoa ao ponto",
+      attachment_create: "Adicionou anexo",
+      news_image_create: "Adicionou imagem no catalogo",
+      news_image_delete: "Removeu imagem do catalogo",
+      reports_image_delete: "Removeu imagem de relatorios",
+      complaint_update: "Atualizou denuncia",
+      admin_user_create: "Criou usuario admin",
+      admin_user_update: "Atualizou usuario admin",
+      theme_create: "Criou paleta de tema",
+      theme_update: "Atualizou paleta de tema",
+      theme_delete: "Excluiu paleta de tema",
+      theme_activate: "Ativou paleta de tema",
+      theme_reset: "Resetou paleta de tema",
+      public_cache_refresh: "Atualizou cache publico",
+    };
     const pdf = await PDFDocument.create();
     let page = pdf.addPage();
     const font = await pdf.embedFont(StandardFonts.Helvetica);
@@ -3858,7 +3888,9 @@ app.get("/reports/user-summary", async (c) => {
       created_at: string;
     }>).forEach((row) => {
       const when = row.created_at ? new Date(row.created_at).toISOString() : "-";
-      const label = `${row.action} (${row.entity_type ?? "-"})`;
+      const translatedAction =
+        actionTranslations[row.action] ?? `Acao: ${row.action}`;
+      const label = `${translatedAction} (${row.entity_type ?? "-"})`;
       drawLine(label, `${row.entity_id ?? "-"} | ${when}`);
     });
 
