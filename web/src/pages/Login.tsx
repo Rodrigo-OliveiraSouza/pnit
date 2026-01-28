@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import NewsCarousel from "../components/NewsCarousel";
+import { useSiteCopy } from "../providers/SiteCopyProvider";
 import { loginUser, setAuthRole, setAuthToken, setAuthUserId } from "../services/api";
 
 export default function Login() {
+  const { copy } = useSiteCopy();
+  const loginCopy = copy.login;
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,8 +44,8 @@ export default function Login() {
         </div>
       </div>
       <div className="auth-card">
-        <h2>Entrar</h2>
-        <p>Use seu email institucional para continuar.</p>
+        <h2>{loginCopy.title}</h2>
+        <p>{loginCopy.description}</p>
         <form className="form" onSubmit={handleSubmit}>
           <label>
             Email
@@ -66,12 +69,12 @@ export default function Login() {
           </label>
           {error && <div className="alert">{error}</div>}
           <button className="btn btn-primary" type="submit" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? "Entrando..." : loginCopy.buttonLabel}
           </button>
         </form>
         <div className="auth-footer">
           <span>Primeiro acesso?</span>
-          <Link to="/cadastro">Criar conta</Link>
+          <Link to="/cadastro">{loginCopy.createAccountLabel}</Link>
         </div>
       </div>
     </div>

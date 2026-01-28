@@ -1543,6 +1543,39 @@ textarea {
   color: rgba(var(--color-ink-rgb), 0.6);
 }
 
+.theme-copy-panel {
+  margin-top: 1.5rem;
+  padding: 1.6rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.14);
+  background: var(--color-white);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  gap: 1.2rem;
+}
+
+.theme-copy-panel h4 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-family: "Newsreader", serif;
+}
+
+.copy-section h5 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1rem;
+  color: rgba(var(--color-ink-rgb), 0.8);
+}
+
+.copy-section .theme-control textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.copy-footer-lists {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
 .activity-list {
   list-style: none;
   padding: 0;

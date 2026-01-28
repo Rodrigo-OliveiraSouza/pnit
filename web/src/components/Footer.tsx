@@ -1,5 +1,9 @@
+import { useSiteCopy } from "../providers/SiteCopyProvider";
+
 export default function Footer() {
   const baseUrl = import.meta.env.BASE_URL || "/";
+  const { copy } = useSiteCopy();
+  const { footer } = copy;
   return (
     <footer className="site-footer">
       <div className="footer-grid">
@@ -16,24 +20,22 @@ export default function Footer() {
               className="logo logo-diversifica theme-ignore"
             />
           </div>
-          <p>
-            Plataforma nacional para visibilidade e gestão de pontos de residentes.
-          </p>
+          <p>{footer.description}</p>
         </div>
         <div>
-          <h4>Transparência</h4>
+          <h4>{footer.transparencyTitle}</h4>
           <ul>
-            <li>Dados públicos limitados e anonimizados</li>
-            <li>Política de privacidade e segurança</li>
-            <li>Atualização contínua via auditoria</li>
+            {footer.transparencyItems.map((item, index) => (
+              <li key={`transparency-${index}`}>{item}</li>
+            ))}
           </ul>
         </div>
         <div>
-          <h4>Contato</h4>
+          <h4>{footer.contactTitle}</h4>
           <ul>
-            <li>Canal institucional de suporte</li>
-            <li>Ouvidoria</li>
-            <li>Centro de ajuda</li>
+            {footer.contactItems.map((item, index) => (
+              <li key={`contact-${index}`}>{item}</li>
+            ))}
           </ul>
         </div>
       </div>
@@ -45,7 +47,7 @@ export default function Footer() {
             className="logo logo-governo theme-ignore"
           />
         </div>
-        <span>Versão MVP</span>
+        <span>{footer.version}</span>
       </div>
     </footer>
   );

@@ -9,6 +9,7 @@ import {
   resolveThemeColors,
   resolveThemeImageStyles,
 } from "../utils/theme";
+import { SiteCopyProvider } from "../providers/SiteCopyProvider";
 
 export default function Layout() {
   useEffect(() => {
@@ -33,13 +34,15 @@ export default function Layout() {
   }, []);
 
   return (
-    <div className="app-shell">
-      <FloatingSymbols />
-      <Header />
-      <main className="app-main">
-        <Outlet />
-      </main>
-      <Footer />
-    </div>
+    <SiteCopyProvider>
+      <div className="app-shell">
+        <FloatingSymbols />
+        <Header />
+        <main className="app-main">
+          <Outlet />
+        </main>
+        <Footer />
+      </div>
+    </SiteCopyProvider>
   );
 }

@@ -37,6 +37,8 @@ import {
   DEFAULT_THEME_COLORS,
   DEFAULT_THEME_IMAGE_STYLES,
 } from "../utils/theme";
+import type { SiteCopy } from "../data/siteCopy";
+import { useSiteCopy } from "../providers/SiteCopyProvider";
 
 export function AdminPanel() {
   const role = getAuthRole();
@@ -120,6 +122,16 @@ export function AdminPanel() {
     colors: ThemeColors;
     image_styles: ThemeImageStyles;
   } | null>(null);
+  const {
+    copy,
+    updateHeaderCopy,
+    updateLoginCopy,
+    updateFooterCopy,
+    resetSiteCopy,
+  } = useSiteCopy();
+  const [textDraft, setTextDraft] = useState<SiteCopy>(copy);
+  const [textSaving, setTextSaving] = useState(false);
+  const [textFeedback, setTextFeedback] = useState<string | null>(null);
 
   const toThemeDraft = (theme?: ThemePalette | null) => ({
     id: theme?.id ?? null,
@@ -222,6 +234,10 @@ export function AdminPanel() {
   }, [activeTab, isAdmin, isSupervisor]);
 
   useEffect(() => {
+    setTextDraft(copy);
+  }, [copy]);
+
+  useEffect(() => {
     if (!themeDraft) return;
     applyThemeToRoot(themeDraft.colors, themeDraft.image_styles);
   }, [themeDraft]);
@@ -285,6 +301,72 @@ export function AdminPanel() {
     setThemeDraft(draft);
     setThemeSnapshot(draft);
     setThemeFeedback("Nova paleta iniciada. Edite e salve para criar.");
+  };
+
+  const handleHeaderTextChange =
+    (field: keyof SiteCopy["header"]) => (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setTextDraft((current) => ({
+        ...current,
+        header: { ...current.header, [field]: value },
+      }));
+    };
+
+  const handleLoginTextChange =
+    (field: keyof SiteCopy["login"]) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const value = event.target.value;
+      setTextDraft((current) => ({
+        ...current,
+        login: { ...current.login, [field]: value },
+      }));
+    };
+
+  const handleFooterTextChange =
+    (
+      field: Exclude<keyof SiteCopy["footer"], "transparencyItems" | "contactItems">
+    ) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setTextDraft((current) => ({
+        ...current,
+        footer: { ...current.footer, [field]: value },
+      }));
+    };
+
+  const handleFooterListChange =
+    (list: "transparencyItems" | "contactItems", index: number) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setTextDraft((current) => {
+        const updatedList = [...current.footer[list]];
+        updatedList[index] = value;
+        return {
+          ...current,
+          footer: {
+            ...current.footer,
+            [list]: updatedList,
+          },
+        };
+      });
+    };
+
+  const handleTextSave = () => {
+    setTextSaving(true);
+    try {
+      updateHeaderCopy(textDraft.header);
+      updateLoginCopy(textDraft.login);
+      updateFooterCopy(textDraft.footer);
+      setTextFeedback("Textos atualizados.");
+    } catch {
+      setTextFeedback("Não foi possível atualizar os textos.");
+    } finally {
+      setTextSaving(false);
+    }
+  };
+
+  const handleTextReset = () => {
+    resetSiteCopy();
+    setTextFeedback("Textos restaurados para o padrão.");
   };
 
   const updateThemeDraft = (
@@ -1721,6 +1803,186 @@ export function AdminPanel() {
                 )}
               </div>
             </div>
+            <div className="theme-copy-panel">
+              <h4>Textos do front-end</h4>
+              <div className="copy-section">
+                <h5>Cabeçalho</h5>
+                <div className="theme-editor-grid">
+                  <div className="theme-control">
+                    <label>Subtítulo do cabeçalho</label>
+                    <input
+                      value={textDraft.header.brandSub}
+                      onChange={handleHeaderTextChange("brandSub")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Botão do painel</label>
+                    <input
+                      value={textDraft.header.panelLabel}
+                      onChange={handleHeaderTextChange("panelLabel")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Botão de login</label>
+                    <input
+                      value={textDraft.header.loginButton}
+                      onChange={handleHeaderTextChange("loginButton")}
+                    />
+                  </div>
+                </div>
+                <div className="theme-editor-grid">
+                  <div className="theme-control">
+                    <label>Menu - Mapa</label>
+                    <input
+                      value={textDraft.header.navMap}
+                      onChange={handleHeaderTextChange("navMap")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Menu - Cadastro com código</label>
+                    <input
+                      value={textDraft.header.navAccessCode}
+                      onChange={handleHeaderTextChange("navAccessCode")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Menu - Relatórios</label>
+                    <input
+                      value={textDraft.header.navReports}
+                      onChange={handleHeaderTextChange("navReports")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Menu - Imagens</label>
+                    <input
+                      value={textDraft.header.navImages}
+                      onChange={handleHeaderTextChange("navImages")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Menu - Denúncias</label>
+                    <input
+                      value={textDraft.header.navComplaints}
+                      onChange={handleHeaderTextChange("navComplaints")}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="copy-section">
+                <h5>Login</h5>
+                <div className="theme-editor-grid">
+                  <div className="theme-control">
+                    <label>Eyebrow</label>
+                    <input
+                      value={textDraft.login.eyebrow}
+                      onChange={handleLoginTextChange("eyebrow")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Título da página</label>
+                    <input
+                      value={textDraft.login.title}
+                      onChange={handleLoginTextChange("title")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Botão</label>
+                    <input
+                      value={textDraft.login.buttonLabel}
+                      onChange={handleLoginTextChange("buttonLabel")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Link de cadastro</label>
+                    <input
+                      value={textDraft.login.createAccountLabel}
+                      onChange={handleLoginTextChange("createAccountLabel")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Descrição</label>
+                    <textarea
+                      rows={3}
+                      value={textDraft.login.description}
+                      onChange={handleLoginTextChange("description")}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="copy-section">
+                <h5>Rodapé</h5>
+                <div className="theme-editor-grid">
+                  <div className="theme-control">
+                    <label>Descrição principal</label>
+                    <input
+                      value={textDraft.footer.description}
+                      onChange={handleFooterTextChange("description")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Título - Transparência</label>
+                    <input
+                      value={textDraft.footer.transparencyTitle}
+                      onChange={handleFooterTextChange("transparencyTitle")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Título - Contato</label>
+                    <input
+                      value={textDraft.footer.contactTitle}
+                      onChange={handleFooterTextChange("contactTitle")}
+                    />
+                  </div>
+                  <div className="theme-control">
+                    <label>Versão</label>
+                    <input
+                      value={textDraft.footer.version}
+                      onChange={handleFooterTextChange("version")}
+                    />
+                  </div>
+                </div>
+                <div className="theme-editor-grid copy-footer-lists">
+                  {textDraft.footer.transparencyItems.map((item, index) => (
+                    <div className="theme-control" key={`transparency-${index}`}>
+                      <label>{`Transparência ${index + 1}`}</label>
+                      <input
+                        value={item}
+                        onChange={handleFooterListChange("transparencyItems", index)}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="theme-editor-grid copy-footer-lists">
+                  {textDraft.footer.contactItems.map((item, index) => (
+                    <div className="theme-control" key={`contact-${index}`}>
+                      <label>{`Contato ${index + 1}`}</label>
+                      <input
+                        value={item}
+                        onChange={handleFooterListChange("contactItems", index)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="theme-actions">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={handleTextSave}
+                  disabled={textSaving}
+                >
+                  {textSaving ? "Salvando..." : "Salvar textos"}
+                </button>
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={handleTextReset}
+                >
+                  Restaurar padrão
+                </button>
+              </div>
+              {textFeedback && <div className="report-ready">{textFeedback}</div>}
+            </div>
           </div>
         )}
         {activeTab === "settings" && (
@@ -1852,6 +2114,3 @@ export default function Admin() {
     </div>
   );
 }
-
-
-
