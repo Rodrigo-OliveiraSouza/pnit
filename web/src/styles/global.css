@@ -1990,6 +1990,15 @@ th {
   gap: 0.6rem;
 }
 
+.footer-contact {
+  justify-self: end;
+  text-align: right;
+}
+
+.footer-contact ul {
+  justify-items: end;
+}
+
 .footer-bottom {
   display: flex;
   justify-content: space-between;

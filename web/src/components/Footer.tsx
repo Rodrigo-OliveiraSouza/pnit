@@ -32,7 +32,7 @@ export default function Footer() {
           </div>
           <p>{footer.description}</p>
         </div>
-        <div>
+        <div className="footer-contact">
           <h4>{footer.contactTitle}</h4>
           <ul>
             {footer.contactItems.map((item, index) => {
