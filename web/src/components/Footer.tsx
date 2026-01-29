@@ -38,7 +38,7 @@ export default function Footer() {
               rel="noreferrer"
             >
               <img
-                src={`${baseUrl}logos/mir.png`}
+                src={`${baseUrl}logos/mir2.jpeg`}
                 alt="MIR - Minist\u00e9rio da Igualdade Racial"
                 className="logo logo-mir theme-ignore"
               />
