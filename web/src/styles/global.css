@@ -99,6 +99,13 @@ img.theme-ignore,
   border-radius: 0;
 }
 
+.map-shell img,
+.map-shell .gm-style img {
+  filter: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
 .theme-media {
   position: relative;
   overflow: hidden;
