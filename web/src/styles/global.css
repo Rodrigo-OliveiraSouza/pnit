@@ -223,6 +223,10 @@ img.theme-ignore,
   object-fit: contain;
 }
 
+.logo-link {
+  display: inline-flex;
+}
+
 .logo-governo {
   height: 100px;
 }

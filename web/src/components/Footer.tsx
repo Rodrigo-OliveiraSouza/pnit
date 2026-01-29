@@ -14,21 +14,35 @@ export default function Footer() {
       <div className="footer-grid">
         <div>
           <div className="footer-logos">
-            <img
-              src={`${baseUrl}logos/governo-brasil.png`}
-              alt="Governo do Brasil"
-              className="logo logo-governo theme-ignore"
-            />
-            <img
-              src={`${baseUrl}logos/diversifica.png`}
-              alt="Diversifica Inclus\u00e3o e Diversidade"
-              className="logo logo-diversifica theme-ignore"
-            />
-            <img
-              src={`${baseUrl}logos/mir.png`}
-              alt="MIR - Minist\u00e9rio da Igualdade Racial"
-              className="logo logo-mir theme-ignore"
-            />
+            <a href="https://www.gov.br/pt-br" target="_blank" rel="noreferrer">
+              <img
+                src={`${baseUrl}logos/governo-brasil.png`}
+                alt="Governo do Brasil"
+                className="logo logo-governo theme-ignore"
+              />
+            </a>
+            <a
+              href="https://plataformadiversifica.vercel.app/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img
+                src={`${baseUrl}logos/diversifica.png`}
+                alt="Diversifica Inclus\u00e3o e Diversidade"
+                className="logo logo-diversifica theme-ignore"
+              />
+            </a>
+            <a
+              href="https://www.gov.br/igualdaderacial/pt-br"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <img
+                src={`${baseUrl}logos/mir.png`}
+                alt="MIR - Minist\u00e9rio da Igualdade Racial"
+                className="logo logo-mir theme-ignore"
+              />
+            </a>
           </div>
           <p>{footer.description}</p>
         </div>

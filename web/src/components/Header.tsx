@@ -58,12 +58,14 @@ export default function Header() {
     <header className={`site-header${isHidden ? " is-hidden" : ""}`}>
       <div className="header-top header-top-logos header-bar">
         <div className="header-left">
-                    <div className="header-logos">
-            <img
-              src={`${baseUrl}logos/agentes-territoriais.jpg`}
-              alt="Agentes Territoriais"
-              className="logo logo-agentes theme-ignore"
-            />
+          <div className="header-logos">
+            <Link to="/" className="logo-link">
+              <img
+                src={`${baseUrl}logos/agentes-territoriais.jpg`}
+                alt="Agentes Territoriais"
+                className="logo logo-agentes theme-ignore"
+              />
+            </Link>
           </div>
           <div className="brand">
             <span className="brand-sub">{copy.header.brandSub}</span>
