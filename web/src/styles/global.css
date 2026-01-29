@@ -1522,12 +1522,12 @@ textarea {
   border-radius: var(--radius-lg);
   border: 1px solid rgba(var(--color-forest-rgb), 0.16);
   background: rgba(var(--color-sky-rgb), 0.6);
-  position: sticky;
-  top: 1rem;
+  position: relative;
+  top: auto;
   z-index: 1;
-  align-self: start;
-  max-height: calc(100vh - 220px);
-  overflow: auto;
+  align-self: stretch;
+  max-height: none;
+  overflow: visible;
 }
 
 .theme-carousel {
