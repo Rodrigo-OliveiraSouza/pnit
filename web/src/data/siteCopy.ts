@@ -57,6 +57,7 @@ export const DEFAULT_SITE_COPY: SiteCopy = {
     ],
     contactTitle: "Contato",
     contactItems: ["Canal institucional de suporte", "Ouvidoria", "Centro de ajuda"],
-    version: "Versão MVP",
+    version: "",
   },
 };
+
