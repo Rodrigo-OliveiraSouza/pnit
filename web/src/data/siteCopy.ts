@@ -29,7 +29,7 @@ export type SiteCopy = {
 
 export const DEFAULT_SITE_COPY: SiteCopy = {
   header: {
-    brandSub: "Mapa público de residentes",
+    brandSub: "",
     navMap: "Mapa",
     navAccessCode: "Cadastro com código",
     navReports: "Relatórios",
@@ -60,4 +60,5 @@ export const DEFAULT_SITE_COPY: SiteCopy = {
     version: "",
   },
 };
+
 
