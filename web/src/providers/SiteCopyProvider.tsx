@@ -35,11 +35,20 @@ const mergeSection = <T extends Record<string, unknown>>(
 const mergeSiteCopy = (
   base: SiteCopy,
   override?: Partial<SiteCopy>
-): SiteCopy => ({
-  header: mergeSection(base.header, override?.header),
-  login: mergeSection(base.login, override?.login),
-  footer: mergeSection(base.footer, override?.footer),
-});
+): SiteCopy => {
+  const merged: SiteCopy = {
+    header: mergeSection(base.header, override?.header),
+    login: mergeSection(base.login, override?.login),
+    footer: mergeSection(base.footer, override?.footer),
+  };
+  if (base.header.brandSub === "") {
+    merged.header.brandSub = "";
+  }
+  if (base.footer.version === "") {
+    merged.footer.version = "";
+  }
+  return merged;
+};
 
 export function SiteCopyProvider({ children }: { children: ReactNode }) {
   const [copy, setCopy] = useState<SiteCopy>(DEFAULT_SITE_COPY);
@@ -47,7 +56,11 @@ export function SiteCopyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = loadStoredSiteCopy();
     if (stored) {
-      setCopy((current) => mergeSiteCopy(current, stored));
+      setCopy((current) => {
+        const merged = mergeSiteCopy(current, stored);
+        persistSiteCopy(merged);
+        return merged;
+      });
     }
   }, []);
 
