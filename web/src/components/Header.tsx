@@ -58,16 +58,11 @@ export default function Header() {
     <header className={`site-header${isHidden ? " is-hidden" : ""}`}>
       <div className="header-top header-top-logos header-bar">
         <div className="header-left">
-          <div className="header-logos">
+                    <div className="header-logos">
             <img
-              src={`${baseUrl}logos/governo-brasil.png`}
-              alt="Governo do Brasil"
-              className="logo logo-governo theme-ignore"
-            />
-            <img
-              src={`${baseUrl}logos/diversifica.png`}
-              alt="Diversifica Inclusão e Diversidade"
-              className="logo logo-diversifica theme-ignore"
+              src={`${baseUrl}logos/agentes-territoriais.jpg`}
+              alt="Agentes Territoriais"
+              className="logo logo-agentes theme-ignore"
             />
           </div>
           <div className="brand">
@@ -146,3 +141,4 @@ export default function Header() {
     </header>
   );
 }
+
