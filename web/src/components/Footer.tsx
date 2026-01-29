@@ -4,6 +4,11 @@ export default function Footer() {
   const baseUrl = import.meta.env.BASE_URL || "/";
   const { copy } = useSiteCopy();
   const { footer } = copy;
+  const contactLinks: Record<number, string> = {
+    0: "https://infinity.dev.br/",
+    1: "mailto:territoriaisagentes@gmail.com",
+    2: `${baseUrl}denuncias`,
+  };
   return (
     <footer className="site-footer">
       <div className="footer-grid">
@@ -28,19 +33,27 @@ export default function Footer() {
           <p>{footer.description}</p>
         </div>
         <div>
-          <h4>{footer.transparencyTitle}</h4>
-          <ul>
-            {footer.transparencyItems.map((item, index) => (
-              <li key={`transparency-${index}`}>{item}</li>
-            ))}
-          </ul>
-        </div>
-        <div>
           <h4>{footer.contactTitle}</h4>
           <ul>
-            {footer.contactItems.map((item, index) => (
-              <li key={`contact-${index}`}>{item}</li>
-            ))}
+            {footer.contactItems.map((item, index) => {
+              const link = contactLinks[index];
+              if (!link) {
+                return <li key={`contact-${index}`}>{item}</li>;
+              }
+              const isExternal = link.startsWith("http");
+              return (
+                <li key={`contact-${index}`}>
+                  <a
+                    href={link}
+                    {...(isExternal
+                      ? { target: "_blank", rel: "noreferrer" }
+                      : {})}
+                  >
+                    {item}
+                  </a>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>

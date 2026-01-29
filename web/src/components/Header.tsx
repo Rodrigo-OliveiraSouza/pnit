@@ -7,7 +7,7 @@ import {
   setAuthUserId,
 } from "../services/api";
 import { useSiteCopy } from "../providers/SiteCopyProvider";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -18,12 +18,32 @@ export default function Header() {
   const panelLink = "/painel?tab=register";
   const { copy } = useSiteCopy();
   const isLoggedIn = Boolean(authToken);
+  const [isHidden, setIsHidden] = useState(false);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     const handler = () => setAuthTokenState(getAuthToken());
     window.addEventListener("pnit_auth_change", handler);
     return () => {
       window.removeEventListener("pnit_auth_change", handler);
+    };
+  }, []);
+
+  useEffect(() => {
+    lastScrollY.current = window.scrollY;
+    const handleScroll = () => {
+      const currentY = window.scrollY;
+      const previousY = lastScrollY.current;
+      if (currentY > previousY && currentY > 20) {
+        setIsHidden(true);
+      } else if (currentY < previousY) {
+        setIsHidden(false);
+      }
+      lastScrollY.current = currentY;
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
     };
   }, []);
 
@@ -35,7 +55,7 @@ export default function Header() {
   };
 
   return (
-    <header className="site-header">
+    <header className={`site-header${isHidden ? " is-hidden" : ""}`}>
       <div className="header-top header-top-logos header-bar">
         <div className="header-left">
           <div className="header-logos">
