@@ -1543,8 +1543,37 @@ textarea {
   grid-auto-columns: minmax(240px, 1fr);
   gap: 0.8rem;
   overflow-x: auto;
-  padding-bottom: 0.6rem;
+  padding-bottom: 0.3rem;
   scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.theme-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.theme-carousel-wrap {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.carousel-arrow {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--color-forest-rgb), 0.28);
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.carousel-arrow:hover {
+  background: rgba(var(--color-sky-rgb), 0.45);
 }
 
 .theme-carousel .theme-card {

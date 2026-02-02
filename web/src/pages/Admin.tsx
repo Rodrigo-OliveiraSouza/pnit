@@ -1,4 +1,4 @@
-﻿import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { formatStatus } from "../utils/format";
@@ -118,6 +118,7 @@ export function AdminPanel() {
   const [themeActivatingId, setThemeActivatingId] = useState<string | null>(null);
   const [themeResetting, setThemeResetting] = useState(false);
   const [themeFeedback, setThemeFeedback] = useState<string | null>(null);
+  const themeCarouselRef = useRef<HTMLDivElement | null>(null);
   const [themeDraft, setThemeDraft] = useState<{
     id: string | null;
     name: string;
@@ -825,7 +826,7 @@ export function AdminPanel() {
         <div className="theme-card-header">
           <div>
             <strong>{theme.name}</strong>
-            <span className="muted">{isActive ? "Ativa" : "Dispon?vel"}</span>
+            <span className="muted">{isActive ? "Ativa" : "Disponível"}</span>
           </div>
           {isActive && <span className="theme-card-badge">Ativa</span>}
         </div>
@@ -842,7 +843,7 @@ export function AdminPanel() {
                 borderColor: previewPrimaryBg,
               }}
             >
-              Prim?ria
+              Primária
             </button>
             <button
               type="button"
@@ -854,7 +855,7 @@ export function AdminPanel() {
                 borderColor: previewSecondaryText,
               }}
             >
-              Secund?ria
+              Secundária
             </button>
           </div>
         </div>
@@ -902,6 +903,13 @@ export function AdminPanel() {
         </div>
       </div>
     );
+  };
+
+  const scrollThemeCarousel = (direction: "prev" | "next") => {
+    const carousel = themeCarouselRef.current;
+    if (!carousel) return;
+    const amount = direction === "next" ? 320 : -320;
+    carousel.scrollBy({ left: amount, behavior: "smooth" });
   };
 
   return (
@@ -1674,13 +1682,49 @@ export function AdminPanel() {
                   </div>
                 )}
                 {!themeLoading && savedThemes.length > 0 && (
-                  <div className="theme-carousel">
-                    {savedThemes.map((theme) => renderThemeCard(theme))}
+                  <div className="theme-carousel-wrap">
+                    <button
+                      className="carousel-arrow"
+                      type="button"
+                      onClick={() => scrollThemeCarousel("prev")}
+                      aria-label="Ver paleta anterior"
+                    >
+                      ?
+                    </button>
+                    <div className="theme-carousel" ref={themeCarouselRef}>
+                      {savedThemes.map((theme) => renderThemeCard(theme))}
+                    </div>
+                    <button
+                      className="carousel-arrow"
+                      type="button"
+                      onClick={() => scrollThemeCarousel("next")}
+                      aria-label="Ver pr?xima paleta"
+                    >
+                      ?
+                    </button>
                   </div>
                 )}
                 {!themeLoading && !activeTheme && savedThemes.length === 0 && themes.length > 0 && (
-                  <div className="theme-carousel">
-                    {themes.map((theme) => renderThemeCard(theme))}
+                  <div className="theme-carousel-wrap">
+                    <button
+                      className="carousel-arrow"
+                      type="button"
+                      onClick={() => scrollThemeCarousel("prev")}
+                      aria-label="Ver paleta anterior"
+                    >
+                      ?
+                    </button>
+                    <div className="theme-carousel" ref={themeCarouselRef}>
+                      {themes.map((theme) => renderThemeCard(theme))}
+                    </div>
+                    <button
+                      className="carousel-arrow"
+                      type="button"
+                      onClick={() => scrollThemeCarousel("next")}
+                      aria-label="Ver pr?xima paleta"
+                    >
+                      ?
+                    </button>
                   </div>
                 )}
               </div>
@@ -2319,3 +2363,5 @@ export default function Admin() {
     </div>
   );
 }
+
+
