@@ -6,8 +6,8 @@ export default function Footer() {
   const { footer } = copy;
   const contactLinks: Record<number, string> = {
     0: "https://infinity.dev.br/",
-    1: "mailto:agentesterritoriais2@gmail.com",
-    2: `${baseUrl}denuncias`,
+    1: `${baseUrl}denuncias`,
+    2: "mailto:agentesterritoriais2@gmail.com",
   };
   return (
     <footer className="site-footer">
