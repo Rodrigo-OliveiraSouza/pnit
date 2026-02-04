@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Símbolos flutuando (2D)</title>
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+
+      /* Se quiser o fundo, mantenha bg.png na pasta */
+      background-image: url("./bg.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+
+      /* Se NÃO quiser fundo, apague as 3 linhas acima e use:
+         background: #f4f4f4;
+      */
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize() {
+    canvas.width = Math.floor(innerWidth * DPR);
+    canvas.height = Math.floor(innerHeight * DPR);
+  }
+  addEventListener("resize", resize);
+  resize();
+
+  // =========================
+  // ARQUIVOS
+  // =========================
+  const SYMBOL_COUNT = 15;
+  const BASE = "./";
+  const symbolFiles = Array.from({ length: SYMBOL_COUNT }, (_, i) => `${BASE}sim${i+1}.png`);
+
+  // =========================
+  // CONFIG DO MOVIMENTO
+  // =========================
+  const SYMBOL_SIZE = 70;         // tamanho em px (antes do DPR)
+  const DRIFT_SPEED = 0.25;       // velocidade do “passeio” (0.15 a 0.6)
+  const FLOAT_AMPLITUDE = 14;     // flutuação local (px)
+  const ROT_AMPLITUDE = 0.10;     // rotação máxima (rad) ~0.10 = bem sutil
+  const EDGE_PADDING = 60;        // distância mínima das bordas
+
+  // =========================
+  // UTILS
+  // =========================
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  // =========================
+  // LOAD IMAGES
+  // =========================
+  function loadImage(src){
+    return new Promise(res=>{
+      const img = new Image();
+      img.onload = () => res({ img, ok:true });
+      img.onerror = () => res({ img, ok:false });
+      img.src = src + "?v=" + Date.now();
+    });
+  }
+
+  async function loadSymbols(){
+    const loaded = await Promise.all(symbolFiles.map(loadImage));
+    return loaded.map((r, i) => ({
+      id: i + 1,
+      img: r.img,
+      ok: r.ok,
+
+      // posição base aleatória
+      x: 0,
+      y: 0,
+
+      // velocidade base
+      vx: rand(-1, 1) * DRIFT_SPEED,
+      vy: rand(-1, 1) * DRIFT_SPEED,
+
+      // parâmetros individuais (movimento orgânico)
+      phase: rand(0, Math.PI * 2),
+      floatSpeed: rand(0.6, 1.6),
+      floatAmp: rand(FLOAT_AMPLITUDE * 0.6, FLOAT_AMPLITUDE * 1.2),
+
+      rotPhase: rand(0, Math.PI * 2),
+      rotSpeed: rand(0.4, 1.4),
+      rotAmp: rand(-ROT_AMPLITUDE, ROT_AMPLITUDE),
+
+      // leve variação de tamanho por símbolo
+      size: rand(SYMBOL_SIZE * 0.85, SYMBOL_SIZE * 1.10)
+    }));
+  }
+
+  function drawPNG(img, ok, x, y, sizePx, rot){
+    if(!ok || !img.naturalWidth) return;
+
+    const size = sizePx * DPR;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    const sc = Math.min(size / iw, size / ih);
+
+    ctx.drawImage(img, -iw*sc/2, -ih*sc/2, iw*sc, ih*sc);
+    ctx.restore();
+  }
+
+  // =========================
+  // MAIN
+  // =========================
+  (async () => {
+    const symbols = await loadSymbols();
+
+    // posiciona inicialmente dentro da tela
+    function resetPositions() {
+      const w = canvas.width;
+      const h = canvas.height;
+
+      for (const s of symbols) {
+        s.x = rand(EDGE_PADDING * DPR, w - EDGE_PADDING * DPR);
+        s.y = rand(EDGE_PADDING * DPR, h - EDGE_PADDING * DPR);
+      }
+    }
+    resetPositions();
+
+    // ao redimensionar, re-centraliza mantendo dentro
+    addEventListener("resize", () => resetPositions());
+
+    let last = performance.now();
+
+    function frame(now){
+      const dt = Math.min(0.033, (now - last) / 1000); // até ~30fps step
+      last = now;
+
+      // limpa canvas (fundo está no body)
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const w = canvas.width;
+      const h = canvas.height;
+      const pad = EDGE_PADDING * DPR;
+
+      // atualiza + desenha
+      for (const s of symbols) {
+        // drift lento (passeio)
+        s.x += s.vx * (w * 0.02) * dt;
+        s.y += s.vy * (h * 0.02) * dt;
+
+        // “bater e voltar” nas bordas
+        if (s.x < pad) { s.x = pad; s.vx *= -1; }
+        if (s.x > w - pad) { s.x = w - pad; s.vx *= -1; }
+        if (s.y < pad) { s.y = pad; s.vy *= -1; }
+        if (s.y > h - pad) { s.y = h - pad; s.vy *= -1; }
+
+        // flutuação orgânica local (não altera o drift)
+        const fx = Math.sin(now/1000 * s.floatSpeed + s.phase) * s.floatAmp * DPR;
+        const fy = Math.cos(now/1000 * (s.floatSpeed*0.9) + s.phase) * s.floatAmp * DPR;
+
+        // rotação orgânica
+        const rot = Math.sin(now/1000 * s.rotSpeed + s.rotPhase) * s.rotAmp;
+
+        drawPNG(s.img, s.ok, s.x + fx, s.y + fy, s.size, rot);
+      }
+
+      requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+  })();
+})();
+</script>
+</body>
+</html>
