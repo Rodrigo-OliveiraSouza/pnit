@@ -75,12 +75,6 @@ export default function PasswordReset() {
   return (
     <div className="page auth-page">
       <div className="auth-visual">
-        <span className="eyebrow">Recuperacao de acesso</span>
-        <h1>Recupere sua senha</h1>
-        <p>
-          Envie o email da conta, receba um codigo de verificacao e defina uma
-          nova senha.
-        </p>
         <div className="auth-carousel">
           <NewsCarousel
             className="news-carousel-media"
@@ -88,16 +82,6 @@ export default function PasswordReset() {
             showDots={false}
             collection="reports"
           />
-        </div>
-        <div className="auth-highlights">
-          <div>
-            <strong>Codigo temporario</strong>
-            <span>Valido por alguns minutos para sua seguranca.</span>
-          </div>
-          <div>
-            <strong>Fluxo rapido</strong>
-            <span>Recupere o acesso em poucos passos.</span>
-          </div>
         </div>
       </div>
       <div className="auth-card">
