@@ -11,6 +11,10 @@ type Env = {
   PUBLIC_BASE_URL?: string;
   R2_BUCKET?: R2Bucket;
   COMPLAINTS_SECRET?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
+  EMAIL_FROM_NAME?: string;
+  PASSWORD_RESET_TTL_MINUTES?: string;
 };
 
 type Bounds = {
@@ -666,6 +670,88 @@ function generateLinkCode() {
   return `V${generateAccessCode()}`;
 }
 
+const PASSWORD_RESET_CODE_LENGTH = 6;
+const DEFAULT_PASSWORD_RESET_TTL_MINUTES = 15;
+
+function getPasswordResetTtlMinutes(env: Env) {
+  const raw = Number(env.PASSWORD_RESET_TTL_MINUTES);
+  if (Number.isFinite(raw) && raw > 0 && raw <= 180) {
+    return Math.floor(raw);
+  }
+  return DEFAULT_PASSWORD_RESET_TTL_MINUTES;
+}
+
+function generateNumericCode(length = PASSWORD_RESET_CODE_LENGTH) {
+  const digits = "0123456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  let code = "";
+  for (let i = 0; i < length; i += 1) {
+    code += digits[bytes[i] % digits.length];
+  }
+  return code;
+}
+
+function formatEmailFrom(env: Env) {
+  if (!env.EMAIL_FROM) return null;
+  if (env.EMAIL_FROM_NAME) {
+    return `${env.EMAIL_FROM_NAME} <${env.EMAIL_FROM}>`;
+  }
+  return env.EMAIL_FROM;
+}
+
+async function sendPasswordResetEmail(
+  c: Context,
+  env: Env,
+  payload: { email: string; code: string; expiresInMinutes: number }
+) {
+  const from = formatEmailFrom(env);
+  if (!env.RESEND_API_KEY || !from) {
+    throw new Error("EMAIL_NOT_CONFIGURED");
+  }
+  const baseUrl = getPublicBaseUrl(c, env);
+  const subject = "Codigo de recuperacao de senha";
+  const expiresText = `${payload.expiresInMinutes} minutos`;
+  const helpUrl = baseUrl ? `${baseUrl}/recuperar-senha` : null;
+  const textLines = [
+    "Recebemos uma solicitacao para recuperar sua senha.",
+    `Seu codigo de verificacao: ${payload.code}`,
+    `Esse codigo expira em ${expiresText}.`,
+    "Se voce nao solicitou, ignore esta mensagem.",
+  ];
+  if (helpUrl) {
+    textLines.push(`Recuperar senha: ${helpUrl}`);
+  }
+  const text = textLines.join("\n");
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <h2 style="margin: 0 0 12px;">Recuperacao de senha</h2>
+      <p>Recebemos uma solicitacao para recuperar sua senha.</p>
+      <p style="font-size: 18px; font-weight: bold; letter-spacing: 2px;">${payload.code}</p>
+      <p>Esse codigo expira em <strong>${expiresText}</strong>.</p>
+      <p>Se voce nao solicitou, ignore esta mensagem.</p>
+      ${helpUrl ? `<p><a href="${helpUrl}">Recuperar senha</a></p>` : ""}
+    </div>
+  `;
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [payload.email],
+      subject,
+      text,
+      html,
+    }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`EMAIL_SEND_FAILED ${response.status} ${detail}`);
+  }
+}
+
 const RESIDENT_PROFILE_FIELDS = [
   "health_score",
   "health_has_clinic",
@@ -1121,6 +1207,136 @@ app.post("/auth/login", async (c) => {
   });
 });
 
+app.post("/auth/password/reset/request", async (c) => {
+  const sql = getSql(c.env);
+  const body = (await c.req.json().catch(() => null)) as
+    | { email?: string }
+    | null;
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  if (!email) {
+    return jsonError(c, 400, "email is required");
+  }
+  if (!c.env.RESEND_API_KEY || !c.env.EMAIL_FROM) {
+    return jsonError(c, 500, "Email service not configured", "CONFIG");
+  }
+  const rows = await sql("SELECT id, email FROM app_users WHERE email = $1", [
+    email,
+  ]);
+  if (rows.length === 0) {
+    return c.json({ ok: true });
+  }
+  const user = rows[0] as { id: string; email: string };
+  const code = generateNumericCode();
+  const hashed = await hashPassword(code);
+  const ttlMinutes = getPasswordResetTtlMinutes(c.env);
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
+  await sql(
+    `
+    INSERT INTO password_reset_codes (
+      user_id,
+      code_hash,
+      code_salt,
+      expires_at,
+      requested_ip,
+      requested_user_agent
+    )
+    VALUES ($1, $2, $3, $4, $5, $6)
+    `,
+    [
+      user.id,
+      hashed.hash,
+      hashed.salt,
+      expiresAt,
+      getClientIp(c),
+      c.req.header("User-Agent") ?? null,
+    ]
+  );
+  try {
+    await sendPasswordResetEmail(c, c.env, {
+      email: user.email,
+      code,
+      expiresInMinutes: ttlMinutes,
+    });
+  } catch (error) {
+    console.error("password_reset_email_failed", error);
+    return jsonError(c, 500, "Falha ao enviar email", "EMAIL");
+  }
+  await logAudit(sql, user.id, "password_reset_request", "app_users", user.id);
+  return c.json({ ok: true });
+});
+
+app.post("/auth/password/reset/confirm", async (c) => {
+  const sql = getSql(c.env);
+  const body = (await c.req.json().catch(() => null)) as
+    | { email?: string; code?: string; password?: string }
+    | null;
+  const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const code = typeof body?.code === "string" ? body.code.trim() : "";
+  const password = typeof body?.password === "string" ? body.password : "";
+  if (!email || !code || !password) {
+    return jsonError(c, 400, "email, code and password are required");
+  }
+  const rows = await sql("SELECT id, email FROM app_users WHERE email = $1", [
+    email,
+  ]);
+  if (rows.length === 0) {
+    return jsonError(c, 400, "Codigo invalido", "INVALID_CODE");
+  }
+  const user = rows[0] as { id: string; email: string };
+  const codeRows = await sql(
+    `
+    SELECT id, code_hash, code_salt, expires_at
+    FROM password_reset_codes
+    WHERE user_id = $1
+      AND used_at IS NULL
+      AND expires_at > now()
+    ORDER BY created_at DESC
+    LIMIT 1
+    `,
+    [user.id]
+  );
+  if (codeRows.length === 0) {
+    return jsonError(c, 400, "Codigo expirado ou invalido", "INVALID_CODE");
+  }
+  const resetCode = codeRows[0] as {
+    id: string;
+    code_hash: string;
+    code_salt: string;
+  };
+  const hashed = await hashPassword(code, resetCode.code_salt);
+  if (hashed.hash !== resetCode.code_hash) {
+    return jsonError(c, 400, "Codigo invalido", "INVALID_CODE");
+  }
+  const newPassword = await hashPassword(password);
+  await sql("BEGIN");
+  try {
+    await sql(
+      `
+      UPDATE app_users
+      SET password_hash = $2,
+          password_salt = $3,
+          updated_at = now()
+      WHERE id = $1
+      `,
+      [user.id, newPassword.hash, newPassword.salt]
+    );
+    await sql(
+      `
+      UPDATE password_reset_codes
+      SET used_at = now()
+      WHERE user_id = $1 AND used_at IS NULL
+      `,
+      [user.id]
+    );
+    await sql("COMMIT");
+  } catch (error) {
+    await sql("ROLLBACK");
+    throw error;
+  }
+  await logAudit(sql, user.id, "password_reset", "app_users", user.id);
+  return c.json({ ok: true });
+});
+
 app.get("/auth/me", async (c) => {
   const claims = await requireAuth(c, c.env);
   if (!claims) {
@@ -1330,16 +1546,44 @@ app.put("/link-codes/:id/revoke", async (c) => {
 
 app.post("/public/access-code/submit", async (c) => {
   const sql = getSql(c.env);
-  const body = (await c.req.json().catch(() => null)) as
-    | {
-        code?: string;
-        resident?: Record<string, unknown>;
-        profile?: Record<string, unknown>;
-        point?: Record<string, unknown>;
+  const contentType = c.req.header("Content-Type") ?? "";
+  let body: {
+    code?: string;
+    resident?: Record<string, unknown>;
+    profile?: Record<string, unknown>;
+    point?: Record<string, unknown>;
+  } | null = null;
+  let file: File | null = null;
+  if (contentType.includes("multipart/form-data")) {
+    const parsed = await c.req.parseBody();
+    const payloadValue = parsed.payload;
+    const payloadText = Array.isArray(payloadValue)
+      ? payloadValue[0]
+      : payloadValue;
+    if (typeof payloadText === "string") {
+      try {
+        body = JSON.parse(payloadText) as typeof body;
+      } catch {
+        body = null;
       }
-    | null;
+    }
+    const fileValue = parsed.file;
+    if (fileValue instanceof File) {
+      file = fileValue;
+    } else if (Array.isArray(fileValue)) {
+      const firstFile = fileValue.find((item) => item instanceof File);
+      if (firstFile instanceof File) {
+        file = firstFile;
+      }
+    }
+  } else {
+    body = (await c.req.json().catch(() => null)) as typeof body;
+  }
   if (!body?.code) {
     return jsonError(c, 400, "code is required");
+  }
+  if (file && !c.env.R2_BUCKET) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
   }
   const codeValue = body.code.trim().toUpperCase();
   const codeRows = await sql(
@@ -1619,6 +1863,73 @@ app.post("/public/access-code/submit", async (c) => {
       [residentId, pointId]
     );
 
+    let attachmentId: string | null = null;
+    if (file) {
+      const key = `${crypto.randomUUID()}-${file.name}`;
+      await c.env.R2_BUCKET.put(key, await file.arrayBuffer(), {
+        httpMetadata: { contentType: file.type || "application/octet-stream" },
+      });
+      let attachmentRows: { id: string }[] | null = null;
+      try {
+        attachmentRows = (await sql(
+          `
+          INSERT INTO attachments (resident_id, point_id, s3_key, original_name, mime_type, size, visibility)
+          VALUES ($1, $2, $3, $4, $5, $6, 'public')
+          RETURNING id
+          `,
+          [
+            residentId,
+            pointId,
+            key,
+            file.name,
+            file.type || "application/octet-stream",
+            file.size,
+          ]
+        )) as { id: string }[];
+      } catch (error) {
+        console.error("attachments insert with original_name failed, retrying", error);
+        try {
+          attachmentRows = (await sql(
+            `
+            INSERT INTO attachments (resident_id, point_id, s3_key, mime_type, size, visibility)
+            VALUES ($1, $2, $3, $4, $5, 'public')
+            RETURNING id
+            `,
+            [
+              residentId,
+              pointId,
+              key,
+              file.type || "application/octet-stream",
+              file.size,
+            ]
+          )) as { id: string }[];
+        } catch (retryError) {
+          console.error("attachments insert with visibility failed, retrying minimal", retryError);
+          try {
+            attachmentRows = (await sql(
+              `
+              INSERT INTO attachments (resident_id, point_id, s3_key, mime_type, size)
+              VALUES ($1, $2, $3, $4, $5)
+              RETURNING id
+              `,
+              [
+                residentId,
+                pointId,
+                key,
+                file.type || "application/octet-stream",
+                file.size,
+              ]
+            )) as { id: string }[];
+          } catch (finalError) {
+            console.error("attachments insert minimal failed, cleaning up R2 object", finalError);
+            await c.env.R2_BUCKET.delete(key);
+            throw finalError;
+          }
+        }
+      }
+      attachmentId = attachmentRows[0].id as string;
+    }
+
     await sql(
       `
       UPDATE access_codes
@@ -1631,6 +1942,7 @@ app.post("/public/access-code/submit", async (c) => {
     await sql("COMMIT");
     await logAudit(sql, actorId, "access_code_submission", "residents", residentId, {
       point_id: pointId,
+      attachment_id: attachmentId,
     });
     return c.json({
       ok: true,

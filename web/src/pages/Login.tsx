@@ -73,6 +73,7 @@ export default function Login() {
           </button>
         </form>
         <div className="auth-footer">
+          <Link to="/recuperar-senha">Esqueci minha senha</Link>
           <Link to="/cadastro">{loginCopy.createAccountLabel}</Link>
         </div>
       </div>

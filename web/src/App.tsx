@@ -11,6 +11,7 @@ import Complaints from "./pages/Complaints";
 import NewsImages from "./pages/NewsImages";
 import NotFound from "./pages/NotFound";
 import AccessCodeRegister from "./pages/AccessCodeRegister";
+import PasswordReset from "./pages/PasswordReset";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/relatorios" element={<Reports />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/recuperar-senha" element={<PasswordReset />} />
         <Route path="/cadastro" element={<Register />} />
         <Route path="/acesso" element={<AccessCodeRegister />} />
         <Route path="/painel" element={<EmployeeDashboard />} />

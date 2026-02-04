@@ -871,8 +871,46 @@ export type PendingSubmissionItem = {
 };
 
 export async function submitAccessCodeRegistration(
-  payload: AccessCodeSubmissionPayload
+  payload: AccessCodeSubmissionPayload,
+  file?: File | null
 ): Promise<{ ok: boolean; resident_id: string; point_id: string; status: string }> {
+  if (file) {
+    const form = new FormData();
+    form.append("payload", JSON.stringify(payload));
+    form.append("file", file);
+    const response = await fetch(`${API_BASE_URL}/public/access-code/submit`, {
+      method: "POST",
+      body: form,
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!response.ok) {
+      let message = `Erro ${response.status}`;
+      if (contentType.includes("application/json")) {
+        try {
+          const body = (await response.json()) as ApiErrorBody;
+          message = body.error?.message ?? body.message ?? message;
+        } catch {
+          // Ignore JSON parsing errors.
+        }
+      }
+      throw new Error(message);
+    }
+    if (contentType.includes("application/json")) {
+      return (await response.json()) as {
+        ok: boolean;
+        resident_id: string;
+        point_id: string;
+        status: string;
+      };
+    }
+    return JSON.parse(await response.text()) as {
+      ok: boolean;
+      resident_id: string;
+      point_id: string;
+      status: string;
+    };
+  }
+
   return apiFetch<{ ok: boolean; resident_id: string; point_id: string; status: string }>(
     "/public/access-code/submit",
     {
@@ -1167,6 +1205,24 @@ export async function loginUser(payload: {
   password: string;
 }): Promise<LoginResponse> {
   return apiFetch<LoginResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function requestPasswordReset(email: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>("/auth/password/reset/request", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function confirmPasswordReset(payload: {
+  email: string;
+  code: string;
+  password: string;
+}): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>("/auth/password/reset/confirm", {
     method: "POST",
     body: JSON.stringify(payload),
   });
