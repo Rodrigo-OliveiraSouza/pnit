@@ -23,7 +23,7 @@ export default function Footer() {
               />
             </a>
             <a
-              href="https://plataformadiversifica.vercel.app/"
+              href="https://www.avadiversifica.com.br/"
               target="_blank"
               rel="noreferrer"
             >
