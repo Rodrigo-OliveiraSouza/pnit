@@ -6,7 +6,7 @@ export default function Footer() {
   const { footer } = copy;
   const contactLinks: Record<number, string> = {
     0: "https://infinity.dev.br/",
-    1: "mailto:territoriaisagentes@gmail.com",
+    1: "mailto:agentesterritoriais@gmail.com",
     2: `${baseUrl}denuncias`,
   };
   return (
