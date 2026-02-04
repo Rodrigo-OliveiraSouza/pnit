@@ -85,7 +85,7 @@ export default function NewsImages() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("Remover esta imagem do cat\u00e1logo?")) {
+    if (!window.confirm("Remover esta imagem do catálogo?")) {
       return;
     }
     try {
@@ -117,7 +117,7 @@ export default function NewsImages() {
       </section>
       {isAdmin && (
         <section className="dashboard-card">
-          <div className="tabs" role="tablist" aria-label="Cole\u00e7\u00f5es de carrossel">
+          <div className="tabs" role="tablist" aria-label="Coleções de carrossel">
             <button
               type="button"
               role="tab"
@@ -129,7 +129,7 @@ export default function NewsImages() {
                 setError(null);
               }}
             >
-              Carrossel p\u00fablico
+              Carrossel público
             </button>
             <button
               type="button"
@@ -147,12 +147,12 @@ export default function NewsImages() {
           </div>
           <div className="form-header">
             <div>
-              <span className="eyebrow">Cat\u00e1logo</span>
+              <span className="eyebrow">Catálogo</span>
               <h2>Gerenciar imagens do carrossel</h2>
               <p className="muted">
                 {collection === "reports"
-                  ? "Adicione ou remova imagens do carrossel exibido na cria\u00e7\u00e3o de conta."
-                  : "Adicione ou remova imagens que aparecem no carrossel p\u00fablico."}
+                  ? "Adicione ou remova imagens do carrossel exibido na criação de conta."
+                  : "Adicione ou remova imagens que aparecem no carrossel público."}
               </p>
             </div>
           </div>
@@ -174,7 +174,7 @@ export default function NewsImages() {
                 onClick={handleUpload}
                 disabled={uploading}
               >
-                {uploading ? "Enviando..." : "Adicionar ao cat\u00e1logo"}
+                {uploading ? "Enviando..." : "Adicionar ao catálogo"}
               </button>
             </div>
           </div>

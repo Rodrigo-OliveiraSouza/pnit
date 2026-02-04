@@ -1,6 +1,9 @@
 name = "pnit-api"
 main = "src/index.ts"
 compatibility_date = "2026-01-20"
+routes = [
+  { pattern = "api.pnit.infinity.dev.br", zone_name = "infinity.dev.br", custom_domain = true }
+]
 
 [triggers]
 crons = ["0 2 * * *"]
