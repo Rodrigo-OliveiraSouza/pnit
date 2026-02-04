@@ -61,7 +61,7 @@ export default function Header() {
           <div className="header-logos">
             <Link to="/" className="logo-link">
               <img
-                src={`${baseUrl}logos/agentes-territoriais.jpg`}
+                src={`${baseUrl}logos/agentes-territoriais.png`}
                 alt="Agentes Territoriais"
                 className="logo logo-agentes theme-ignore"
               />

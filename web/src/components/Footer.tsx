@@ -14,6 +14,7 @@ export default function Footer() {
       <div className="footer-grid">
         <div>
           <div className="footer-logos">
+  
             <a href="https://www.gov.br/pt-br" target="_blank" rel="noreferrer">
               <img
                 src={`${baseUrl}logos/governo-brasil.png`}
