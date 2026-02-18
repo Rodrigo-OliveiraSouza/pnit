@@ -692,11 +692,26 @@ img.theme-ignore,
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-white);
+  background: rgba(var(--color-ink-rgb), 0.28);
+}
+
+.landing-hero-media .news-card-media .news-media::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--news-media-bg);
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08);
+  filter: blur(18px) brightness(0.72);
+  opacity: 0.92;
 }
 
 .landing-hero-media .news-card-media .news-media img {
+  position: relative;
+  z-index: 1;
   object-fit: contain;
+  object-position: center;
 }
 
 .landing-hero-media::before,

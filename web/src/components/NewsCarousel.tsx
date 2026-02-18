@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { fetchNewsImages, fetchReportsImages } from "../services/api";
 
 const fallbackItems = Array.from({ length: 4 }, (_, index) => ({
@@ -112,6 +112,9 @@ export default function NewsCarousel({
   const handleNext = () => {
     setActiveIndex((previous) => (previous + 1) % items.length);
   };
+  const mediaStyle = active.src
+    ? ({ ["--news-media-bg" as "--news-media-bg"]: `url(${active.src})` } as CSSProperties)
+    : undefined;
 
   return (
     <div className={`news-carousel${className ? ` ${className}` : ""}`}>
@@ -123,6 +126,7 @@ export default function NewsCarousel({
           className={`news-media theme-media${active.src ? "" : " is-placeholder"}${
             useSplitView ? " news-media-split" : ""
           }`}
+          style={mediaStyle}
           role={useSplitView ? "img" : undefined}
           aria-label={useSplitView ? active.title : undefined}
         >
