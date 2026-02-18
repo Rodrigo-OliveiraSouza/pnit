@@ -9,19 +9,19 @@ export default function Footer() {
     1: `${baseUrl}denuncias`,
     2: "mailto:agentesterritoriais2@gmail.com",
   };
+  const socialLinks = [
+    { label: "Instagram Gov.br", href: "https://www.instagram.com/govbr/" },
+    {
+      label: "Instagram Minist\u00e9rio da Igualdade Racial",
+      href: "https://www.instagram.com/mdigualdaderacial/",
+    },
+  ];
   return (
     <footer className="site-footer">
       <div className="footer-grid">
         <div>
           <div className="footer-logos">
   
-            <a href="https://www.gov.br/pt-br" target="_blank" rel="noreferrer">
-              <img
-                src={`${baseUrl}logos/governo-brasil.png`}
-                alt="Governo do Brasil"
-                className="logo logo-governo theme-ignore"
-              />
-            </a>
             <a
               href="https://www.avadiversifica.com.br/"
               target="_blank"
@@ -42,6 +42,13 @@ export default function Footer() {
                 src={`${baseUrl}logos/mir2.jpeg`}
                 alt="MIR - Minist\u00e9rio da Igualdade Racial"
                 className="logo logo-mir theme-ignore"
+              />
+            </a>
+            <a href="https://www.gov.br/pt-br" target="_blank" rel="noreferrer">
+              <img
+                src={`${baseUrl}logos/governo-brasil.png`}
+                alt="Governo do Brasil"
+                className="logo logo-governo theme-ignore"
               />
             </a>
           </div>
@@ -70,6 +77,18 @@ export default function Footer() {
               );
             })}
           </ul>
+          <div className="footer-social">
+            <h4>{"M\u00eddias sociais oficiais"}</h4>
+            <ul>
+              {socialLinks.map((item) => (
+                <li key={item.href}>
+                  <a href={item.href} target="_blank" rel="noreferrer">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
       <div className="footer-bottom">

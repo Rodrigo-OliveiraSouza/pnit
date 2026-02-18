@@ -315,7 +315,7 @@ export default function MapFilters({
             </option>
           ))}
         </select>
-        <label className="filter-label">Regiao</label>
+        <label className="filter-label">{"Territ\u00f3rio"}</label>
         <input
           type="text"
           placeholder="Norte, Centro, etc."
