@@ -12,7 +12,6 @@ type NewsDraft = {
   body: string;
   support_subtitle: string;
   support_text: string;
-  support_image_description: string;
   support_image_source: string;
 };
 
@@ -22,7 +21,6 @@ const INITIAL_DRAFT: NewsDraft = {
   body: "",
   support_subtitle: "",
   support_text: "",
-  support_image_description: "",
   support_image_source: "",
 };
 
@@ -103,7 +101,6 @@ export default function AdminNewsManager() {
       body: item.body,
       support_subtitle: item.support_subtitle ?? "",
       support_text: item.support_text ?? "",
-      support_image_description: item.support_image_description ?? "",
       support_image_source: item.support_image_source ?? "",
     });
     setCoverFile(null);
@@ -246,16 +243,6 @@ export default function AdminNewsManager() {
             placeholder="Informacoes complementares"
             value={draft.support_text}
             onChange={handleDraftChange("support_text")}
-          />
-        </label>
-
-        <label>
-          Descricao da imagem de apoio
-          <input
-            type="text"
-            placeholder="Descreva a imagem de apoio"
-            value={draft.support_image_description}
-            onChange={handleDraftChange("support_image_description")}
           />
         </label>
 
