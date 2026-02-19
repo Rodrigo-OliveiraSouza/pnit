@@ -4409,6 +4409,7 @@ app.get("/reports/user-summary", async (c) => {
       news_image_create: "Adicionou imagem no catalogo",
       news_image_delete: "Removeu imagem do catalogo",
       news_post_create: "Publicou noticia",
+      news_post_update: "Editou noticia",
       reports_image_delete: "Removeu imagem de relatorios",
       complaint_update: "Atualizou denuncia",
       complaints_config_update: "Alterou configuracao de denuncias",
@@ -6163,6 +6164,237 @@ app.post("/admin/news", async (c) => {
       );
     }
     return jsonError(c, 500, "Failed to publish news", "INTERNAL");
+  }
+});
+
+app.put("/admin/news/:id", async (c) => {
+  const sql = getSql(c.env);
+  await ensureNewsPostsSchema(sql);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+
+  const body = await c.req.parseBody();
+  const id = c.req.param("id");
+  const title = readOptionalText(body.title);
+  const subtitle = readOptionalText(body.subtitle);
+  const bodyText = readOptionalText(body.body);
+  const supportSubtitle = readOptionalText(body.support_subtitle);
+  const supportText = readOptionalText(body.support_text);
+  const supportImageDescription = readOptionalText(body.support_image_description);
+  const supportImageSource = readOptionalText(body.support_image_source);
+  const coverFile = body.cover_file;
+  const supportFile = body.support_file;
+
+  if (!title) {
+    return jsonError(c, 400, "title is required");
+  }
+  if (!bodyText) {
+    return jsonError(c, 400, "body is required");
+  }
+  if (coverFile !== undefined && !(coverFile instanceof File)) {
+    return jsonError(c, 400, "cover_file must be a file");
+  }
+  if (supportFile !== undefined && !(supportFile instanceof File)) {
+    return jsonError(c, 400, "support_file must be a file");
+  }
+
+  const currentRows = await sql(
+    `
+    SELECT
+      n.id,
+      n.cover_attachment_id,
+      n.support_attachment_id,
+      cover.s3_key AS cover_s3_key,
+      support.s3_key AS support_s3_key
+    FROM news_posts n
+    JOIN attachments cover ON cover.id = n.cover_attachment_id
+    LEFT JOIN attachments support ON support.id = n.support_attachment_id
+    WHERE n.id = $1
+    LIMIT 1
+    `,
+    [id]
+  );
+  if (currentRows.length === 0) {
+    return jsonError(c, 404, "News post not found", "NOT_FOUND");
+  }
+
+  const bucket = c.env.R2_BUCKET;
+  if ((coverFile instanceof File || supportFile instanceof File) && !bucket) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+  }
+
+  const current = currentRows[0];
+  const uploaded: Array<{ id: string; key: string }> = [];
+  const uploadAttachment = async (
+    file: File,
+    folder: "cover" | "support",
+    collection: "news_article_cover" | "news_article_support"
+  ) => {
+    const key = `news/articles/${folder}/${crypto.randomUUID()}-${file.name}`;
+    await bucket!.put(key, await file.arrayBuffer(), {
+      httpMetadata: { contentType: file.type || "application/octet-stream" },
+    });
+    const rows = await sql(
+      `
+      INSERT INTO attachments (s3_key, original_name, mime_type, size, visibility, collection)
+      VALUES ($1, $2, $3, $4, 'public', $5)
+      RETURNING id
+      `,
+      [
+        key,
+        file.name,
+        file.type || "application/octet-stream",
+        file.size,
+        collection,
+      ]
+    );
+    const attachment = { id: rows[0].id as string, key };
+    uploaded.push(attachment);
+    return attachment;
+  };
+
+  try {
+    const coverAttachment =
+      coverFile instanceof File
+        ? await uploadAttachment(coverFile, "cover", "news_article_cover")
+        : null;
+    const supportAttachment =
+      supportFile instanceof File
+        ? await uploadAttachment(supportFile, "support", "news_article_support")
+        : null;
+
+    const nextCoverAttachmentId =
+      coverAttachment?.id ?? (current.cover_attachment_id as string);
+    const nextSupportAttachmentId =
+      supportAttachment?.id ?? (current.support_attachment_id as string | null);
+
+    const rows = await sql(
+      `
+      UPDATE news_posts
+      SET
+        title = $2,
+        subtitle = $3,
+        body = $4,
+        support_subtitle = $5,
+        support_text = $6,
+        support_image_description = $7,
+        support_image_source = $8,
+        cover_attachment_id = $9,
+        support_attachment_id = $10,
+        updated_at = now()
+      WHERE id = $1
+      RETURNING id, title, subtitle, body, support_subtitle, support_text, support_image_description, support_image_source, created_at, updated_at
+      `,
+      [
+        id,
+        title,
+        subtitle,
+        bodyText,
+        supportSubtitle,
+        supportText,
+        supportImageDescription,
+        supportImageSource,
+        nextCoverAttachmentId,
+        nextSupportAttachmentId,
+      ]
+    );
+
+    if (rows.length === 0) {
+      return jsonError(c, 404, "News post not found", "NOT_FOUND");
+    }
+
+    const staleAttachments: Array<{ id: string; key: string }> = [];
+    if (coverAttachment?.id) {
+      staleAttachments.push({
+        id: current.cover_attachment_id as string,
+        key: current.cover_s3_key as string,
+      });
+    }
+    if (supportAttachment?.id && current.support_attachment_id && current.support_s3_key) {
+      staleAttachments.push({
+        id: current.support_attachment_id as string,
+        key: current.support_s3_key as string,
+      });
+    }
+
+    for (const attachment of staleAttachments) {
+      let removedFromDb = false;
+      try {
+        await sql("DELETE FROM attachments WHERE id = $1", [attachment.id]);
+        removedFromDb = true;
+      } catch (cleanupError) {
+        console.warn("news_post_update_cleanup_db_failed", cleanupError);
+      }
+      if (!removedFromDb) {
+        continue;
+      }
+      try {
+        await bucket?.delete(attachment.key);
+      } catch (cleanupError) {
+        console.warn("news_post_update_cleanup_r2_failed", cleanupError);
+      }
+    }
+
+    await logAudit(sql, claims.sub, "news_post_update", "news_posts", id, {
+      replaced_cover: Boolean(coverAttachment?.id),
+      replaced_support: Boolean(supportAttachment?.id),
+    });
+
+    const item = rows[0];
+    const baseUrl = getPublicBaseUrl(c, c.env);
+    return c.json({
+      item: {
+        id: item.id as string,
+        title: item.title as string,
+        subtitle: (item.subtitle as string | null) ?? null,
+        body: item.body as string,
+        support_subtitle: (item.support_subtitle as string | null) ?? null,
+        support_text: (item.support_text as string | null) ?? null,
+        support_image_description:
+          (item.support_image_description as string | null) ?? null,
+        support_image_source: (item.support_image_source as string | null) ?? null,
+        cover_url: `${baseUrl}/attachments/${nextCoverAttachmentId}`,
+        support_url: nextSupportAttachmentId
+          ? `${baseUrl}/attachments/${nextSupportAttachmentId}`
+          : null,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      },
+    });
+  } catch (error) {
+    console.error("news_post_update_failed", error);
+    for (const attachment of uploaded) {
+      let removedFromDb = false;
+      try {
+        await sql("DELETE FROM attachments WHERE id = $1", [attachment.id]);
+        removedFromDb = true;
+      } catch (cleanupError) {
+        console.warn("news_post_update_rollback_db_failed", cleanupError);
+      }
+      if (!removedFromDb) {
+        continue;
+      }
+      try {
+        await bucket?.delete(attachment.key);
+      } catch (cleanupError) {
+        console.warn("news_post_update_rollback_r2_failed", cleanupError);
+      }
+    }
+    const message = error instanceof Error ? error.message : "";
+    if (/relation\s+"news_posts"\s+does not exist/i.test(message)) {
+      return jsonError(
+        c,
+        500,
+        "Tabela de noticias ausente no banco. Aplique a migration 2026-02-19_news_posts.sql.",
+        "MIGRATION_REQUIRED"
+      );
+    }
+    return jsonError(c, 500, "Failed to update news", "INTERNAL");
   }
 });
 

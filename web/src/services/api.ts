@@ -731,6 +731,73 @@ export async function createNewsPost(payload: {
   return response.json();
 }
 
+export async function updateNewsPost(payload: {
+  id: string;
+  title: string;
+  subtitle?: string;
+  body: string;
+  support_subtitle?: string;
+  support_text?: string;
+  support_image_description?: string;
+  support_image_source?: string;
+  cover_file?: File | null;
+  support_file?: File | null;
+}): Promise<{ item: NewsPost }> {
+  const formData = new FormData();
+  formData.append("title", payload.title);
+  formData.append("body", payload.body);
+  if (payload.subtitle?.trim()) {
+    formData.append("subtitle", payload.subtitle.trim());
+  }
+  if (payload.support_subtitle?.trim()) {
+    formData.append("support_subtitle", payload.support_subtitle.trim());
+  }
+  if (payload.support_text?.trim()) {
+    formData.append("support_text", payload.support_text.trim());
+  }
+  if (payload.support_image_description?.trim()) {
+    formData.append(
+      "support_image_description",
+      payload.support_image_description.trim()
+    );
+  }
+  if (payload.support_image_source?.trim()) {
+    formData.append("support_image_source", payload.support_image_source.trim());
+  }
+  if (payload.cover_file instanceof File) {
+    formData.append("cover_file", payload.cover_file);
+  }
+  if (payload.support_file instanceof File) {
+    formData.append("support_file", payload.support_file);
+  }
+
+  const token = getAuthToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/admin/news/${payload.id}`, {
+    method: "PUT",
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await response.json().catch(() => null)) as
+        | ApiErrorBody
+        | null;
+      const message =
+        body?.error?.message ?? body?.message ?? `Erro ${response.status}`;
+      throw new Error(message);
+    }
+    const text = await response.text();
+    throw new Error(text || `Erro ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function uploadNewsImage(file: File): Promise<{ item: NewsImage }> {
   const formData = new FormData();
   formData.append("file", file);

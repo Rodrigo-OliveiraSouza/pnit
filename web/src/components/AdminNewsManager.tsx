@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { createNewsPost, listNewsPosts, type NewsPost } from "../services/api";
+import {
+  createNewsPost,
+  listNewsPosts,
+  updateNewsPost,
+  type NewsPost,
+} from "../services/api";
 
 type NewsDraft = {
   title: string;
@@ -32,11 +37,13 @@ export default function AdminNewsManager() {
   const [draft, setDraft] = useState<NewsDraft>(INITIAL_DRAFT);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [supportFile, setSupportFile] = useState<File | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<NewsPost[]>([]);
   const [loading, setLoading] = useState(false);
+  const formCardRef = useRef<HTMLDivElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const supportInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -69,10 +76,7 @@ export default function AdminNewsManager() {
       setDraft((current) => ({ ...current, [field]: value }));
     };
 
-  const resetDraft = () => {
-    setDraft(INITIAL_DRAFT);
-    setCoverFile(null);
-    setSupportFile(null);
+  const clearFileInputs = () => {
     if (coverInputRef.current) {
       coverInputRef.current.value = "";
     }
@@ -80,6 +84,35 @@ export default function AdminNewsManager() {
       supportInputRef.current.value = "";
     }
   };
+
+  const resetDraft = () => {
+    setDraft(INITIAL_DRAFT);
+    setCoverFile(null);
+    setSupportFile(null);
+    setEditingId(null);
+    clearFileInputs();
+  };
+
+  const handleEdit = (item: NewsPost) => {
+    setEditingId(item.id);
+    setFeedback(null);
+    setError(null);
+    setDraft({
+      title: item.title,
+      subtitle: item.subtitle ?? "",
+      body: item.body,
+      support_subtitle: item.support_subtitle ?? "",
+      support_text: item.support_text ?? "",
+      support_image_description: item.support_image_description ?? "",
+      support_image_source: item.support_image_source ?? "",
+    });
+    setCoverFile(null);
+    setSupportFile(null);
+    clearFileInputs();
+    formCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const isEditing = Boolean(editingId);
 
   const handlePublish = async () => {
     if (!draft.title.trim()) {
@@ -90,11 +123,11 @@ export default function AdminNewsManager() {
       setFeedback("Texto principal da noticia e obrigatorio.");
       return;
     }
-    if (!coverFile) {
+    if (!isEditing && !coverFile) {
       setFeedback("A imagem de apresentacao e obrigatoria.");
       return;
     }
-    if (!supportFile) {
+    if (!isEditing && !supportFile) {
       setFeedback("A imagem de apoio e obrigatoria.");
       return;
     }
@@ -103,21 +136,35 @@ export default function AdminNewsManager() {
     setFeedback(null);
     setError(null);
     try {
-      await createNewsPost({
-        ...draft,
-        title: draft.title.trim(),
-        body: draft.body.trim(),
-        cover_file: coverFile,
-        support_file: supportFile,
-      });
-      setFeedback("Noticia publicada com sucesso.");
+      if (isEditing && editingId) {
+        await updateNewsPost({
+          id: editingId,
+          ...draft,
+          title: draft.title.trim(),
+          body: draft.body.trim(),
+          cover_file: coverFile,
+          support_file: supportFile,
+        });
+        setFeedback("Noticia atualizada com sucesso.");
+      } else {
+        await createNewsPost({
+          ...draft,
+          title: draft.title.trim(),
+          body: draft.body.trim(),
+          cover_file: coverFile as File,
+          support_file: supportFile as File,
+        });
+        setFeedback("Noticia publicada com sucesso.");
+      }
       resetDraft();
       await loadNews();
     } catch (publishError) {
       const message =
         publishError instanceof Error
           ? publishError.message
-          : "Falha ao publicar noticia.";
+          : isEditing
+            ? "Falha ao atualizar noticia."
+            : "Falha ao publicar noticia.";
       setError(message);
     } finally {
       setPublishing(false);
@@ -126,13 +173,15 @@ export default function AdminNewsManager() {
 
   return (
     <div className="admin-news-layout">
-      <div className="dashboard-card admin-news-card">
+      <div ref={formCardRef} className="dashboard-card admin-news-card">
         <div className="form-header">
           <div>
             <span className="eyebrow">Noticias</span>
-            <h3>Publicar nova noticia</h3>
+            <h3>{isEditing ? "Editar noticia publicada" : "Publicar nova noticia"}</h3>
             <p className="muted">
-              Preencha os campos abaixo para publicar no mural oficial.
+              {isEditing
+                ? "Atualize os campos e salve as alteracoes. As imagens so mudam se voce selecionar novos arquivos."
+                : "Preencha os campos abaixo para publicar no mural oficial."}
             </p>
           </div>
         </div>
@@ -242,8 +291,24 @@ export default function AdminNewsManager() {
             onClick={() => void handlePublish()}
             disabled={publishing}
           >
-            {publishing ? "Publicando..." : "Publicar noticia"}
+            {publishing
+              ? isEditing
+                ? "Salvando..."
+                : "Publicando..."
+              : isEditing
+                ? "Salvar alteracoes"
+                : "Publicar noticia"}
           </button>
+          {isEditing && (
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={resetDraft}
+              disabled={publishing}
+            >
+              Cancelar edicao
+            </button>
+          )}
         </div>
         {feedback && <div className="report-ready">{feedback}</div>}
         {error && <div className="alert">{error}</div>}
@@ -265,11 +330,25 @@ export default function AdminNewsManager() {
             {items.map((item) => (
               <article key={item.id} className="admin-news-item">
                 <img src={item.cover_url} alt={item.title} />
-                <div>
-                  <h4>{item.title}</h4>
-                  <p className="muted">
-                    Publicado em {formatPublishedAt(item.created_at)}
-                  </p>
+                <div className="admin-news-item-content">
+                  <div className="admin-news-item-meta">
+                    <h4>{item.title}</h4>
+                    <p className="muted">
+                      Publicado em {formatPublishedAt(item.created_at)}
+                    </p>
+                    {item.updated_at && item.updated_at !== item.created_at && (
+                      <p className="muted">
+                        Atualizado em {formatPublishedAt(item.updated_at)}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    type="button"
+                    onClick={() => handleEdit(item)}
+                  >
+                    Editar noticia
+                  </button>
                 </div>
               </article>
             ))}
