@@ -6089,6 +6089,15 @@ app.post("/admin/news", async (c) => {
         console.warn("news_post_cleanup_r2_failed", cleanupError);
       }
     }
+    const message = error instanceof Error ? error.message : "";
+    if (/relation\s+"news_posts"\s+does not exist/i.test(message)) {
+      return jsonError(
+        c,
+        500,
+        "Tabela de noticias ausente no banco. Aplique a migration 2026-02-19_news_posts.sql.",
+        "MIGRATION_REQUIRED"
+      );
+    }
     return jsonError(c, 500, "Failed to publish news", "INTERNAL");
   }
 });

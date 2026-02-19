@@ -712,7 +712,17 @@ export async function createNewsPost(payload: {
     body: formData,
   });
   if (!response.ok) {
-    throw new Error(await response.text());
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await response.json().catch(() => null)) as
+        | ApiErrorBody
+        | null;
+      const message =
+        body?.error?.message ?? body?.message ?? `Erro ${response.status}`;
+      throw new Error(message);
+    }
+    const text = await response.text();
+    throw new Error(text || `Erro ${response.status}`);
   }
   return response.json();
 }
