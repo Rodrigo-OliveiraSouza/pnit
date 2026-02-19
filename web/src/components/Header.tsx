@@ -89,6 +89,14 @@ export default function Header() {
             >
               Noticias
             </NavLink>
+            <NavLink
+              to="/equipe"
+              className={({ isActive }) =>
+                `nav-link${isActive ? " active" : ""}`
+              }
+            >
+              Equipe
+            </NavLink>
             {!isLoggedIn && (
               <NavLink
                 to="/acesso"

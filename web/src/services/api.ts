@@ -237,6 +237,17 @@ export type NewsPost = {
   updated_at?: string;
 };
 
+export type TeamMember = {
+  id: string;
+  occupation: string;
+  name: string;
+  resume?: string | null;
+  position: number;
+  photo_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type ReportFilters = {
   city?: string;
   state?: string;
@@ -669,6 +680,10 @@ export async function listNewsPosts(): Promise<{ items: NewsPost[] }> {
   return apiFetch<{ items: NewsPost[] }>("/news");
 }
 
+export async function listTeamMembers(): Promise<{ items: TeamMember[] }> {
+  return apiFetch<{ items: TeamMember[] }>("/team");
+}
+
 export async function createNewsPost(payload: {
   title: string;
   subtitle?: string;
@@ -711,6 +726,51 @@ export async function createNewsPost(payload: {
   }
 
   const response = await fetch(`${API_BASE_URL}/admin/news`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await response.json().catch(() => null)) as
+        | ApiErrorBody
+        | null;
+      const message =
+        body?.error?.message ?? body?.message ?? `Erro ${response.status}`;
+      throw new Error(message);
+    }
+    const text = await response.text();
+    throw new Error(text || `Erro ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function createTeamMember(payload: {
+  occupation: string;
+  name: string;
+  resume?: string;
+  position: number;
+  photo_file?: File | null;
+}): Promise<{ item: TeamMember }> {
+  const formData = new FormData();
+  formData.append("occupation", payload.occupation);
+  formData.append("name", payload.name);
+  formData.append("position", String(payload.position));
+  if (payload.resume?.trim()) {
+    formData.append("resume", payload.resume.trim());
+  }
+  if (payload.photo_file instanceof File) {
+    formData.append("photo_file", payload.photo_file);
+  }
+
+  const token = getAuthToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/admin/team`, {
     method: "POST",
     headers,
     body: formData,

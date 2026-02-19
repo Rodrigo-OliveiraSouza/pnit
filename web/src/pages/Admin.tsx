@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
 import AdminNewsManager from "../components/AdminNewsManager";
+import AdminTeamManager from "../components/AdminTeamManager";
 import {
   fetchAuditEntries,
   fetchAdminUserDetails,
@@ -63,6 +64,7 @@ export function AdminPanel() {
     | "users"
     | "complaints"
     | "news"
+    | "team"
     | "productivity"
     | "management"
     | "settings"
@@ -251,7 +253,8 @@ export function AdminPanel() {
       !isAdmin &&
       (activeTab === "complaints" ||
         activeTab === "settings" ||
-        activeTab === "news")
+        activeTab === "news" ||
+        activeTab === "team")
     ) {
       setActiveTab("requests");
       return;
@@ -1049,6 +1052,15 @@ export function AdminPanel() {
               Notícias
             </button>
           )}
+          {isAdmin && (
+            <button
+              className={`tab ${activeTab === "team" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("team")}
+            >
+              Equipe
+            </button>
+          )}
           <button
             className={`tab ${activeTab === "productivity" ? "active" : ""}`}
             type="button"
@@ -1554,6 +1566,7 @@ export function AdminPanel() {
           </div>
         )}
         {activeTab === "news" && <AdminNewsManager />}
+        {activeTab === "team" && <AdminTeamManager />}
         {activeTab === "productivity" && (
           <div className="dashboard-card">
             <h3>Relatório de usuários</h3>

@@ -10,6 +10,7 @@ import PointDetail from "./pages/PointDetail";
 import Complaints from "./pages/Complaints";
 import NewsImages from "./pages/NewsImages";
 import News from "./pages/News";
+import Team from "./pages/Team";
 import NotFound from "./pages/NotFound";
 import AccessCodeRegister from "./pages/AccessCodeRegister";
 import PasswordReset from "./pages/PasswordReset";
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/denuncias" element={<Complaints />} />
         <Route path="/noticias" element={<News />} />
+        <Route path="/equipe" element={<Team />} />
         <Route path="/imagens-noticias" element={<NewsImages />} />
         <Route path="/map/points/:id" element={<PointDetail />} />
         <Route path="*" element={<NotFound />} />
