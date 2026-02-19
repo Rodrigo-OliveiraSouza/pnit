@@ -298,6 +298,10 @@ export type Complaint = {
   created_at: string;
 };
 
+export type ComplaintConfigResponse = {
+  complaints_enabled: boolean;
+};
+
 export type ProductivityResponse = {
   summary: {
     total_residents: number;
@@ -1164,6 +1168,26 @@ export async function exportReport(payload: {
   });
 }
 
+export async function fetchPublicComplaintsConfig(): Promise<ComplaintConfigResponse> {
+  return apiFetch<ComplaintConfigResponse>("/public/complaints/config");
+}
+
+export async function fetchAdminComplaintsConfig(): Promise<ComplaintConfigResponse> {
+  return apiFetch<ComplaintConfigResponse>("/admin/complaints/config");
+}
+
+export async function updateAdminComplaintsConfig(
+  complaintsEnabled: boolean
+): Promise<ComplaintConfigResponse & { ok: boolean }> {
+  return apiFetch<ComplaintConfigResponse & { ok: boolean }>(
+    "/admin/complaints/config",
+    {
+      method: "PUT",
+      body: JSON.stringify({ complaints_enabled: complaintsEnabled }),
+    }
+  );
+}
+
 export async function submitComplaint(payload: {
   type: string;
   description: string;
@@ -1185,6 +1209,15 @@ export async function submitComplaint(payload: {
     body: form,
   });
   if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await response.json().catch(() => null)) as
+        | ApiErrorBody
+        | null;
+      const message =
+        body?.error?.message ?? body?.message ?? `Erro ${response.status}`;
+      throw new Error(message);
+    }
     throw new Error(`Erro ${response.status}`);
   }
   return (await response.json()) as { ok: boolean; id: string };

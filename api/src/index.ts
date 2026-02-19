@@ -169,6 +169,39 @@ async function ensureNewsPostsSchema(sql: ReturnType<typeof neon>) {
   );
 }
 
+async function ensurePlatformSettingsSchema(sql: ReturnType<typeof neon>) {
+  await sql(
+    `
+    CREATE TABLE IF NOT EXISTS platform_settings (
+      key text PRIMARY KEY,
+      value_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+      updated_by uuid NULL REFERENCES app_users(id),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+    `
+  );
+}
+
+async function getComplaintsRegistrationEnabled(sql: ReturnType<typeof neon>) {
+  await ensurePlatformSettingsSchema(sql);
+  const rows = await sql(
+    `
+    SELECT value_json
+    FROM platform_settings
+    WHERE key = 'complaints'
+    LIMIT 1
+    `
+  );
+  if (rows.length === 0) {
+    return true;
+  }
+  const parsed = parseJsonField<Record<string, unknown>>(rows[0].value_json);
+  if (!parsed || typeof parsed.enabled !== "boolean") {
+    return true;
+  }
+  return parsed.enabled;
+}
+
 function jsonError(
   c: Context,
   status: number,
@@ -4378,6 +4411,7 @@ app.get("/reports/user-summary", async (c) => {
       news_post_create: "Publicou noticia",
       reports_image_delete: "Removeu imagem de relatorios",
       complaint_update: "Atualizou denuncia",
+      complaints_config_update: "Alterou configuracao de denuncias",
       admin_user_create: "Criou usuario admin",
       admin_user_update: "Atualizou usuario admin",
       theme_create: "Criou paleta de tema",
@@ -6327,8 +6361,75 @@ app.delete("/media/reports/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+app.get("/public/complaints/config", async (c) => {
+  const sql = getSql(c.env);
+  const complaintsEnabled = await getComplaintsRegistrationEnabled(sql);
+  return c.json({ complaints_enabled: complaintsEnabled });
+});
+
+app.get("/admin/complaints/config", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const complaintsEnabled = await getComplaintsRegistrationEnabled(sql);
+  return c.json({ complaints_enabled: complaintsEnabled });
+});
+
+app.put("/admin/complaints/config", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const body = (await c.req.json().catch(() => null)) as
+    | { complaints_enabled?: boolean }
+    | null;
+  if (typeof body?.complaints_enabled !== "boolean") {
+    return jsonError(c, 400, "complaints_enabled is required");
+  }
+
+  await ensurePlatformSettingsSchema(sql);
+  await sql(
+    `
+    INSERT INTO platform_settings (key, value_json, updated_by, updated_at)
+    VALUES ('complaints', $1::jsonb, $2, now())
+    ON CONFLICT (key) DO UPDATE SET
+      value_json = EXCLUDED.value_json,
+      updated_by = EXCLUDED.updated_by,
+      updated_at = now()
+    `,
+    [JSON.stringify({ enabled: body.complaints_enabled }), claims.sub]
+  );
+  await logAudit(
+    sql,
+    claims.sub,
+    "complaints_config_update",
+    "platform_settings",
+    claims.sub,
+    { complaints_enabled: body.complaints_enabled }
+  );
+  return c.json({ ok: true, complaints_enabled: body.complaints_enabled });
+});
+
 app.post("/public/complaints", async (c) => {
   const sql = getSql(c.env);
+  const complaintsEnabled = await getComplaintsRegistrationEnabled(sql);
+  if (!complaintsEnabled) {
+    return jsonError(
+      c,
+      403,
+      "Registro de denuncias temporariamente desativado.",
+      "COMPLAINTS_DISABLED"
+    );
+  }
   const contentType = c.req.header("Content-Type") ?? "";
   let body: Record<string, unknown> = {};
   let file: File | null = null;

@@ -382,6 +382,13 @@ CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints (status);
 CREATE INDEX IF NOT EXISTS idx_complaints_city ON complaints (city);
 CREATE INDEX IF NOT EXISTS idx_complaints_state ON complaints (state);
 
+CREATE TABLE IF NOT EXISTS platform_settings (
+  key text PRIMARY KEY,
+  value_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+  updated_by uuid NULL REFERENCES app_users(id),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS geocode_cache (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   address_query text NOT NULL,

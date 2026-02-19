@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { submitComplaint } from "../services/api";
+import { useEffect, useState } from "react";
+import { fetchPublicComplaintsConfig, submitComplaint } from "../services/api";
 
 export default function Complaints() {
   const [type, setType] = useState("Infraestrutura");
@@ -13,10 +13,44 @@ export default function Complaints() {
     message: string;
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [complaintsEnabled, setComplaintsEnabled] = useState(true);
+  const [configLoading, setConfigLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const loadConfig = async () => {
+      setConfigLoading(true);
+      try {
+        const response = await fetchPublicComplaintsConfig();
+        if (!active) return;
+        setComplaintsEnabled(response.complaints_enabled);
+      } catch {
+        if (active) {
+          setComplaintsEnabled(true);
+        }
+      } finally {
+        if (active) {
+          setConfigLoading(false);
+        }
+      }
+    };
+    void loadConfig();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus(null);
+    if (!complaintsEnabled) {
+      setStatus({
+        type: "error",
+        message:
+          "Registro de denuncias temporariamente desativado. Use os canais oficiais.",
+      });
+      return;
+    }
     if (!description.trim()) {
       setStatus({ type: "error", message: "Descreva a denúncia." });
       return;
@@ -65,7 +99,10 @@ export default function Complaints() {
       <section className="module-section complaints-layout">
         <div className="dashboard-card complaints-form-card">
           <h2>Registrar denúncia</h2>
-          <form className="form" onSubmit={handleSubmit}>
+          {configLoading ? (
+            <p className="muted">Verificando disponibilidade do canal...</p>
+          ) : complaintsEnabled ? (
+            <form className="form" onSubmit={handleSubmit}>
             <label>
               Tipo
               <select
@@ -137,7 +174,13 @@ export default function Complaints() {
             <button className="btn btn-primary" type="submit" disabled={loading}>
               {loading ? "Enviando..." : "Enviar denúncia"}
             </button>
-          </form>
+            </form>
+          ) : (
+            <div className="alert">
+              O registro de denuncias esta temporariamente desativado.
+              Utilize os canais oficiais de atendimento nesta pagina.
+            </div>
+          )}
         </div>
 
         <div className="dashboard-card complaints-support-card">

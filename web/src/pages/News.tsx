@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { listNewsPosts, type NewsPost } from "../services/api";
 
 const formatPublishedAt = (value?: string) => {
@@ -23,6 +23,8 @@ export default function News() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [scrollToArticle, setScrollToArticle] = useState(false);
+  const articleRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -58,6 +60,23 @@ export default function News() {
     return posts.find((item) => item.id === selectedId) ?? posts[0];
   }, [posts, selectedId]);
 
+  useEffect(() => {
+    if (!scrollToArticle || !selectedPost || !articleRef.current) return;
+    const articleTop =
+      articleRef.current.getBoundingClientRect().top + window.scrollY;
+    const header = document.querySelector(".site-header");
+    const headerRect = header?.getBoundingClientRect();
+    const headerOffset = headerRect
+      ? Math.max(0, Math.min(headerRect.height, headerRect.bottom))
+      : 0;
+    const spacing = 16;
+    window.scrollTo({
+      top: Math.max(0, articleTop - headerOffset - spacing),
+      behavior: "smooth",
+    });
+    setScrollToArticle(false);
+  }, [scrollToArticle, selectedPost]);
+
   return (
     <div className="page news-index-page">
       <section className="module-section news-index-header">
@@ -85,7 +104,10 @@ export default function News() {
                 className={`news-strip-card${
                   selectedPost?.id === post.id ? " active" : ""
                 }`}
-                onClick={() => setSelectedId(post.id)}
+                onClick={() => {
+                  setSelectedId(post.id);
+                  setScrollToArticle(true);
+                }}
               >
                 <img
                   src={post.cover_url}
@@ -103,7 +125,7 @@ export default function News() {
       </section>
 
       {selectedPost && (
-        <section className="news-article-panel">
+        <section ref={articleRef} className="news-article-panel">
           <img
             src={selectedPost.cover_url}
             alt={selectedPost.title}

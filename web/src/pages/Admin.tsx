@@ -18,16 +18,19 @@ import {
   listThemes,
   listAdminUsers,
   listComplaints,
+  fetchAdminComplaintsConfig,
   listLinkCodes,
   refreshPublicMapCache,
   resetTheme,
   updateAdminUser,
+  updateAdminComplaintsConfig,
   updateComplaintStatus,
   updateTheme,
   createLinkCode,
   revokeLinkCode,
   type AdminUser,
   type Complaint,
+  type ComplaintConfigResponse,
   type LinkCode,
   type ProductivityResponse,
 } from "../services/api";
@@ -70,6 +73,12 @@ export function AdminPanel() {
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [openComplaintId, setOpenComplaintId] = useState<string | null>(null);
+  const [complaintsEnabled, setComplaintsEnabled] = useState(true);
+  const [complaintsConfigLoading, setComplaintsConfigLoading] = useState(false);
+  const [complaintsConfigSaving, setComplaintsConfigSaving] = useState(false);
+  const [complaintsConfigError, setComplaintsConfigError] = useState<string | null>(
+    null
+  );
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [productivity, setProductivity] = useState<ProductivityResponse | null>(
     null
@@ -230,6 +239,7 @@ export function AdminPanel() {
     void loadLinkCodes();
     if (isAdmin) {
       void loadComplaints();
+      void loadComplaintsConfig();
       void loadThemes();
     }
     void loadAudit();
@@ -580,6 +590,42 @@ export function AdminPanel() {
       setComplaints([]);
     } finally {
       setComplaintLoading(false);
+    }
+  };
+
+  const loadComplaintsConfig = async () => {
+    if (!isAdmin) return;
+    setComplaintsConfigLoading(true);
+    setComplaintsConfigError(null);
+    try {
+      const response: ComplaintConfigResponse = await fetchAdminComplaintsConfig();
+      setComplaintsEnabled(response.complaints_enabled);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Falha ao carregar configuracao de denuncias.";
+      setComplaintsConfigError(message);
+    } finally {
+      setComplaintsConfigLoading(false);
+    }
+  };
+
+  const handleToggleComplaintsRegistration = async () => {
+    if (!isAdmin) return;
+    setComplaintsConfigSaving(true);
+    setComplaintsConfigError(null);
+    try {
+      const response = await updateAdminComplaintsConfig(!complaintsEnabled);
+      setComplaintsEnabled(response.complaints_enabled);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Falha ao atualizar configuracao de denuncias.";
+      setComplaintsConfigError(message);
+    } finally {
+      setComplaintsConfigSaving(false);
     }
   };
 
@@ -1386,6 +1432,34 @@ export function AdminPanel() {
         )}
         {activeTab === "complaints" && (
           <div className="table-card">
+            <div className="table-header" style={{ marginBottom: "0.8rem" }}>
+              <div>
+                <span className="eyebrow">Canal publico</span>
+                <h3>
+                  Registro de denuncias:{" "}
+                  {complaintsEnabled ? "Ativo" : "Desativado"}
+                </h3>
+                <p className="muted">
+                  Quando desativado, o formulario publico some e permanecem
+                  apenas os contatos oficiais.
+                </p>
+              </div>
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => void handleToggleComplaintsRegistration()}
+                disabled={complaintsConfigLoading || complaintsConfigSaving}
+              >
+                {complaintsConfigLoading
+                  ? "Carregando..."
+                  : complaintsConfigSaving
+                    ? "Salvando..."
+                    : complaintsEnabled
+                      ? "Desativar registro"
+                      : "Ativar registro"}
+              </button>
+            </div>
+            {complaintsConfigError && <div className="alert">{complaintsConfigError}</div>}
             <table>
               <thead>
                 <tr>
