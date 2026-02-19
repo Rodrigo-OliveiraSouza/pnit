@@ -881,7 +881,7 @@ img.theme-ignore,
 }
 
 .news-article-panel {
-  --news-article-media-ratio: 21 / 4;
+  --news-article-media-ratio: 16 / 2.2;
   background: var(--color-white);
   border-radius: var(--radius-lg);
   padding: 1.4rem;
