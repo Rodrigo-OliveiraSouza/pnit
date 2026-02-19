@@ -893,6 +893,7 @@ img.theme-ignore,
   overflow: hidden;
   width: 100%;
   min-width: 0;
+  max-width: 58rem;
 }
 
 .news-article-cover {
