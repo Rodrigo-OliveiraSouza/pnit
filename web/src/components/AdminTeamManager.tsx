@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import { createTeamMember, listTeamMembers, type TeamMember } from "../services/api";
+import {
+  createTeamMember,
+  listTeamMembers,
+  updateTeamMember,
+  type TeamMember,
+} from "../services/api";
 
 type TeamDraft = {
   occupation: string;
@@ -18,12 +23,15 @@ const INITIAL_DRAFT: TeamDraft = {
 export default function AdminTeamManager() {
   const [draft, setDraft] = useState<TeamDraft>(INITIAL_DRAFT);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [items, setItems] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const formCardRef = useRef<HTMLDivElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const isEditing = Boolean(editingId);
 
   const loadTeamMembers = async () => {
     setLoading(true);
@@ -50,18 +58,18 @@ export default function AdminTeamManager() {
   }, []);
 
   const positionOptions = useMemo(() => {
-    const total = Math.max(1, items.length + 1);
+    const total = Math.max(1, items.length + (isEditing ? 0 : 1));
     return Array.from({ length: total }, (_, index) => index + 1);
-  }, [items.length]);
+  }, [items.length, isEditing]);
 
   useEffect(() => {
-    const maxPosition = Math.max(1, items.length + 1);
+    const maxPosition = Math.max(1, items.length + (isEditing ? 0 : 1));
     setDraft((current) => {
       const nextPosition = Math.min(Math.max(current.position, 1), maxPosition);
       if (nextPosition === current.position) return current;
       return { ...current, position: nextPosition };
     });
-  }, [items.length]);
+  }, [items.length, isEditing]);
 
   const handleDraftChange =
     (field: "occupation" | "name" | "resume") =>
@@ -76,18 +84,38 @@ export default function AdminTeamManager() {
     setDraft((current) => ({ ...current, position: value }));
   };
 
+  const clearPhotoInput = () => {
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
+  };
+
   const resetDraft = (nextPosition?: number) => {
     setDraft({
       ...INITIAL_DRAFT,
       position: nextPosition ?? Math.max(1, items.length + 1),
     });
     setPhotoFile(null);
-    if (photoInputRef.current) {
-      photoInputRef.current.value = "";
-    }
+    setEditingId(null);
+    clearPhotoInput();
   };
 
-  const handleCreate = async () => {
+  const handleEdit = (item: TeamMember) => {
+    setEditingId(item.id);
+    setFeedback(null);
+    setError(null);
+    setDraft({
+      occupation: item.occupation,
+      name: item.name,
+      resume: item.resume ?? "",
+      position: Math.min(Math.max(item.position, 1), Math.max(1, items.length)),
+    });
+    setPhotoFile(null);
+    clearPhotoInput();
+    formCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleSubmit = async () => {
     if (!draft.occupation.trim()) {
       setFeedback("O campo ocupacao e obrigatorio.");
       return;
@@ -101,22 +129,39 @@ export default function AdminTeamManager() {
     setFeedback(null);
     setError(null);
     try {
-      await createTeamMember({
-        occupation: draft.occupation.trim(),
-        name: draft.name.trim(),
-        resume: draft.resume,
-        position: draft.position,
-        photo_file: photoFile,
-      });
+      if (isEditing && editingId) {
+        await updateTeamMember({
+          id: editingId,
+          occupation: draft.occupation.trim(),
+          name: draft.name.trim(),
+          resume: draft.resume,
+          position: draft.position,
+          photo_file: photoFile,
+        });
+      } else {
+        await createTeamMember({
+          occupation: draft.occupation.trim(),
+          name: draft.name.trim(),
+          resume: draft.resume,
+          position: draft.position,
+          photo_file: photoFile,
+        });
+      }
       const loadedItems = await loadTeamMembers();
       const nextPosition = Math.max(1, loadedItems.length + 1);
       resetDraft(nextPosition);
-      setFeedback("Pessoa adicionada na equipe com sucesso.");
-    } catch (createError) {
+      setFeedback(
+        isEditing
+          ? "Pessoa da equipe atualizada com sucesso."
+          : "Pessoa adicionada na equipe com sucesso."
+      );
+    } catch (saveError) {
       const message =
-        createError instanceof Error
-          ? createError.message
-          : "Falha ao adicionar pessoa na equipe.";
+        saveError instanceof Error
+          ? saveError.message
+          : isEditing
+            ? "Falha ao atualizar pessoa da equipe."
+            : "Falha ao adicionar pessoa na equipe.";
       setError(message);
     } finally {
       setSaving(false);
@@ -125,14 +170,15 @@ export default function AdminTeamManager() {
 
   return (
     <div className="admin-team-layout">
-      <div className="dashboard-card admin-team-card">
+      <div ref={formCardRef} className="dashboard-card admin-team-card">
         <div className="form-header">
           <div>
             <span className="eyebrow">Equipe</span>
-            <h3>Adicionar pessoa na equipe</h3>
+            <h3>{isEditing ? "Editar pessoa da equipe" : "Adicionar pessoa na equipe"}</h3>
             <p className="muted">
-              Defina a posicao da lista. Ao inserir em uma posicao existente, as
-              demais pessoas descem automaticamente.
+              {isEditing
+                ? "Atualize os campos e salve as alteracoes. A imagem so muda se voce selecionar um novo arquivo."
+                : "Defina a posicao da lista. Ao inserir em uma posicao existente, as demais pessoas descem automaticamente."}
             </p>
           </div>
         </div>
@@ -194,11 +240,25 @@ export default function AdminTeamManager() {
           <button
             className="btn btn-primary"
             type="button"
-            onClick={() => void handleCreate()}
+            onClick={() => void handleSubmit()}
             disabled={saving}
           >
-            {saving ? "Salvando..." : "Adicionar pessoa"}
+            {saving
+              ? "Salvando..."
+              : isEditing
+                ? "Salvar alteracoes"
+                : "Adicionar pessoa"}
           </button>
+          {isEditing && (
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => resetDraft(Math.max(1, items.length + 1))}
+              disabled={saving}
+            >
+              Cancelar edicao
+            </button>
+          )}
         </div>
 
         {feedback && <div className="report-ready">{feedback}</div>}
@@ -230,6 +290,15 @@ export default function AdminTeamManager() {
                   <h4>{item.occupation}</h4>
                   <p>{item.name}</p>
                   {item.resume && <p className="muted">{item.resume}</p>}
+                  <div>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      type="button"
+                      onClick={() => handleEdit(item)}
+                    >
+                      Editar pessoa
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}

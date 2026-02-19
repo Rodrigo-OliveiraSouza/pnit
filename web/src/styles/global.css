@@ -1021,13 +1021,6 @@ img.theme-ignore,
   gap: 0.35rem;
 }
 
-.team-card-position {
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
 .team-card-body h2 {
   margin: 0;
   color: var(--color-clay);

@@ -4435,6 +4435,7 @@ app.get("/reports/user-summary", async (c) => {
       news_post_create: "Publicou noticia",
       news_post_update: "Editou noticia",
       team_member_create: "Adicionou membro da equipe",
+      team_member_update: "Editou membro da equipe",
       reports_image_delete: "Removeu imagem de relatorios",
       complaint_update: "Atualizou denuncia",
       complaints_config_update: "Alterou configuracao de denuncias",
@@ -6209,6 +6210,224 @@ app.post("/admin/team", async (c) => {
       );
     }
     return jsonError(c, 500, "Failed to create team member", "INTERNAL");
+  }
+});
+
+app.put("/admin/team/:id", async (c) => {
+  const sql = getSql(c.env);
+  await ensureTeamMembersSchema(sql);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+
+  const id = c.req.param("id");
+  const body = await c.req.parseBody();
+  const occupation = readOptionalText(body.occupation);
+  const name = readOptionalText(body.name);
+  const resume = readOptionalText(body.resume);
+  const positionRaw = readOptionalText(body.position);
+  const photoFile = body.photo_file;
+
+  if (!occupation) {
+    return jsonError(c, 400, "occupation is required");
+  }
+  if (!name) {
+    return jsonError(c, 400, "name is required");
+  }
+  if (!positionRaw) {
+    return jsonError(c, 400, "position is required");
+  }
+  const parsedPosition = Number(positionRaw);
+  if (!Number.isInteger(parsedPosition) || parsedPosition <= 0) {
+    return jsonError(c, 400, "position must be a positive integer");
+  }
+  if (photoFile !== undefined && !(photoFile instanceof File)) {
+    return jsonError(c, 400, "photo_file must be a file");
+  }
+
+  const currentRows = await sql(
+    `
+    SELECT
+      t.id,
+      t.position,
+      t.photo_attachment_id,
+      a.s3_key AS photo_s3_key
+    FROM team_members t
+    LEFT JOIN attachments a ON a.id = t.photo_attachment_id
+    WHERE t.id = $1
+    LIMIT 1
+    `,
+    [id]
+  );
+  if (currentRows.length === 0) {
+    return jsonError(c, 404, "Team member not found", "NOT_FOUND");
+  }
+  const current = currentRows[0];
+  const currentPosition = Number(current.position);
+
+  const totalRows = await sql("SELECT COUNT(*)::int AS total FROM team_members");
+  const total = Number(totalRows[0]?.total ?? 0);
+  const targetPosition = Math.max(1, Math.min(parsedPosition, Math.max(1, total)));
+
+  const bucket = c.env.R2_BUCKET;
+  if (photoFile instanceof File && !bucket) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+  }
+
+  let uploadedPhoto: { id: string; key: string } | null = null;
+  if (photoFile instanceof File && bucket) {
+    const key = `team/${crypto.randomUUID()}-${photoFile.name}`;
+    await bucket.put(key, await photoFile.arrayBuffer(), {
+      httpMetadata: { contentType: photoFile.type || "application/octet-stream" },
+    });
+    const uploadedRows = await sql(
+      `
+      INSERT INTO attachments (s3_key, original_name, mime_type, size, visibility, collection)
+      VALUES ($1, $2, $3, $4, 'public', 'team_member_photo')
+      RETURNING id
+      `,
+      [
+        key,
+        photoFile.name,
+        photoFile.type || "application/octet-stream",
+        photoFile.size,
+      ]
+    );
+    uploadedPhoto = {
+      id: uploadedRows[0].id as string,
+      key,
+    };
+  }
+
+  try {
+    await sql("BEGIN");
+
+    if (targetPosition < currentPosition) {
+      await sql(
+        `
+        UPDATE team_members
+        SET position = position + 1, updated_at = now()
+        WHERE id <> $3
+          AND position >= $1
+          AND position < $2
+        `,
+        [targetPosition, currentPosition, id]
+      );
+    } else if (targetPosition > currentPosition) {
+      await sql(
+        `
+        UPDATE team_members
+        SET position = position - 1, updated_at = now()
+        WHERE id <> $3
+          AND position > $1
+          AND position <= $2
+        `,
+        [currentPosition, targetPosition, id]
+      );
+    }
+
+    const nextPhotoAttachmentId =
+      uploadedPhoto?.id ?? ((current.photo_attachment_id as string | null) ?? null);
+
+    const rows = await sql(
+      `
+      UPDATE team_members
+      SET
+        occupation = $2,
+        name = $3,
+        resume = $4,
+        position = $5,
+        photo_attachment_id = $6,
+        updated_at = now()
+      WHERE id = $1
+      RETURNING id, occupation, name, resume, position, photo_attachment_id, created_at, updated_at
+      `,
+      [id, occupation, name, resume, targetPosition, nextPhotoAttachmentId]
+    );
+
+    await sql("COMMIT");
+
+    const item = rows[0];
+    const stalePhoto =
+      uploadedPhoto?.id && current.photo_attachment_id && current.photo_s3_key
+        ? {
+            id: current.photo_attachment_id as string,
+            key: current.photo_s3_key as string,
+          }
+        : null;
+    if (stalePhoto) {
+      let removedFromDb = false;
+      try {
+        await sql("DELETE FROM attachments WHERE id = $1", [stalePhoto.id]);
+        removedFromDb = true;
+      } catch (cleanupError) {
+        console.warn("team_member_update_cleanup_db_failed", cleanupError);
+      }
+      if (removedFromDb) {
+        try {
+          await bucket?.delete(stalePhoto.key);
+        } catch (cleanupError) {
+          console.warn("team_member_update_cleanup_r2_failed", cleanupError);
+        }
+      }
+    }
+
+    await logAudit(sql, claims.sub, "team_member_update", "team_members", id, {
+      position: item.position,
+      replaced_photo: Boolean(uploadedPhoto?.id),
+    });
+
+    const baseUrl = getPublicBaseUrl(c, c.env);
+    return c.json({
+      item: {
+        id: item.id as string,
+        occupation: item.occupation as string,
+        name: item.name as string,
+        resume: (item.resume as string | null) ?? null,
+        position: Number(item.position),
+        photo_url: item.photo_attachment_id
+          ? `${baseUrl}/attachments/${item.photo_attachment_id as string}`
+          : null,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      },
+    });
+  } catch (error) {
+    try {
+      await sql("ROLLBACK");
+    } catch {
+      // Ignore rollback errors.
+    }
+    if (uploadedPhoto) {
+      let removedFromDb = false;
+      try {
+        await sql("DELETE FROM attachments WHERE id = $1", [uploadedPhoto.id]);
+        removedFromDb = true;
+      } catch (cleanupError) {
+        console.warn("team_member_update_rollback_db_failed", cleanupError);
+      }
+      if (removedFromDb) {
+        try {
+          await bucket?.delete(uploadedPhoto.key);
+        } catch (cleanupError) {
+          console.warn("team_member_update_rollback_r2_failed", cleanupError);
+        }
+      }
+    }
+    const message = error instanceof Error ? error.message : "";
+    if (/relation\s+"team_members"\s+does not exist/i.test(message)) {
+      return jsonError(
+        c,
+        500,
+        "Tabela de equipe ausente no banco. Aplique a migration 2026-02-19_team_members.sql.",
+        "MIGRATION_REQUIRED"
+      );
+    }
+    return jsonError(c, 500, "Failed to update team member", "INTERNAL");
   }
 });
 

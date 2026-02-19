@@ -791,6 +791,52 @@ export async function createTeamMember(payload: {
   return response.json();
 }
 
+export async function updateTeamMember(payload: {
+  id: string;
+  occupation: string;
+  name: string;
+  resume?: string;
+  position: number;
+  photo_file?: File | null;
+}): Promise<{ item: TeamMember }> {
+  const formData = new FormData();
+  formData.append("occupation", payload.occupation);
+  formData.append("name", payload.name);
+  formData.append("position", String(payload.position));
+  if (payload.resume?.trim()) {
+    formData.append("resume", payload.resume.trim());
+  }
+  if (payload.photo_file instanceof File) {
+    formData.append("photo_file", payload.photo_file);
+  }
+
+  const token = getAuthToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/admin/team/${payload.id}`, {
+    method: "PUT",
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await response.json().catch(() => null)) as
+        | ApiErrorBody
+        | null;
+      const message =
+        body?.error?.message ?? body?.message ?? `Erro ${response.status}`;
+      throw new Error(message);
+    }
+    const text = await response.text();
+    throw new Error(text || `Erro ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function updateNewsPost(payload: {
   id: string;
   title: string;

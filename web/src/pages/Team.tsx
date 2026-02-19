@@ -67,7 +67,6 @@ export default function Team() {
                   </div>
                 )}
                 <div className="team-card-body">
-                  <span className="team-card-position">Posicao {member.position}</span>
                   <h2>{member.occupation}</h2>
                   <h3>{member.name}</h3>
                   {member.resume && <p>{member.resume}</p>}
