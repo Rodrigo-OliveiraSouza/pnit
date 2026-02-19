@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
+import AdminNewsManager from "../components/AdminNewsManager";
 import {
   fetchAuditEntries,
   fetchAdminUserDetails,
@@ -58,6 +59,7 @@ export function AdminPanel() {
     | "requests"
     | "users"
     | "complaints"
+    | "news"
     | "productivity"
     | "management"
     | "settings"
@@ -235,7 +237,12 @@ export function AdminPanel() {
   }, [isSupervisor, isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin && (activeTab === "complaints" || activeTab === "settings")) {
+    if (
+      !isAdmin &&
+      (activeTab === "complaints" ||
+        activeTab === "settings" ||
+        activeTab === "news")
+    ) {
       setActiveTab("requests");
       return;
     }
@@ -987,6 +994,15 @@ export function AdminPanel() {
               Denúncias
             </button>
           )}
+          {isAdmin && (
+            <button
+              className={`tab ${activeTab === "news" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("news")}
+            >
+              Notícias
+            </button>
+          )}
           <button
             className={`tab ${activeTab === "productivity" ? "active" : ""}`}
             type="button"
@@ -1463,6 +1479,7 @@ export function AdminPanel() {
             </table>
           </div>
         )}
+        {activeTab === "news" && <AdminNewsManager />}
         {activeTab === "productivity" && (
           <div className="dashboard-card">
             <h3>Relatório de usuários</h3>

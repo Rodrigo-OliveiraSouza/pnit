@@ -433,6 +433,12 @@ function getPublicBaseUrl(c: Context, env: Env) {
   return host ? `https://${host}` : "";
 }
 
+function readOptionalText(value: unknown) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function toNumber(value: string | null): number | null {
   if (!value) return null;
   const parsed = Number(value);
@@ -4341,6 +4347,7 @@ app.get("/reports/user-summary", async (c) => {
       attachment_create: "Adicionou anexo",
       news_image_create: "Adicionou imagem no catalogo",
       news_image_delete: "Removeu imagem do catalogo",
+      news_post_create: "Publicou noticia",
       reports_image_delete: "Removeu imagem de relatorios",
       complaint_update: "Atualizou denuncia",
       admin_user_create: "Criou usuario admin",
@@ -5886,6 +5893,204 @@ app.get("/attachments/:id", async (c) => {
   c.header("Content-Type", mime);
   c.header("Cache-Control", "public, max-age=86400");
   return c.body(object.body);
+});
+
+app.get("/news", async (c) => {
+  const sql = getSql(c.env);
+  const rows = await sql(
+    `
+    SELECT
+      n.id,
+      n.title,
+      n.subtitle,
+      n.body,
+      n.support_subtitle,
+      n.support_text,
+      n.support_image_description,
+      n.support_image_source,
+      n.created_at,
+      n.updated_at,
+      cover.id AS cover_attachment_id,
+      support.id AS support_attachment_id
+    FROM news_posts n
+    JOIN attachments cover ON cover.id = n.cover_attachment_id
+    LEFT JOIN attachments support ON support.id = n.support_attachment_id
+    ORDER BY n.created_at DESC
+    `
+  );
+  const baseUrl = getPublicBaseUrl(c, c.env);
+  const items = rows.map((row) => ({
+    id: row.id as string,
+    title: row.title as string,
+    subtitle: (row.subtitle as string | null) ?? null,
+    body: row.body as string,
+    support_subtitle: (row.support_subtitle as string | null) ?? null,
+    support_text: (row.support_text as string | null) ?? null,
+    support_image_description:
+      (row.support_image_description as string | null) ?? null,
+    support_image_source: (row.support_image_source as string | null) ?? null,
+    cover_url: `${baseUrl}/attachments/${row.cover_attachment_id as string}`,
+    support_url: row.support_attachment_id
+      ? `${baseUrl}/attachments/${row.support_attachment_id as string}`
+      : null,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  }));
+  return c.json({ items });
+});
+
+app.post("/admin/news", async (c) => {
+  const sql = getSql(c.env);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const bucket = c.env.R2_BUCKET;
+  if (!bucket) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+  }
+
+  const body = await c.req.parseBody();
+  const title = readOptionalText(body.title);
+  const subtitle = readOptionalText(body.subtitle);
+  const bodyText = readOptionalText(body.body);
+  const supportSubtitle = readOptionalText(body.support_subtitle);
+  const supportText = readOptionalText(body.support_text);
+  const supportImageDescription = readOptionalText(body.support_image_description);
+  const supportImageSource = readOptionalText(body.support_image_source);
+  const coverFile = body.cover_file;
+  const supportFile = body.support_file;
+
+  if (!title) {
+    return jsonError(c, 400, "title is required");
+  }
+  if (!bodyText) {
+    return jsonError(c, 400, "body is required");
+  }
+  if (!(coverFile instanceof File)) {
+    return jsonError(c, 400, "cover_file is required");
+  }
+  if (!(supportFile instanceof File)) {
+    return jsonError(c, 400, "support_file is required");
+  }
+
+  const uploaded: Array<{ id: string; key: string }> = [];
+  const uploadAttachment = async (
+    file: File,
+    folder: "cover" | "support",
+    collection: "news_article_cover" | "news_article_support"
+  ) => {
+    const key = `news/articles/${folder}/${crypto.randomUUID()}-${file.name}`;
+    await bucket.put(key, await file.arrayBuffer(), {
+      httpMetadata: { contentType: file.type || "application/octet-stream" },
+    });
+    const rows = await sql(
+      `
+      INSERT INTO attachments (s3_key, original_name, mime_type, size, visibility, collection)
+      VALUES ($1, $2, $3, $4, 'public', $5)
+      RETURNING id
+      `,
+      [
+        key,
+        file.name,
+        file.type || "application/octet-stream",
+        file.size,
+        collection,
+      ]
+    );
+    const attachment = { id: rows[0].id as string, key };
+    uploaded.push(attachment);
+    return attachment;
+  };
+
+  try {
+    const coverAttachment = await uploadAttachment(
+      coverFile,
+      "cover",
+      "news_article_cover"
+    );
+
+    const supportAttachment = await uploadAttachment(
+      supportFile,
+      "support",
+      "news_article_support"
+    );
+
+    const rows = await sql(
+      `
+      INSERT INTO news_posts (
+        title,
+        subtitle,
+        body,
+        support_subtitle,
+        support_text,
+        support_image_description,
+        support_image_source,
+        cover_attachment_id,
+        support_attachment_id,
+        created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id, title, subtitle, body, support_subtitle, support_text, support_image_description, support_image_source, created_at, updated_at
+      `,
+      [
+        title,
+        subtitle,
+        bodyText,
+        supportSubtitle,
+        supportText,
+        supportImageDescription,
+        supportImageSource,
+        coverAttachment.id,
+        supportAttachment.id,
+        claims.sub,
+      ]
+    );
+    const item = rows[0];
+    await logAudit(sql, claims.sub, "news_post_create", "news_posts", item.id as string, {
+      cover_attachment_id: coverAttachment.id,
+      support_attachment_id: supportAttachment.id,
+    });
+    const baseUrl = getPublicBaseUrl(c, c.env);
+    return c.json(
+      {
+        item: {
+          id: item.id as string,
+          title: item.title as string,
+          subtitle: (item.subtitle as string | null) ?? null,
+          body: item.body as string,
+          support_subtitle: (item.support_subtitle as string | null) ?? null,
+          support_text: (item.support_text as string | null) ?? null,
+          support_image_description:
+            (item.support_image_description as string | null) ?? null,
+          support_image_source: (item.support_image_source as string | null) ?? null,
+          cover_url: `${baseUrl}/attachments/${coverAttachment.id}`,
+          support_url: `${baseUrl}/attachments/${supportAttachment.id}`,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+        },
+      },
+      201
+    );
+  } catch (error) {
+    console.error("news_post_create_failed", error);
+    for (const attachment of uploaded) {
+      try {
+        await sql("DELETE FROM attachments WHERE id = $1", [attachment.id]);
+      } catch (cleanupError) {
+        console.warn("news_post_cleanup_db_failed", cleanupError);
+      }
+      try {
+        await bucket.delete(attachment.key);
+      } catch (cleanupError) {
+        console.warn("news_post_cleanup_r2_failed", cleanupError);
+      }
+    }
+    return jsonError(c, 500, "Failed to publish news", "INTERNAL");
+  }
 });
 
 app.get("/media/news", async (c) => {

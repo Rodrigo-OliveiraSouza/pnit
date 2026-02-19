@@ -13,7 +13,7 @@ export default function Footer() {
     { label: "Instagram Gov.br", href: "https://www.instagram.com/govbr/" },
     {
       label: "Instagram Minist\u00e9rio da Igualdade Racial",
-      href: "https://www.instagram.com/mdigualdaderacial/",
+      href: "https://www.instagram.com/ministerioigualdaderacial/",
     },
   ];
   return (

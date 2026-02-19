@@ -81,6 +81,14 @@ export default function Header() {
             >
               {copy.header.navMap}
             </NavLink>
+            <NavLink
+              to="/noticias"
+              className={({ isActive }) =>
+                `nav-link${isActive ? " active" : ""}`
+              }
+            >
+              Noticias
+            </NavLink>
             {!isLoggedIn && (
               <NavLink
                 to="/acesso"

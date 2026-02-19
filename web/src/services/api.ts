@@ -222,6 +222,21 @@ export type NewsImage = {
   created_at?: string;
 };
 
+export type NewsPost = {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  body: string;
+  support_subtitle?: string | null;
+  support_text?: string | null;
+  support_image_description?: string | null;
+  support_image_source?: string | null;
+  cover_url: string;
+  support_url?: string | null;
+  created_at: string;
+  updated_at?: string;
+};
+
 export type ReportFilters = {
   city?: string;
   state?: string;
@@ -644,6 +659,62 @@ export async function createCommunity(payload: CommunityInfo) {
 
 export async function fetchNewsImages(): Promise<{ items: NewsImage[] }> {
   return apiFetch<{ items: NewsImage[] }>("/media/news");
+}
+
+export async function listNewsPosts(): Promise<{ items: NewsPost[] }> {
+  return apiFetch<{ items: NewsPost[] }>("/news");
+}
+
+export async function createNewsPost(payload: {
+  title: string;
+  subtitle?: string;
+  body: string;
+  support_subtitle?: string;
+  support_text?: string;
+  support_image_description?: string;
+  support_image_source?: string;
+  cover_file: File;
+  support_file: File;
+}): Promise<{ item: NewsPost }> {
+  const formData = new FormData();
+  formData.append("title", payload.title);
+  formData.append("body", payload.body);
+  formData.append("cover_file", payload.cover_file);
+  if (payload.subtitle?.trim()) {
+    formData.append("subtitle", payload.subtitle.trim());
+  }
+  if (payload.support_subtitle?.trim()) {
+    formData.append("support_subtitle", payload.support_subtitle.trim());
+  }
+  if (payload.support_text?.trim()) {
+    formData.append("support_text", payload.support_text.trim());
+  }
+  if (payload.support_image_description?.trim()) {
+    formData.append(
+      "support_image_description",
+      payload.support_image_description.trim()
+    );
+  }
+  if (payload.support_image_source?.trim()) {
+    formData.append("support_image_source", payload.support_image_source.trim());
+  }
+  formData.append("support_file", payload.support_file);
+
+  const token = getAuthToken();
+  const headers = new Headers();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${API_BASE_URL}/admin/news`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return response.json();
 }
 
 export async function uploadNewsImage(file: File): Promise<{ item: NewsImage }> {
