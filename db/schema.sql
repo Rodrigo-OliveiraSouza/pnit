@@ -292,6 +292,7 @@ CREATE TABLE IF NOT EXISTS news_posts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
   subtitle text NULL,
+  territory text NULL,
   body text NOT NULL,
   support_subtitle text NULL,
   support_text text NULL,
@@ -346,6 +347,7 @@ ALTER TABLE attachments
 CREATE INDEX IF NOT EXISTS idx_attachments_collection ON attachments (collection);
 CREATE INDEX IF NOT EXISTS idx_news_posts_created_at ON news_posts (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_news_posts_created_by ON news_posts (created_by);
+CREATE INDEX IF NOT EXISTS idx_news_posts_territory ON news_posts (territory);
 CREATE INDEX IF NOT EXISTS idx_team_members_position ON team_members (position ASC);
 CREATE INDEX IF NOT EXISTS idx_team_members_created_by ON team_members (created_by);
 

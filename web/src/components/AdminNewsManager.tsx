@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   createNewsPost,
   listNewsPosts,
@@ -9,6 +9,7 @@ import {
 type NewsDraft = {
   title: string;
   subtitle: string;
+  territory: string;
   body: string;
   support_subtitle: string;
   support_text: string;
@@ -18,6 +19,7 @@ type NewsDraft = {
 const INITIAL_DRAFT: NewsDraft = {
   title: "",
   subtitle: "",
+  territory: "",
   body: "",
   support_subtitle: "",
   support_text: "",
@@ -67,6 +69,16 @@ export default function AdminNewsManager() {
     void loadNews();
   }, []);
 
+  const territoryOptions = useMemo(() => {
+    const unique = new Set<string>();
+    for (const item of items) {
+      const value = item.territory?.trim();
+      if (!value) continue;
+      unique.add(value);
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [items]);
+
   const handleDraftChange =
     (field: keyof NewsDraft) =>
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -98,6 +110,7 @@ export default function AdminNewsManager() {
     setDraft({
       title: item.title,
       subtitle: item.subtitle ?? "",
+      territory: item.territory ?? "",
       body: item.body,
       support_subtitle: item.support_subtitle ?? "",
       support_text: item.support_text ?? "",
@@ -138,6 +151,7 @@ export default function AdminNewsManager() {
           id: editingId,
           ...draft,
           title: draft.title.trim(),
+          territory: draft.territory.trim(),
           body: draft.body.trim(),
           cover_file: coverFile,
           support_file: supportFile,
@@ -147,6 +161,7 @@ export default function AdminNewsManager() {
         await createNewsPost({
           ...draft,
           title: draft.title.trim(),
+          territory: draft.territory.trim(),
           body: draft.body.trim(),
           cover_file: coverFile as File,
           support_file: supportFile as File,
@@ -202,6 +217,21 @@ export default function AdminNewsManager() {
               value={draft.subtitle}
               onChange={handleDraftChange("subtitle")}
             />
+          </label>
+          <label>
+            Territorio (opcional)
+            <input
+              type="text"
+              list="news-territory-options"
+              placeholder="Ex: Reconcavo Baiano"
+              value={draft.territory}
+              onChange={handleDraftChange("territory")}
+            />
+            <datalist id="news-territory-options">
+              {territoryOptions.map((territory) => (
+                <option key={territory} value={territory} />
+              ))}
+            </datalist>
           </label>
         </div>
 
@@ -320,6 +350,7 @@ export default function AdminNewsManager() {
                 <div className="admin-news-item-content">
                   <div className="admin-news-item-meta">
                     <h4>{item.title}</h4>
+                    {item.territory && <p className="muted">Territorio: {item.territory}</p>}
                     <p className="muted">
                       Publicado em {formatPublishedAt(item.created_at)}
                     </p>

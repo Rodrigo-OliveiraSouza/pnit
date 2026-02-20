@@ -148,6 +148,7 @@ async function ensureNewsPostsSchema(sql: ReturnType<typeof neon>) {
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       title text NOT NULL,
       subtitle text NULL,
+      territory text NULL,
       body text NOT NULL,
       support_subtitle text NULL,
       support_text text NULL,
@@ -162,10 +163,16 @@ async function ensureNewsPostsSchema(sql: ReturnType<typeof neon>) {
     `
   );
   await sql(
+    "ALTER TABLE news_posts ADD COLUMN IF NOT EXISTS territory text NULL"
+  );
+  await sql(
     "CREATE INDEX IF NOT EXISTS idx_news_posts_created_at ON news_posts (created_at DESC)"
   );
   await sql(
     "CREATE INDEX IF NOT EXISTS idx_news_posts_created_by ON news_posts (created_by)"
+  );
+  await sql(
+    "CREATE INDEX IF NOT EXISTS idx_news_posts_territory ON news_posts (territory)"
   );
 }
 
@@ -5993,6 +6000,7 @@ app.get("/news", async (c) => {
       n.id,
       n.title,
       n.subtitle,
+      n.territory,
       n.body,
       n.support_subtitle,
       n.support_text,
@@ -6013,6 +6021,7 @@ app.get("/news", async (c) => {
     id: row.id as string,
     title: row.title as string,
     subtitle: (row.subtitle as string | null) ?? null,
+    territory: (row.territory as string | null) ?? null,
     body: row.body as string,
     support_subtitle: (row.support_subtitle as string | null) ?? null,
     support_text: (row.support_text as string | null) ?? null,
@@ -6449,6 +6458,7 @@ app.post("/admin/news", async (c) => {
   const body = await c.req.parseBody();
   const title = readOptionalText(body.title);
   const subtitle = readOptionalText(body.subtitle);
+  const territory = readOptionalText(body.territory);
   const bodyText = readOptionalText(body.body);
   const supportSubtitle = readOptionalText(body.support_subtitle);
   const supportText = readOptionalText(body.support_text);
@@ -6517,6 +6527,7 @@ app.post("/admin/news", async (c) => {
       INSERT INTO news_posts (
         title,
         subtitle,
+        territory,
         body,
         support_subtitle,
         support_text,
@@ -6526,12 +6537,13 @@ app.post("/admin/news", async (c) => {
         support_attachment_id,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING id, title, subtitle, body, support_subtitle, support_text, support_image_description, support_image_source, created_at, updated_at
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING id, title, subtitle, territory, body, support_subtitle, support_text, support_image_description, support_image_source, created_at, updated_at
       `,
       [
         title,
         subtitle,
+        territory,
         bodyText,
         supportSubtitle,
         supportText,
@@ -6554,6 +6566,7 @@ app.post("/admin/news", async (c) => {
           id: item.id as string,
           title: item.title as string,
           subtitle: (item.subtitle as string | null) ?? null,
+          territory: (item.territory as string | null) ?? null,
           body: item.body as string,
           support_subtitle: (item.support_subtitle as string | null) ?? null,
           support_text: (item.support_text as string | null) ?? null,
@@ -6610,6 +6623,7 @@ app.put("/admin/news/:id", async (c) => {
   const id = c.req.param("id");
   const title = readOptionalText(body.title);
   const subtitle = readOptionalText(body.subtitle);
+  const territory = readOptionalText(body.territory);
   const bodyText = readOptionalText(body.body);
   const supportSubtitle = readOptionalText(body.support_subtitle);
   const supportText = readOptionalText(body.support_text);
@@ -6707,21 +6721,23 @@ app.put("/admin/news/:id", async (c) => {
       SET
         title = $2,
         subtitle = $3,
-        body = $4,
-        support_subtitle = $5,
-        support_text = $6,
-        support_image_description = $7,
-        support_image_source = $8,
-        cover_attachment_id = $9,
-        support_attachment_id = $10,
+        territory = $4,
+        body = $5,
+        support_subtitle = $6,
+        support_text = $7,
+        support_image_description = $8,
+        support_image_source = $9,
+        cover_attachment_id = $10,
+        support_attachment_id = $11,
         updated_at = now()
       WHERE id = $1
-      RETURNING id, title, subtitle, body, support_subtitle, support_text, support_image_description, support_image_source, created_at, updated_at
+      RETURNING id, title, subtitle, territory, body, support_subtitle, support_text, support_image_description, support_image_source, created_at, updated_at
       `,
       [
         id,
         title,
         subtitle,
+        territory,
         bodyText,
         supportSubtitle,
         supportText,
@@ -6780,6 +6796,7 @@ app.put("/admin/news/:id", async (c) => {
         id: item.id as string,
         title: item.title as string,
         subtitle: (item.subtitle as string | null) ?? null,
+        territory: (item.territory as string | null) ?? null,
         body: item.body as string,
         support_subtitle: (item.support_subtitle as string | null) ?? null,
         support_text: (item.support_text as string | null) ?? null,

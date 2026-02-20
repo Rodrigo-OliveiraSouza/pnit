@@ -226,6 +226,7 @@ export type NewsPost = {
   id: string;
   title: string;
   subtitle?: string | null;
+  territory?: string | null;
   body: string;
   support_subtitle?: string | null;
   support_text?: string | null;
@@ -687,6 +688,7 @@ export async function listTeamMembers(): Promise<{ items: TeamMember[] }> {
 export async function createNewsPost(payload: {
   title: string;
   subtitle?: string;
+  territory?: string;
   body: string;
   support_subtitle?: string;
   support_text?: string;
@@ -701,6 +703,9 @@ export async function createNewsPost(payload: {
   formData.append("cover_file", payload.cover_file);
   if (payload.subtitle?.trim()) {
     formData.append("subtitle", payload.subtitle.trim());
+  }
+  if (payload.territory?.trim()) {
+    formData.append("territory", payload.territory.trim());
   }
   if (payload.support_subtitle?.trim()) {
     formData.append("support_subtitle", payload.support_subtitle.trim());
@@ -841,6 +846,7 @@ export async function updateNewsPost(payload: {
   id: string;
   title: string;
   subtitle?: string;
+  territory?: string;
   body: string;
   support_subtitle?: string;
   support_text?: string;
@@ -854,6 +860,9 @@ export async function updateNewsPost(payload: {
   formData.append("body", payload.body);
   if (payload.subtitle?.trim()) {
     formData.append("subtitle", payload.subtitle.trim());
+  }
+  if (payload.territory?.trim()) {
+    formData.append("territory", payload.territory.trim());
   }
   if (payload.support_subtitle?.trim()) {
     formData.append("support_subtitle", payload.support_subtitle.trim());
