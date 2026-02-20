@@ -500,6 +500,11 @@ img.theme-ignore,
   justify-content: flex-start;
 }
 
+.news-carousel-media .news-card {
+  width: 100%;
+  max-width: min(100%, 3000px);
+}
+
 .news-card {
   width: min(320px, 90vw);
   background: var(--color-white);
@@ -512,7 +517,9 @@ img.theme-ignore,
 
 .news-card-media {
   width: 100%;
-  height: clamp(300px, 50vh, 560px);
+  max-width: min(100%, 3000px);
+  aspect-ratio: 3000 / 1000;
+  height: auto;
   border-radius: var(--radius-lg);
   position: relative;
   animation: newsEnter 480ms ease;
