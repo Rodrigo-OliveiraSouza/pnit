@@ -169,11 +169,19 @@ export default function News() {
             </div>
           )}
         </div>
-        <p className="news-filter-current">
-          {selectedTerritory === ALL_TERRITORIES
-            ? "Exibindo todos os territorios"
-            : `Territorio selecionado: ${selectedTerritory}`}
-        </p>
+        {selectedTerritory !== ALL_TERRITORIES && (
+          <button
+            type="button"
+            className="news-filter-chip"
+            onClick={() => setSelectedTerritory(ALL_TERRITORIES)}
+            aria-label={`Remover filtro de territorio ${selectedTerritory}`}
+          >
+            <span>{selectedTerritory}</span>
+            <span className="news-filter-chip-close" aria-hidden="true">
+              x
+            </span>
+          </button>
+        )}
       </section>
 
       <section className="news-strip">
