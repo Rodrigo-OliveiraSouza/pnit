@@ -913,6 +913,12 @@ export async function updateNewsPost(payload: {
   return response.json();
 }
 
+export async function deleteNewsPost(id: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/admin/news/${id}`, {
+    method: "DELETE",
+  });
+}
+
 export async function uploadNewsImage(file: File): Promise<{ item: NewsImage }> {
   const formData = new FormData();
   formData.append("file", file);

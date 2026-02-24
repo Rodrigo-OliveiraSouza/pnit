@@ -4441,6 +4441,7 @@ app.get("/reports/user-summary", async (c) => {
       news_image_delete: "Removeu imagem do catalogo",
       news_post_create: "Publicou noticia",
       news_post_update: "Editou noticia",
+      news_post_delete: "Apagou noticia",
       team_member_create: "Adicionou membro da equipe",
       team_member_update: "Editou membro da equipe",
       reports_image_delete: "Removeu imagem de relatorios",
@@ -6841,6 +6842,94 @@ app.put("/admin/news/:id", async (c) => {
     }
     return jsonError(c, 500, "Failed to update news", "INTERNAL");
   }
+});
+
+app.delete("/admin/news/:id", async (c) => {
+  const sql = getSql(c.env);
+  await ensureNewsPostsSchema(sql);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (claims.role !== "admin") {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  if (!c.env.R2_BUCKET) {
+    return jsonError(c, 500, "R2_BUCKET is not configured", "CONFIG");
+  }
+
+  const id = c.req.param("id");
+  const currentRows = await sql(
+    `
+    SELECT
+      n.id,
+      n.cover_attachment_id,
+      n.support_attachment_id,
+      cover.s3_key AS cover_s3_key,
+      support.s3_key AS support_s3_key
+    FROM news_posts n
+    JOIN attachments cover ON cover.id = n.cover_attachment_id
+    LEFT JOIN attachments support ON support.id = n.support_attachment_id
+    WHERE n.id = $1
+    LIMIT 1
+    `,
+    [id]
+  );
+  if (currentRows.length === 0) {
+    return jsonError(c, 404, "News post not found", "NOT_FOUND");
+  }
+
+  const current = currentRows[0];
+  const coverAttachmentId = current.cover_attachment_id as string;
+  const supportAttachmentId = (current.support_attachment_id as string | null) ?? null;
+  const coverKey = current.cover_s3_key as string;
+  const supportKey = (current.support_s3_key as string | null) ?? null;
+
+  try {
+    await sql("BEGIN");
+    await sql("DELETE FROM news_posts WHERE id = $1", [id]);
+    await sql("DELETE FROM attachments WHERE id = $1", [coverAttachmentId]);
+    if (supportAttachmentId) {
+      await sql("DELETE FROM attachments WHERE id = $1", [supportAttachmentId]);
+    }
+    await sql("COMMIT");
+  } catch (error) {
+    try {
+      await sql("ROLLBACK");
+    } catch {
+      // Ignore rollback errors.
+    }
+    const message = error instanceof Error ? error.message : "";
+    if (/relation\s+"news_posts"\s+does not exist/i.test(message)) {
+      return jsonError(
+        c,
+        500,
+        "Tabela de noticias ausente no banco. Aplique a migration 2026-02-19_news_posts.sql.",
+        "MIGRATION_REQUIRED"
+      );
+    }
+    return jsonError(c, 500, "Failed to delete news", "INTERNAL");
+  }
+
+  try {
+    await c.env.R2_BUCKET.delete(coverKey);
+  } catch (cleanupError) {
+    console.warn("news_post_delete_cleanup_cover_r2_failed", cleanupError);
+  }
+  if (supportKey) {
+    try {
+      await c.env.R2_BUCKET.delete(supportKey);
+    } catch (cleanupError) {
+      console.warn("news_post_delete_cleanup_support_r2_failed", cleanupError);
+    }
+  }
+
+  await logAudit(sql, claims.sub, "news_post_delete", "news_posts", id, {
+    cover_attachment_id: coverAttachmentId,
+    support_attachment_id: supportAttachmentId,
+  });
+
+  return c.json({ ok: true });
 });
 
 app.get("/media/news", async (c) => {

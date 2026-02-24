@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   createNewsPost,
+  deleteNewsPost,
   listNewsPosts,
   updateNewsPost,
   type NewsPost,
@@ -39,6 +40,7 @@ export default function AdminNewsManager() {
   const [supportFile, setSupportFile] = useState<File | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<NewsPost[]>([]);
@@ -125,6 +127,9 @@ export default function AdminNewsManager() {
   const isEditing = Boolean(editingId);
 
   const handlePublish = async () => {
+    if (deleting) {
+      return;
+    }
     if (!draft.title.trim()) {
       setFeedback("Titulo da noticia e obrigatorio.");
       return;
@@ -180,6 +185,36 @@ export default function AdminNewsManager() {
       setError(message);
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!editingId || publishing || deleting) {
+      return;
+    }
+    const confirmed = window.confirm(
+      "Deseja apagar esta noticia? Esta acao nao pode ser desfeita."
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleting(true);
+    setFeedback(null);
+    setError(null);
+    try {
+      await deleteNewsPost(editingId);
+      resetDraft();
+      await loadNews();
+      setFeedback("Noticia apagada com sucesso.");
+    } catch (deleteError) {
+      const message =
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Falha ao apagar noticia.";
+      setError(message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -306,7 +341,7 @@ export default function AdminNewsManager() {
             className="btn btn-primary"
             type="button"
             onClick={() => void handlePublish()}
-            disabled={publishing}
+            disabled={publishing || deleting}
           >
             {publishing
               ? isEditing
@@ -321,9 +356,19 @@ export default function AdminNewsManager() {
               className="btn btn-outline"
               type="button"
               onClick={resetDraft}
-              disabled={publishing}
+              disabled={publishing || deleting}
             >
               Cancelar edicao
+            </button>
+          )}
+          {isEditing && (
+            <button
+              className="btn btn-outline"
+              type="button"
+              onClick={() => void handleDelete()}
+              disabled={publishing || deleting}
+            >
+              {deleting ? "Apagando..." : "Apagar noticia"}
             </button>
           )}
         </div>
