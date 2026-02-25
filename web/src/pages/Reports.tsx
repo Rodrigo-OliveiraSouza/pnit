@@ -201,8 +201,8 @@ export default function Reports() {
 
   return (
     <div className="page">
-      <section className="public-hero">
-        <div>
+      <section className="public-hero reports-hero">
+        <div className="reports-hero-card">
           <span className="eyebrow">Relatórios</span>
           <h1>Selecione áreas e gere relatórios territoriais</h1>
           <p className="lead">

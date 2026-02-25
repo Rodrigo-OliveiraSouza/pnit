@@ -1295,6 +1295,29 @@ img.theme-ignore,
   flex-wrap: wrap;
 }
 
+.reports-hero {
+  align-items: stretch;
+}
+
+.reports-hero-card {
+  width: 100%;
+  max-width: 980px;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  background: var(--color-white);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.16);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.reports-hero-card h1 {
+  margin: 0 0 0.9rem;
+}
+
+.reports-hero-card .lead {
+  margin: 0;
+  max-width: 72ch;
+}
+
 .hero-content h1 {
   font-family: "Newsreader", serif;
   font-size: clamp(2.5rem, 3vw, 3.4rem);
@@ -2647,8 +2670,9 @@ th {
   margin-top: 1.2rem;
 }
 
-.footer-social-links {
+.footer-grid ul.footer-social-links {
   display: flex;
+  flex-direction: row;
   justify-content: flex-end;
   flex-wrap: nowrap;
   align-items: flex-start;
@@ -2768,7 +2792,7 @@ th {
     gap: 0.6rem;
   }
 
-  .footer-social-links {
+  .footer-grid ul.footer-social-links {
     justify-content: flex-start;
   }
 
