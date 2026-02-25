@@ -1495,7 +1495,7 @@ export default function EmployeeDashboard() {
           )}
 
           <section className="form-section">
-            <div className="form-header">
+            <div className="form-header dashboard-register-hero">
               <div>
                 <span className="eyebrow">Cadastro e georreferenciamento</span>
                 <h2>Registrar pessoa (ponto no mapa)</h2>
@@ -3675,7 +3675,7 @@ export default function EmployeeDashboard() {
       )}
 {activeTab === "people" && (
         <section className="table-section">
-          <div className="table-header">
+          <div className="table-header people-panel-hero">
             <div>
               <span className="eyebrow">Pessoas</span>
               <h2>Cadastros realizados por voce</h2>

@@ -970,7 +970,7 @@ export function AdminPanel() {
 
   return (
     <>
-      <section className="dashboard-hero">
+      <section className="dashboard-hero admin-panel-hero">
         <div>
           <span className="eyebrow">{roleLabel}</span>
           <h1>

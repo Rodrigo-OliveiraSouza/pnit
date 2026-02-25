@@ -85,8 +85,8 @@ export default function Complaints() {
 
   return (
     <div className="page">
-      <section className="public-hero">
-        <div>
+      <section className="public-hero complaints-hero">
+        <div className="complaints-hero-card">
           <span className="eyebrow">Canal de denúncias</span>
           <h1>Envie um relato público com segurança</h1>
           <p className="lead">

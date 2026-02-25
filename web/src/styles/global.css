@@ -1317,6 +1317,28 @@ img.theme-ignore,
   max-width: 72ch;
 }
 
+.complaints-hero {
+  align-items: stretch;
+}
+
+.complaints-hero-card {
+  width: 100%;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  background: var(--color-white);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.16);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.complaints-hero-card h1 {
+  margin: 0 0 0.9rem;
+}
+
+.complaints-hero-card .lead {
+  margin: 0;
+  max-width: 72ch;
+}
+
 .hero-content h1 {
   font-family: "Newsreader", serif;
   font-size: clamp(2.5rem, 3vw, 3.4rem);
@@ -1891,6 +1913,25 @@ textarea {
   flex-wrap: wrap;
 }
 
+.dashboard-hero.admin-panel-hero {
+  width: 100%;
+  align-items: stretch;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  background: var(--color-white);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.16);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.dashboard-hero.admin-panel-hero h1 {
+  margin: 0 0 0.9rem;
+}
+
+.dashboard-hero.admin-panel-hero p {
+  margin: 0;
+  max-width: 72ch;
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1908,6 +1949,25 @@ textarea {
   justify-content: space-between;
   gap: 1.5rem;
   flex-wrap: wrap;
+}
+
+.form-header.dashboard-register-hero {
+  width: 100%;
+  align-items: stretch;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  background: var(--color-white);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.16);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.form-header.dashboard-register-hero h2 {
+  margin: 0 0 0.9rem;
+}
+
+.form-header.dashboard-register-hero .muted {
+  margin: 0;
+  max-width: 72ch;
 }
 
 .form-grid {
@@ -2326,6 +2386,16 @@ textarea {
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
+}
+
+.table-header.people-panel-hero {
+  width: 100%;
+  align-items: stretch;
+  padding: clamp(1.25rem, 2vw, 2rem);
+  background: var(--color-white);
+  border: 1px solid rgba(var(--color-forest-rgb), 0.16);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
 }
 
 .table-card {
