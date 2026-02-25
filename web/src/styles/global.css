@@ -1301,7 +1301,6 @@ img.theme-ignore,
 
 .reports-hero-card {
   width: 100%;
-  max-width: 980px;
   padding: clamp(1.25rem, 2vw, 2rem);
   background: var(--color-white);
   border: 1px solid rgba(var(--color-forest-rgb), 0.16);
@@ -2683,9 +2682,11 @@ th {
 }
 
 .footer-social-links li a {
-  display: grid;
-  justify-items: center;
-  gap: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.08rem;
   text-decoration: none;
   color: var(--color-white);
 }
@@ -2700,6 +2701,7 @@ th {
 .footer-social-tag {
   font-size: 0.78rem;
   font-weight: 700;
+  line-height: 1;
   letter-spacing: 0.04em;
   text-transform: lowercase;
 }
