@@ -834,7 +834,7 @@ img.theme-ignore,
   flex-wrap: wrap;
   gap: 0.8rem;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .news-filter-dropdown {
