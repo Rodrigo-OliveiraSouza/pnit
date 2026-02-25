@@ -804,9 +804,15 @@ img.theme-ignore,
 }
 
 .news-index-page {
-  width: 100%;
+  width: min(100%, 1280px);
   min-width: 0;
   gap: 2.2rem;
+  margin-inline: auto;
+}
+
+.news-index-page > section {
+  width: 100%;
+  margin-inline: auto;
 }
 
 .news-index-header {
@@ -828,6 +834,7 @@ img.theme-ignore,
   flex-wrap: wrap;
   gap: 0.8rem;
   align-items: flex-start;
+  justify-content: center;
 }
 
 .news-filter-dropdown {
@@ -897,12 +904,14 @@ img.theme-ignore,
 .news-strip {
   display: grid;
   gap: 0.8rem;
+  width: 100%;
 }
 
 .news-strip-track {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(240px, min(320px, 82vw));
+  justify-content: center;
   gap: 0.9rem;
   overflow-x: auto;
   padding-bottom: 0.4rem;
@@ -977,6 +986,7 @@ img.theme-ignore,
   width: 100%;
   min-width: 0;
   max-width: 58rem;
+  margin-inline: auto;
 }
 
 .news-article-cover {
