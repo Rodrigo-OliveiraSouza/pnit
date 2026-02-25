@@ -289,19 +289,6 @@ export default function MapFilters({
           <option value="30">Ultimos 30 dias</option>
           <option value="90">Ultimos 90 dias</option>
         </select>
-        <label className="filter-label">Cidade</label>
-        <select
-          className="select"
-          value={selectedCityValue}
-          onChange={(event) => handleCityChange(event.target.value)}
-        >
-          <option value="">Selecione uma cidade</option>
-          {availableCities.map((city) => (
-            <option key={`${city.name}-${city.state}`} value={`${city.name}__${city.state}`}>
-              {city.name} ({city.state})
-            </option>
-          ))}
-        </select>
         <label className="filter-label">Estado</label>
         <select
           className="select"
@@ -312,6 +299,19 @@ export default function MapFilters({
           {BRAZIL_STATES.map((state) => (
             <option key={state.code} value={state.code}>
               {state.code} - {state.name}
+            </option>
+          ))}
+        </select>
+        <label className="filter-label">Cidade</label>
+        <select
+          className="select"
+          value={selectedCityValue}
+          onChange={(event) => handleCityChange(event.target.value)}
+        >
+          <option value="">Selecione uma cidade</option>
+          {availableCities.map((city) => (
+            <option key={`${city.name}-${city.state}`} value={`${city.name}__${city.state}`}>
+              {city.name} ({city.state})
             </option>
           ))}
         </select>

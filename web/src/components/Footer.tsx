@@ -10,9 +10,9 @@ export default function Footer() {
     2: "mailto:agentesterritoriais2@gmail.com",
   };
   const socialLinks = [
-    { label: "Instagram Gov.br", href: "https://www.instagram.com/govbr/" },
+    { tag: "gov", href: "https://www.instagram.com/govbr/" },
     {
-      label: "Instagram Minist\u00e9rio da Igualdade Racial",
+      tag: "mir",
       href: "https://www.instagram.com/ministerioigualdaderacial/",
     },
   ];
@@ -78,12 +78,16 @@ export default function Footer() {
             })}
           </ul>
           <div className="footer-social">
-            <h4>{"M\u00eddias sociais oficiais"}</h4>
-            <ul>
+            <ul className="footer-social-links">
               {socialLinks.map((item) => (
                 <li key={item.href}>
                   <a href={item.href} target="_blank" rel="noreferrer">
-                    {item.label}
+                    <img
+                      src={`${baseUrl}logos/logo_instagram.png`}
+                      alt={`Instagram ${item.tag}`}
+                      className="footer-social-icon theme-ignore"
+                    />
+                    <span className="footer-social-tag">{item.tag}</span>
                   </a>
                 </li>
               ))}

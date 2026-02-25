@@ -38,9 +38,9 @@ export default function Team() {
     <div className="page team-page">
       <section className="module-section team-header">
         <span className="eyebrow">Equipe</span>
-        <h1>Responsaveis, coordenacao e equipe tecnica</h1>
+        <h1>Responsáveis, coordenação e equipe técnica</h1>
         <p className="muted">
-          Conheca as pessoas que organizam e acompanham a plataforma.
+          Conheça as pessoas que organizam e acompanham a plataforma.
         </p>
       </section>
 

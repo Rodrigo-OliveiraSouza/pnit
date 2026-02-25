@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { fetchPublicComplaintsConfig, submitComplaint } from "../services/api";
 
 export default function Complaints() {
@@ -52,7 +52,7 @@ export default function Complaints() {
       return;
     }
     if (!description.trim()) {
-      setStatus({ type: "error", message: "Descreva a denúncia." });
+      setStatus({ type: "error", message: "Descreva a denÃºncia." });
       return;
     }
     setLoading(true);
@@ -67,7 +67,7 @@ export default function Complaints() {
       });
       setStatus({
         type: "success",
-        message: "Denúncia registrada. Obrigado por contribuir.",
+        message: "DenÃºncia registrada. Obrigado por contribuir.",
       });
       setDescription("");
       setLocationText("");
@@ -76,7 +76,7 @@ export default function Complaints() {
       setFile(null);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Falha ao enviar denúncia.";
+        error instanceof Error ? error.message : "Falha ao enviar denÃºncia.";
       setStatus({ type: "error", message });
     } finally {
       setLoading(false);
@@ -87,10 +87,10 @@ export default function Complaints() {
     <div className="page">
       <section className="public-hero">
         <div>
-          <span className="eyebrow">Canal de denúncias</span>
-          <h1>Envie um relato público com segurança</h1>
+          <span className="eyebrow">Canal de denÃºncias</span>
+          <h1>Envie um relato pÃºblico com seguranÃ§a</h1>
           <p className="lead">
-            Este canal é aberto para qualquer pessoa. Dados sensíveis ficam
+            Este canal Ã© aberto para qualquer pessoa. Dados sensÃ­veis ficam
             protegidos.
           </p>
         </div>
@@ -98,7 +98,7 @@ export default function Complaints() {
 
       <section className="module-section complaints-layout">
         <div className="dashboard-card complaints-form-card">
-          <h2>Registrar denúncia</h2>
+          <h2>Registrar denÃºncia</h2>
           {configLoading ? (
             <p className="muted">Verificando disponibilidade do canal...</p>
           ) : complaintsEnabled ? (
@@ -111,16 +111,16 @@ export default function Complaints() {
                 onChange={(event) => setType(event.target.value)}
               >
                 <option value="Infraestrutura">Infraestrutura</option>
-                <option value="Violencia">Violência</option>
-                <option value="Saude">Saúde</option>
-                <option value="Educacao">Educação</option>
+                <option value="Violencia">ViolÃªncia</option>
+                <option value="Saude">SaÃºde</option>
+                <option value="Educacao">EducaÃ§Ã£o</option>
                 <option value="Moradia">Moradia</option>
-                <option value="Seguranca">Segurança</option>
+                <option value="Seguranca">SeguranÃ§a</option>
                 <option value="Outros">Outros</option>
               </select>
             </label>
             <label>
-              Descrição
+              DescriÃ§Ã£o
               <textarea
                 rows={4}
                 placeholder="Descreva o ocorrido com detalhes."
@@ -130,7 +130,7 @@ export default function Complaints() {
               />
             </label>
             <label>
-              Localização (link ou coordenada)
+              LocalizaÃ§Ã£o (link ou coordenada)
               <input
                 type="text"
                 placeholder="Cole o link do WhatsApp ou lat,lng"
@@ -172,7 +172,7 @@ export default function Complaints() {
               </div>
             )}
             <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? "Enviando..." : "Enviar denúncia"}
+              {loading ? "Enviando..." : "Enviar denÃºncia"}
             </button>
             </form>
           ) : (
@@ -184,17 +184,17 @@ export default function Complaints() {
         </div>
 
         <div className="dashboard-card complaints-support-card">
-          <h2>Canais oficiais para denúncia e orientação</h2>
+          <h2>Canais oficiais para denÃºncia e orientaÃ§Ã£o</h2>
           <p className="muted complaints-support-intro">
-            Se você precisar de ajuda imediata, use os telefones destacados abaixo.
-            Para orientação, acompanhe também os canais oficiais.
+            Se vocÃª precisar de ajuda imediata, use os telefones destacados abaixo.
+            Para orientaÃ§Ã£o, acompanhe tambÃ©m os canais oficiais.
           </p>
 
           <article className="complaints-support-group">
-            <h3>Racismo e LGBTfobia - Denúncia / orientação (Disque 100)</h3>
+            <h3>Racismo e LGBTfobia - DenÃºncia / orientaÃ§Ã£o (Disque 100)</h3>
             <p>
-              <strong>Responsável:</strong> Ouvidoria Nacional dos Direitos Humanos /
-              Ministério dos Direitos Humanos e da Cidadania.
+              <strong>ResponsÃ¡vel:</strong> Ouvidoria Nacional dos Direitos Humanos /
+              MinistÃ©rio dos Direitos Humanos e da Cidadania.
             </p>
             <p className="complaints-hotline">
               <strong>Telefone (24h):</strong>
@@ -218,7 +218,7 @@ export default function Complaints() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Site (serviço oficial): denunciar violação de direitos humanos
+                  Site (serviÃ§o oficial): denunciar violaÃ§Ã£o de direitos humanos
                 </a>
               </li>
               <li>
@@ -228,7 +228,7 @@ export default function Complaints() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Site/portal ONDH (informações e acesso)
+                  Site/portal ONDH (informaÃ§Ãµes e acesso)
                 </a>
               </li>
               <li>
@@ -238,7 +238,7 @@ export default function Complaints() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Atendimento em Libras (vídeo)
+                  Atendimento em Libras (vÃ­deo)
                 </a>
               </li>
               <li>
@@ -261,34 +261,18 @@ export default function Complaints() {
               </li>
             </ul>
             <p>
-              App: "Sabe - Conhecer, Aprender e Proteger" (para acesso, apoio e
-              denúncias).
+              <a
+                className="complaints-support-link"
+                href="https://play.google.com/store/apps/details?id=br.mp.mpal.aprender_a_proteger"
+                target="_blank"
+                rel="noreferrer"
+              >
+                App Aprender a Proteger (Play Store)
+              </a>
             </p>
-            <ul className="complaints-support-list">
-              <li>
-                <a
-                  className="complaints-support-link"
-                  href="https://play.google.com/store/search?q=Sabe%20Conhecer%20Aprender%20e%20Proteger&c=apps"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Busca Play Store
-                </a>
-              </li>
-              <li>
-                <a
-                  className="complaints-support-link"
-                  href="https://apps.apple.com/br/search?term=Sabe%20Conhecer%20Aprender%20e%20Proteger"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Busca App Store
-                </a>
-              </li>
-            </ul>
             <p>
-              <strong>Redes sociais</strong> (não é o canal mais rápido para denúncia,
-              mas serve para informações):
+              <strong>Redes sociais</strong> (nÃ£o Ã© o canal mais rÃ¡pido para denÃºncia,
+              mas serve para informaÃ§Ãµes):
             </p>
             <ul className="complaints-support-list">
               <li>
@@ -316,11 +300,11 @@ export default function Complaints() {
 
           <article className="complaints-support-group">
             <h3>
-              Racismo - Contato institucional e políticas públicas (Ministério da
+              Racismo - Contato institucional e polÃ­ticas pÃºblicas (MinistÃ©rio da
               Igualdade Racial)
             </h3>
             <p>
-              <strong>Responsável:</strong> Ministério da Igualdade Racial.
+              <strong>ResponsÃ¡vel:</strong> MinistÃ©rio da Igualdade Racial.
             </p>
             <ul className="complaints-support-list">
               <li>
@@ -367,9 +351,9 @@ export default function Complaints() {
           </article>
 
           <article className="complaints-support-group">
-            <h3>Violência contra a mulher (Ligue 180)</h3>
+            <h3>ViolÃªncia contra a mulher (Ligue 180)</h3>
             <p>
-              <strong>Responsável:</strong> Ministério das Mulheres.
+              <strong>ResponsÃ¡vel:</strong> MinistÃ©rio das Mulheres.
             </p>
             <p className="complaints-hotline">
               <strong>Telefone (24h):</strong>
@@ -401,7 +385,7 @@ export default function Complaints() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Serviço no gov.br (oficial)
+                  ServiÃ§o no gov.br (oficial)
                 </a>
               </li>
               <li>
@@ -411,7 +395,7 @@ export default function Complaints() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Página oficial do Ligue 180
+                  PÃ¡gina oficial do Ligue 180
                 </a>
               </li>
               <li>
@@ -431,16 +415,16 @@ export default function Complaints() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Facebook (Ministério das Mulheres)
+                  Facebook (MinistÃ©rio das Mulheres)
                 </a>
               </li>
             </ul>
           </article>
 
           <article className="complaints-support-group complaints-emergency-group">
-            <h3>Se for situação de perigo imediato</h3>
+            <h3>Se for situaÃ§Ã£o de perigo imediato</h3>
             <p className="complaints-hotline">
-              <strong>Polícia Militar (emergência):</strong>
+              <strong>PolÃ­cia Militar (emergÃªncia):</strong>
               <span className="complaints-hotline-number">190</span>
             </p>
           </article>
@@ -449,3 +433,4 @@ export default function Complaints() {
     </div>
   );
 }
+

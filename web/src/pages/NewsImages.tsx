@@ -110,7 +110,6 @@ export default function NewsImages() {
         <NewsCarousel
           showDots={false}
           imageOnly
-          splitView
           collection={collection}
           items={carouselItems.length > 0 ? carouselItems : undefined}
         />
