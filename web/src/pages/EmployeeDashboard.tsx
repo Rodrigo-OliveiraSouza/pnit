@@ -456,8 +456,7 @@ export default function EmployeeDashboard() {
       tab === "register" ||
       tab === "people" ||
       tab === "admin" ||
-      tab === "management" ||
-      tab === "pending"
+      tab === "management"
     ) {
       setActiveTab(tab);
     }
@@ -568,7 +567,6 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     void loadResidents();
     void loadAccessCodes();
-    void loadPendingSubmissions();
     if (isSupervisor && !isAdmin) {
       void loadLinkCodes();
     }
@@ -1333,18 +1331,6 @@ export default function EmployeeDashboard() {
       >
         Minhas pessoas
       </button>
-      {!isAdmin && (
-        <button
-          className={`tab ${activeTab === "pending" ? "active" : ""}`}
-          type="button"
-          onClick={() => setActiveTab("pending")}
-        >
-          Cadastros pendentes
-          {pendingSubmissions.length > 0
-            ? ` (${pendingSubmissions.length})`
-            : ""}
-        </button>
-      )}
       {isSupervisor && !isAdmin && (
         <button
           className={`tab ${activeTab === "management" ? "active" : ""}`}
