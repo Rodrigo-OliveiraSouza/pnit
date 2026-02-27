@@ -374,7 +374,7 @@ export default function EmployeeDashboard() {
   const isSupervisor = role === "admin" || role === "manager" || role === "teacher";
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<
-    "register" | "people" | "admin" | "pending"
+    "register" | "people" | "admin" | "management" | "pending"
   >("register");
   const [formState, setFormState] = useState(initialFormState);
   const [communityCatalog, setCommunityCatalog] = useState<CommunityInfo[]>([]);
@@ -452,7 +452,13 @@ export default function EmployeeDashboard() {
   useEffect(() => {
     const tab = searchParams.get("tab");
     if (!tab) return;
-    if (tab === "register" || tab === "people" || tab === "admin" || tab === "pending") {
+    if (
+      tab === "register" ||
+      tab === "people" ||
+      tab === "admin" ||
+      tab === "management" ||
+      tab === "pending"
+    ) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -1302,10 +1308,14 @@ export default function EmployeeDashboard() {
   };
 
   useEffect(() => {
-    if (!isSupervisor && activeTab === "admin") {
+    if (!isSupervisor && (activeTab === "admin" || activeTab === "management")) {
+      setActiveTab("register");
+      return;
+    }
+    if (isAdmin && activeTab === "management") {
       setActiveTab("register");
     }
-  }, [activeTab, isSupervisor]);
+  }, [activeTab, isAdmin, isSupervisor]);
 
   const panelTabs = (
     <div className="tabs" style={{ marginBottom: "1.5rem" }}>
@@ -1335,6 +1345,15 @@ export default function EmployeeDashboard() {
             : ""}
         </button>
       )}
+      {isSupervisor && !isAdmin && (
+        <button
+          className={`tab ${activeTab === "management" ? "active" : ""}`}
+          type="button"
+          onClick={() => setActiveTab("management")}
+        >
+          Gestao de usuarios
+        </button>
+      )}
       {isAdmin && (
         <button
           className={`tab ${activeTab === "admin" ? "active" : ""}`}
@@ -1348,6 +1367,15 @@ export default function EmployeeDashboard() {
   );
 
   if (isAdmin && activeTab === "admin") {
+    return (
+      <div className="page">
+        {panelTabs}
+        <AdminPanel />
+      </div>
+    );
+  }
+
+  if (isSupervisor && !isAdmin && activeTab === "management") {
     return (
       <div className="page">
         {panelTabs}

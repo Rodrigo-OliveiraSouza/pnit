@@ -15,7 +15,13 @@ export default function Header() {
   const [authToken, setAuthTokenState] = useState(getAuthToken());
   const role = getAuthRole();
   const isAdmin = role === "admin";
-  const panelLink = "/painel?tab=register";
+  const isSupervisor =
+    role === "admin" || role === "manager" || role === "teacher";
+  const panelLink = isAdmin
+    ? "/painel?tab=admin"
+    : isSupervisor
+      ? "/painel?tab=management"
+      : "/painel?tab=register";
   const { copy } = useSiteCopy();
   const isLoggedIn = Boolean(authToken);
   const [isHidden, setIsHidden] = useState(false);
