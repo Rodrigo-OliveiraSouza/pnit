@@ -21,16 +21,11 @@ export default function Footer() {
       <div className="footer-grid">
         <div>
           <div className="footer-logos">
-  
-            <a
-              href="https://www.avadiversifica.com.br/"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href="https://www.gov.br/pt-br" target="_blank" rel="noreferrer">
               <img
-                src={`${baseUrl}logos/diversifica.png`}
-                alt="Diversifica Inclus\u00e3o e Diversidade"
-                className="logo logo-diversifica theme-ignore"
+                src={`${baseUrl}logos/governo-brasil.png`}
+                alt="Governo do Brasil"
+                className="logo logo-governo theme-ignore"
               />
             </a>
             <a
@@ -44,11 +39,15 @@ export default function Footer() {
                 className="logo logo-mir theme-ignore"
               />
             </a>
-            <a href="https://www.gov.br/pt-br" target="_blank" rel="noreferrer">
+            <a
+              href="https://www.avadiversifica.com.br/"
+              target="_blank"
+              rel="noreferrer"
+            >
               <img
-                src={`${baseUrl}logos/governo-brasil.png`}
-                alt="Governo do Brasil"
-                className="logo logo-governo theme-ignore"
+                src={`${baseUrl}logos/diversifica.png`}
+                alt="Diversifica Inclus\u00e3o e Diversidade"
+                className="logo logo-diversifica theme-ignore"
               />
             </a>
           </div>
