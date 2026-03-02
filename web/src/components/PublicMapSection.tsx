@@ -830,7 +830,6 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
             </div>
 
             <div className="filter-block">
-              <span className="eyebrow">Filtros</span>
               <label className="filter-label">Estado</label>
               <select
                 className="select"
