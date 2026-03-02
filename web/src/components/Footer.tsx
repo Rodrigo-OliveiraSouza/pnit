@@ -32,6 +32,20 @@ export default function Footer() {
     },
   ];
   const supportLines = footer.contactItems.filter(Boolean);
+  const supportLinks = supportLines.map((item, index) => {
+    if (index === 1) {
+      return {
+        label: item,
+        href: "https://falabr.cgu.gov.br/web/home",
+        external: true,
+      };
+    }
+    return {
+      label: item,
+      href: `mailto:${helpEmail}?subject=${encodeURIComponent(item)}`,
+      external: false,
+    };
+  });
   const versionText = footer.version.trim();
   const licenseText =
     "Texto destinado a exibição das informações relacionadas à licença de uso.";
@@ -55,10 +69,16 @@ export default function Footer() {
         <a className="footer-support-email" href={`mailto:${helpEmail}`}>
           {helpEmail}
         </a>
-        {supportLines.length > 0 && (
+        {supportLinks.length > 0 && (
           <div className="footer-support-lines">
-            {supportLines.map((item) => (
-              <span key={item}>{item}</span>
+            {supportLinks.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+              >
+                {item.label}
+              </a>
             ))}
           </div>
         )}
