@@ -3070,11 +3070,11 @@ export default function EmployeeDashboard() {
               <div className="card">
                 <div className="card-header">
                   <div>
-                    <span className="eyebrow">Codigos</span>
-                    <h2>Codigo de vinculacao</h2>
+                    <span className="eyebrow">Códigos</span>
+                    <h2>Código de vinculação</h2>
                     <p>
-                      Gere um codigo para direcionar a aprovacao de novos
-                      cadastros de usuarios ao seu perfil.
+                      Gere um código para direcionar a aprovação de novos
+                      cadastros de usuários ao seu perfil.
                     </p>
                   </div>
                   <button
@@ -3083,16 +3083,16 @@ export default function EmployeeDashboard() {
                     onClick={() => void handleCreateLinkCode()}
                     disabled={linkCodeCreating}
                   >
-                    {linkCodeCreating ? "Gerando..." : "Gerar codigo"}
+                    {linkCodeCreating ? "Gerando..." : "Gerar código"}
                   </button>
                 </div>
                 {linkCodesError && <div className="alert">{linkCodesError}</div>}
                 <div className="card-body">
                   {linkCodesLoading ? (
-                    <div className="empty-state">Carregando codigos...</div>
+                    <div className="empty-state">Carregando códigos...</div>
                   ) : linkCodes.length === 0 ? (
                     <div className="empty-state">
-                      Nenhum codigo de vinculacao criado ainda.
+                      Nenhum código de vinculação criado ainda.
                     </div>
                   ) : (
                     <div className="code-list">
@@ -3151,7 +3151,7 @@ export default function EmployeeDashboard() {
               <div className="card-header">
                 <div>
                   <span className="eyebrow">Cadastros pendentes</span>
-                  <h2>Registros enviados por codigo de acesso</h2>
+                  <h2>Registros enviados por código de acesso</h2>
                   <p>
                     Verifique os dados enviados e aprove para liberar no mapa.
                   </p>
@@ -3692,7 +3692,7 @@ export default function EmployeeDashboard() {
           <div className="table-header people-panel-hero">
             <div>
               <span className="eyebrow">Pessoas</span>
-              <h2>Cadastros realizados por voce</h2>
+              <h2>Cadastros realizados por você</h2>
             </div>
             <Link className="btn btn-primary" to="/relatorios">
               Gerar relatório público

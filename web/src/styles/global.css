@@ -1898,6 +1898,17 @@ textarea {
   margin-top: 0;
 }
 
+.form .checkbox-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-weight: 500;
+}
+
+.form .checkbox-inline input[type="checkbox"] {
+  margin-top: 0.2rem;
+}
+
 .auth-footer {
   display: flex;
   justify-content: space-between;
