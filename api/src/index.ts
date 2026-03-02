@@ -4964,9 +4964,31 @@ app.put("/admin/users/:id", async (c) => {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown>;
+  const id = c.req.param("id");
+  const rows = await sql(
+    `
+    SELECT u.id, u.role, u.status, u.approved_by, u.link_code_id, lc.created_by AS link_code_created_by
+    FROM app_users u
+    LEFT JOIN user_link_codes lc ON lc.id = u.link_code_id
+    WHERE u.id = $1
+    `,
+    [id]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "User not found", "NOT_FOUND");
+  }
+  const target = rows[0] as {
+    id: string;
+    role: string;
+    status: string;
+    approved_by?: string | null;
+    link_code_id?: string | null;
+    link_code_created_by?: string | null;
+  };
   const allowed = isManagerTeacher && !isAdminUser
     ? ["status"]
     : [
+        "email",
         "role",
         "status",
         "full_name",
@@ -4977,13 +4999,33 @@ app.put("/admin/users/:id", async (c) => {
         "territory",
         "access_reason",
       ];
-  let updates = Object.entries(body ?? {}).filter(([key]) =>
+  const normalizedBody = { ...body };
+  if (typeof normalizedBody.email === "string") {
+    normalizedBody.email = normalizedBody.email.trim().toLowerCase();
+  }
+  if (typeof normalizedBody.full_name === "string") {
+    normalizedBody.full_name = normalizedBody.full_name.trim();
+  }
+  const nextPassword =
+    isAdminUser && typeof body.password === "string"
+      ? body.password.trim()
+      : undefined;
+  if (normalizedBody.email === "") {
+    return jsonError(c, 400, "email is required");
+  }
+  if (normalizedBody.full_name === "") {
+    return jsonError(c, 400, "full_name is required");
+  }
+  if (nextPassword !== undefined && nextPassword.length === 0) {
+    return jsonError(c, 400, "password is invalid");
+  }
+  const updates = Object.entries(normalizedBody ?? {}).filter(([key]) =>
     allowed.includes(key)
   );
-  if (updates.length === 0) {
+  if (updates.length === 0 && nextPassword === undefined) {
     return jsonError(c, 400, "No valid fields to update");
   }
-  const nextRole = body.role;
+  const nextRole = normalizedBody.role;
   if (
     nextRole !== undefined &&
     nextRole !== "admin" &&
@@ -4992,9 +5034,9 @@ app.put("/admin/users/:id", async (c) => {
     nextRole !== "teacher" &&
     nextRole !== "content"
   ) {
-    return jsonError(c, 400, "role is invalid");
+      return jsonError(c, 400, "role is invalid");
   }
-  const nextStatus = body.status;
+  const nextStatus = normalizedBody.status;
   if (
     nextStatus !== undefined &&
     nextStatus !== "active" &&
@@ -5003,32 +5045,22 @@ app.put("/admin/users/:id", async (c) => {
   ) {
     return jsonError(c, 400, "status is invalid");
   }
-  const id = c.req.param("id");
   if (isManagerTeacher && !isAdminUser) {
-    const rows = await sql(
-      `
-      SELECT u.status, u.approved_by, u.link_code_id, lc.created_by AS link_code_created_by
-      FROM app_users u
-      LEFT JOIN user_link_codes lc ON lc.id = u.link_code_id
-      WHERE u.id = $1
-      `,
-      [id]
-    );
-    if (rows.length === 0) {
-      return jsonError(c, 404, "User not found", "NOT_FOUND");
-    }
-    const target = rows[0] as {
-      status: string;
-      approved_by?: string | null;
-      link_code_id?: string | null;
-      link_code_created_by?: string | null;
-    };
     if (target.status === "pending") {
       if (target.link_code_id && target.link_code_created_by !== claims.sub) {
         return jsonError(c, 403, "Forbidden", "FORBIDDEN");
       }
     } else if (target.approved_by !== claims.sub) {
       return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+    }
+  }
+  if (typeof normalizedBody.email === "string") {
+    const existing = await sql(
+      "SELECT id FROM app_users WHERE email = $1 AND id <> $2",
+      [normalizedBody.email, id]
+    );
+    if (existing.length > 0) {
+      return jsonError(c, 409, "Email already registered", "CONFLICT");
     }
   }
   const statusUpdate = updates.find(([key]) => key === "status");
@@ -5038,6 +5070,17 @@ app.put("/admin/users/:id", async (c) => {
     extraValues.push(claims.sub);
     extraSets.push(`approved_by = $${updates.length + extraValues.length + 1}`);
     extraSets.push("approved_at = now()");
+  }
+  if (nextPassword !== undefined) {
+    const password = await hashPassword(nextPassword);
+    extraValues.push(password.hash);
+    extraSets.push(
+      `password_hash = $${updates.length + extraValues.length + 1}`
+    );
+    extraValues.push(password.salt);
+    extraSets.push(
+      `password_salt = $${updates.length + extraValues.length + 1}`
+    );
   }
   const sets = updates
     .map(([key], index) => `${key} = $${index + 2}`)
@@ -5052,7 +5095,69 @@ app.put("/admin/users/:id", async (c) => {
     [id, ...values]
   );
   await logAudit(sql, claims.sub, "admin_user_update", "app_users", id, {
-    fields: updates.map(([key]) => key),
+    fields: nextPassword
+      ? updates.map(([key]) => key).concat("password")
+      : updates.map(([key]) => key),
+  });
+  return c.json({ ok: true });
+});
+
+app.delete("/admin/users/:id", async (c) => {
+  const sql = getSql(c.env);
+  await ensureAppUserRoleSchema(sql);
+  const claims = await requireAuth(c, c.env);
+  if (!claims) {
+    return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
+  }
+  if (!isAdmin(claims)) {
+    return jsonError(c, 403, "Forbidden", "FORBIDDEN");
+  }
+  const id = c.req.param("id");
+  const rows = await sql(
+    "SELECT id, role, email, full_name FROM app_users WHERE id = $1",
+    [id]
+  );
+  if (rows.length === 0) {
+    return jsonError(c, 404, "User not found", "NOT_FOUND");
+  }
+  const target = rows[0] as {
+    id: string;
+    role: string;
+    email?: string | null;
+    full_name?: string | null;
+  };
+  if (target.role !== "content") {
+    return jsonError(
+      c,
+      403,
+      "Apenas editores do site podem ser excluídos por esta tela",
+      "FORBIDDEN"
+    );
+  }
+  try {
+    await sql("DELETE FROM app_users WHERE id = $1", [id]);
+  } catch (error) {
+    const code =
+      typeof error === "object" &&
+      error &&
+      "code" in error &&
+      typeof error.code === "string"
+        ? error.code
+        : null;
+    if (code === "23503") {
+      return jsonError(
+        c,
+        409,
+        "Este editor já possui histórico ou conteúdo vinculado. Desative a conta em vez de excluir.",
+        "CONFLICT"
+      );
+    }
+    throw error;
+  }
+  await logAudit(sql, claims.sub, "admin_user_delete", "app_users", id, {
+    email: target.email ?? null,
+    full_name: target.full_name ?? null,
+    role: target.role,
   });
   return c.json({ ok: true });
 });

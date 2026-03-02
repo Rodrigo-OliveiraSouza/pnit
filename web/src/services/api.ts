@@ -1588,11 +1588,17 @@ export async function listAdminUsers(params?: {
 
 export async function updateAdminUser(
   id: string,
-  payload: Partial<AdminUser>
+  payload: Partial<AdminUser> & { password?: string }
 ): Promise<{ ok: boolean }> {
   return apiFetch<{ ok: boolean }>(`/admin/users/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAdminUser(id: string): Promise<{ ok: boolean }> {
+  return apiFetch<{ ok: boolean }>(`/admin/users/${id}`, {
+    method: "DELETE",
   });
 }
 

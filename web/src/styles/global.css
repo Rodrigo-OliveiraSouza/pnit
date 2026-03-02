@@ -1242,6 +1242,27 @@ img.theme-ignore,
   gap: 1rem;
 }
 
+.site-user-password-field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.site-user-password-field input {
+  flex: 1 1 auto;
+}
+
+.site-user-password-toggle {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.site-user-delete-button {
+  --btn-bg: rgba(var(--color-clay-rgb), 0.08);
+  --btn-text: var(--color-clay);
+  --btn-border: rgba(var(--color-clay-rgb), 0.36);
+}
+
 .admin-news-title-input {
   font-size: 1.3rem;
   font-weight: 700;

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+﻿import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { formatStatus } from "../utils/format";
@@ -25,6 +25,7 @@ import {
   refreshPublicMapCache,
   resetTheme,
   createAdminUser,
+  deleteAdminUser,
   updateAdminUser,
   updateAdminComplaintsConfig,
   updateComplaintStatus,
@@ -54,6 +55,12 @@ import {
 } from "../utils/theme";
 import type { SiteCopy } from "../data/siteCopy";
 import { useSiteCopy } from "../providers/SiteCopyProvider";
+
+const EMPTY_SITE_USER_DRAFT = {
+  full_name: "",
+  email: "",
+  password: "",
+};
 
 export function AdminPanel() {
   const role = getAuthRole();
@@ -162,11 +169,12 @@ export function AdminPanel() {
   const [textDraft, setTextDraft] = useState<SiteCopy>(copy);
   const [textSaving, setTextSaving] = useState(false);
   const [textFeedback, setTextFeedback] = useState<string | null>(null);
-  const [siteUserDraft, setSiteUserDraft] = useState({
-    full_name: "",
-    email: "",
-    password: "",
-  });
+  const [siteUserDraft, setSiteUserDraft] = useState(EMPTY_SITE_USER_DRAFT);
+  const [siteUserEditingId, setSiteUserEditingId] = useState<string | null>(null);
+  const [siteUserDeletingId, setSiteUserDeletingId] = useState<string | null>(
+    null
+  );
+  const [siteUserPasswordVisible, setSiteUserPasswordVisible] = useState(false);
   const [siteUserSaving, setSiteUserSaving] = useState(false);
   const [siteUserFeedback, setSiteUserFeedback] = useState<string | null>(null);
 
@@ -316,35 +324,100 @@ export function AdminPanel() {
     await loadUsers();
   };
 
-  const handleCreateSiteUser = async () => {
+  const resetSiteUserForm = () => {
+    setSiteUserDraft(EMPTY_SITE_USER_DRAFT);
+    setSiteUserEditingId(null);
+    setSiteUserPasswordVisible(false);
+  };
+
+  const handleEditSiteUser = (user: AdminUser) => {
+    setSiteUserEditingId(user.id);
+    setSiteUserDraft({
+      full_name: user.full_name ?? "",
+      email: user.email,
+      password: "",
+    });
+    setSiteUserPasswordVisible(false);
+    setSiteUserFeedback(
+      "Edite os dados do editor. A senha atual nao e exibida por seguranca."
+    );
+  };
+
+  const handleSaveSiteUser = async () => {
     if (!isAdmin) return;
-    if (
-      !siteUserDraft.full_name.trim() ||
-      !siteUserDraft.email.trim() ||
-      !siteUserDraft.password.trim()
-    ) {
-      setSiteUserFeedback("Preencha nome, email e senha para criar o editor.");
+    const fullName = siteUserDraft.full_name.trim();
+    const email = siteUserDraft.email.trim().toLowerCase();
+    const hasPassword = siteUserDraft.password.trim().length > 0;
+    if (!fullName || !email || (!siteUserEditingId && !hasPassword)) {
+      setSiteUserFeedback(
+        siteUserEditingId
+          ? "Preencha nome e email. Informe uma nova senha apenas se quiser altera-la."
+          : "Preencha nome, email e senha para criar o editor."
+      );
       return;
     }
     setSiteUserSaving(true);
     setSiteUserFeedback(null);
     try {
-      await createAdminUser({
-        full_name: siteUserDraft.full_name.trim(),
-        email: siteUserDraft.email.trim().toLowerCase(),
-        password: siteUserDraft.password,
-        role: "content",
-        status: "active",
-      });
-      setSiteUserDraft({ full_name: "", email: "", password: "" });
-      setSiteUserFeedback("Editor do site criado com sucesso.");
+      if (siteUserEditingId) {
+        await updateAdminUser(siteUserEditingId, {
+          full_name: fullName,
+          email,
+          ...(hasPassword ? { password: siteUserDraft.password } : {}),
+        });
+        resetSiteUserForm();
+        setSiteUserFeedback(
+          hasPassword
+            ? "Editor atualizado e senha redefinida com sucesso."
+            : "Editor atualizado com sucesso."
+        );
+      } else {
+        await createAdminUser({
+          full_name: fullName,
+          email,
+          password: siteUserDraft.password,
+          role: "content",
+          status: "active",
+        });
+        resetSiteUserForm();
+        setSiteUserFeedback("Editor do site criado com sucesso.");
+      }
       await loadUsers();
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Falha ao criar editor do site.";
+        err instanceof Error
+          ? err.message
+          : siteUserEditingId
+            ? "Falha ao atualizar editor do site."
+            : "Falha ao criar editor do site.";
       setSiteUserFeedback(message);
     } finally {
       setSiteUserSaving(false);
+    }
+  };
+
+  const handleDeleteSiteUser = async (user: AdminUser) => {
+    if (!isAdmin) return;
+    const label = (user.full_name ?? "").trim() || user.email;
+    const confirmed = window.confirm(
+      `Excluir o editor ${label}? Essa acao so funciona para contas sem historico vinculado.`
+    );
+    if (!confirmed) return;
+    setSiteUserDeletingId(user.id);
+    setSiteUserFeedback(null);
+    try {
+      await deleteAdminUser(user.id);
+      if (siteUserEditingId === user.id) {
+        resetSiteUserForm();
+      }
+      setSiteUserFeedback("Editor do site excluido com sucesso.");
+      await loadUsers();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao excluir editor do site.";
+      setSiteUserFeedback(message);
+    } finally {
+      setSiteUserDeletingId(null);
     }
   };
 
@@ -912,6 +985,7 @@ export function AdminPanel() {
   const activeTheme = themes.find((theme) => theme.id === activeThemeId) ?? null;
   const savedThemes = themes.filter((theme) => theme.id !== activeThemeId);
   const siteUsers = allUsers.filter((user) => user.role === "content");
+  const isEditingSiteUser = Boolean(siteUserEditingId);
 
   const renderThemeCard = (theme: ThemePalette, pinned = false) => {
     const resolved = resolveThemeColors(theme.colors ?? DEFAULT_THEME_COLORS);
@@ -1699,10 +1773,13 @@ export function AdminPanel() {
               <div className="form-header">
                 <div>
                   <span className="eyebrow">Acesso ao site</span>
-                  <h3>Criar editor do site</h3>
+                  <h3>
+                    {isEditingSiteUser ? "Editar editor do site" : "Criar editor do site"}
+                  </h3>
                   <p className="muted">
-                    Esse perfil não aparece no cadastro público e acessa apenas
-                    notícias e carrosséis.
+                    {isEditingSiteUser
+                      ? "Atualize nome, email ou defina uma nova senha para esse editor."
+                      : "Esse perfil não aparece no cadastro público e acessa apenas notícias e carrosséis."}
                   </p>
                 </div>
               </div>
@@ -1736,29 +1813,65 @@ export function AdminPanel() {
                   />
                 </label>
                 <label>
-                  Senha inicial
-                  <input
-                    type="password"
-                    placeholder="Crie uma senha inicial"
-                    value={siteUserDraft.password}
-                    onChange={(event) =>
-                      setSiteUserDraft((current) => ({
-                        ...current,
-                        password: event.target.value,
-                      }))
-                    }
-                  />
+                  {isEditingSiteUser ? "Nova senha" : "Senha inicial"}
+                  <div className="site-user-password-field">
+                    <input
+                      type={siteUserPasswordVisible ? "text" : "password"}
+                      placeholder={
+                        isEditingSiteUser
+                          ? "Preencha apenas se quiser trocar a senha"
+                          : "Crie uma senha inicial"
+                      }
+                      value={siteUserDraft.password}
+                      onChange={(event) =>
+                        setSiteUserDraft((current) => ({
+                          ...current,
+                          password: event.target.value,
+                        }))
+                      }
+                    />
+                    <button
+                      className="btn btn-outline btn-sm site-user-password-toggle"
+                      type="button"
+                      onClick={() =>
+                        setSiteUserPasswordVisible((current) => !current)
+                      }
+                    >
+                      {siteUserPasswordVisible ? "Ocultar" : "Mostrar"}
+                    </button>
+                  </div>
                 </label>
+              </div>
+              <div className="form-note">
+                {isEditingSiteUser
+                  ? "A senha atual nao e exibida por seguranca. Informe uma nova senha apenas se precisar redefini-la."
+                  : "Use Mostrar para conferir a senha antes de criar o editor do site."}
               </div>
               <div className="form-actions">
                 <button
                   className="btn btn-primary"
                   type="button"
-                  onClick={() => void handleCreateSiteUser()}
+                  onClick={() => void handleSaveSiteUser()}
                   disabled={siteUserSaving}
                 >
-                  {siteUserSaving ? "Criando..." : "Criar editor do site"}
+                  {siteUserSaving
+                    ? isEditingSiteUser
+                      ? "Salvando..."
+                      : "Criando..."
+                    : isEditingSiteUser
+                      ? "Salvar alteracoes"
+                      : "Criar editor do site"}
                 </button>
+                {isEditingSiteUser && (
+                  <button
+                    className="btn btn-outline"
+                    type="button"
+                    onClick={resetSiteUserForm}
+                    disabled={siteUserSaving}
+                  >
+                    Cancelar edicao
+                  </button>
+                )}
               </div>
               {siteUserFeedback && <div className="alert">{siteUserFeedback}</div>}
             </div>
@@ -1769,7 +1882,7 @@ export function AdminPanel() {
                   <span className="eyebrow">Equipe de conteúdo</span>
                   <h3>Logins já cadastrados</h3>
                   <p className="muted">
-                    Ative ou desative editores responsáveis por notícias e imagens.
+                    Ative, edite ou exclua editores responsáveis por notícias e imagens.
                   </p>
                 </div>
               </div>
@@ -1815,23 +1928,42 @@ export function AdminPanel() {
                               : "Nunca acessou"}
                           </td>
                           <td>
-                            {user.status === "disabled" ? (
+                            <div className="table-actions">
                               <button
-                                className="btn btn-ghost"
+                                className="btn btn-outline"
                                 type="button"
-                                onClick={() => void handleEnable(user.id)}
+                                onClick={() => handleEditSiteUser(user)}
                               >
-                                Ativar
+                                Editar
                               </button>
-                            ) : (
+                              {user.status === "disabled" ? (
+                                <button
+                                  className="btn btn-ghost"
+                                  type="button"
+                                  onClick={() => void handleEnable(user.id)}
+                                >
+                                  Ativar
+                                </button>
+                              ) : (
+                                <button
+                                  className="btn btn-ghost"
+                                  type="button"
+                                  onClick={() => void handleDisable(user.id)}
+                                >
+                                  Desativar
+                                </button>
+                              )}
                               <button
-                                className="btn btn-ghost"
+                                className="btn btn-ghost site-user-delete-button"
                                 type="button"
-                                onClick={() => void handleDisable(user.id)}
+                                onClick={() => void handleDeleteSiteUser(user)}
+                                disabled={siteUserDeletingId === user.id}
                               >
-                                Desativar
+                                {siteUserDeletingId === user.id
+                                  ? "Excluindo..."
+                                  : "Excluir"}
                               </button>
-                            )}
+                            </div>
                           </td>
                         </tr>
                       ))
