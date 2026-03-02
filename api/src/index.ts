@@ -200,6 +200,31 @@ async function ensureTeamMembersSchema(sql: ReturnType<typeof neon>) {
   );
 }
 
+async function ensureAppUserRoleSchema(sql: ReturnType<typeof neon>) {
+  await sql(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'app_users_role_check'
+          AND pg_get_constraintdef(oid) NOT LIKE '%content%'
+      ) THEN
+        ALTER TABLE app_users DROP CONSTRAINT app_users_role_check;
+      END IF;
+    END $$;
+  `);
+  try {
+    await sql(
+      `ALTER TABLE app_users
+        ADD CONSTRAINT app_users_role_check
+        CHECK (role IN ('admin', 'manager', 'registrar', 'teacher', 'content'))`
+    );
+  } catch {
+    // Constraint may already exist with the expected definition.
+  }
+}
+
 async function ensurePlatformSettingsSchema(sql: ReturnType<typeof neon>) {
   await sql(
     `
@@ -4834,6 +4859,7 @@ app.get("/admin/users/:id/details", async (c) => {
 
 app.post("/admin/users", async (c) => {
   const sql = getSql(c.env);
+  await ensureAppUserRoleSchema(sql);
   const claims = await requireAuth(c, c.env);
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
@@ -4927,6 +4953,7 @@ app.post("/admin/users", async (c) => {
 
 app.put("/admin/users/:id", async (c) => {
   const sql = getSql(c.env);
+  await ensureAppUserRoleSchema(sql);
   const claims = await requireAuth(c, c.env);
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
