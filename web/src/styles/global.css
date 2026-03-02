@@ -1761,11 +1761,7 @@ img.theme-ignore,
   color: rgba(var(--color-ink-rgb), 0.6);
 }
 
-.reports-table-card details {
-  padding: 0.2rem 0;
-}
-
-.reports-table-card details > summary {
+.reports-detail-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -1773,28 +1769,40 @@ img.theme-ignore,
   border-radius: 999px;
   background: rgba(var(--color-forest-rgb), 0.1);
   color: var(--color-forest);
+  border: 0;
+  font: inherit;
+  cursor: pointer;
 }
 
-.reports-table-card details > summary::-webkit-details-marker {
-  display: none;
-}
-
-.reports-table-card details[open] > summary {
+.reports-detail-toggle.is-open {
   background: rgba(var(--color-teal-rgb), 0.1);
   color: var(--color-teal);
 }
 
-.reports-table-card .details-grid {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(var(--color-forest-rgb), 0.12);
+.reports-detail-row td {
+  border-bottom: 0;
 }
 
-.reports-table-card .details-grid > div {
+.reports-detail-cell {
+  padding: 0.4rem 0.2rem 1rem;
+}
+
+.reports-table-card .reports-detail-cell .details-grid {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.reports-table-card .reports-detail-cell .details-grid > div {
   padding: 0.95rem;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(var(--color-forest-rgb), 0.1);
+}
+
+.reports-table-card .reports-detail-cell .details-grid p {
+  overflow-wrap: anywhere;
 }
 
 .reports-empty-state {

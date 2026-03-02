@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import NewsCarousel from "../components/NewsCarousel";
 import PublicMapSection from "../components/PublicMapSection";
@@ -223,6 +223,9 @@ export default function Reports() {
   );
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [expandedResidentId, setExpandedResidentId] = useState<string | null>(
+    null
+  );
 
   const allResidents = userSummary?.residents ?? [];
   const availableStates = useMemo(() => {
@@ -298,6 +301,15 @@ export default function Reports() {
       }),
     [allResidents, filterCity, filterState]
   );
+
+  useEffect(() => {
+    if (
+      expandedResidentId &&
+      !filteredResidents.some((resident) => resident.id === expandedResidentId)
+    ) {
+      setExpandedResidentId(null);
+    }
+  }, [expandedResidentId, filteredResidents]);
 
   const hasActiveFilters = Boolean(filterState || filterCity);
   const indicatorSummary = useMemo(() => {
@@ -623,6 +635,94 @@ export default function Reports() {
     }
   };
 
+  const renderResidentDetails = (resident: ResidentRecord) => (
+    <div className="details-grid">
+      <div>
+        <strong>IdentificaÃ§Ã£o</strong>
+        <p>CPF/RG: {resident.doc_id ?? "-"}</p>
+        <p>Nascimento: {resident.birth_date ?? "-"}</p>
+        <p>Sexo: {resident.sex ?? "-"}</p>
+        <p>Telefone: {resident.phone ?? "-"}</p>
+        <p>Email: {resident.email ?? "-"}</p>
+        <p>EndereÃ§o: {resident.address ?? "-"}</p>
+        <p>CrianÃ§as: {resident.children_count ?? "-"}</p>
+        <p>Idosos: {resident.elderly_count ?? "-"}</p>
+        <p>PCD: {resident.pcd_count ?? "-"}</p>
+      </div>
+      <div>
+        <strong>LocalizaÃ§Ã£o</strong>
+        <p>Cidade: {resident.city ?? "-"}</p>
+        <p>Estado: {resident.state ?? "-"}</p>
+        <p>Bairro: {resident.neighborhood ?? "-"}</p>
+        <p>Ãrea: {resident.point_area_type ?? "-"}</p>
+        <p>ReferÃªncia: {resident.point_reference_point ?? "-"}</p>
+        <p>PrecisÃ£o: {resident.point_precision ?? "-"}</p>
+      </div>
+      <div>
+        <strong>Infraestrutura</strong>
+        <p>Energia: {resident.energy_access ?? "-"}</p>
+        <p>Ãgua: {resident.water_supply ?? "-"}</p>
+        <p>Tratamento: {resident.water_treatment ?? "-"}</p>
+        <p>Esgoto: {resident.sewage_type ?? "-"}</p>
+        <p>Lixo: {resident.garbage_collection ?? "-"}</p>
+        <p>Internet: {formatBool(resident.internet_access)}</p>
+        <p>Transporte: {formatBool(resident.transport_access)}</p>
+      </div>
+      <div>
+        <strong>SaÃºde e educaÃ§Ã£o</strong>
+        <p>Posto: {formatBool(resident.health_has_clinic)}</p>
+        <p>EmergÃªncia: {formatBool(resident.health_has_emergency)}</p>
+        <p>Agente: {formatBool(resident.health_has_community_agent)}</p>
+        <p>Unidade (km): {resident.health_unit_distance_km ?? "-"}</p>
+        <p>Tempo: {resident.health_travel_time ?? "-"}</p>
+        <p>Regular: {formatBool(resident.health_has_regular_service)}</p>
+        <p>AmbulÃ¢ncia: {formatBool(resident.health_has_ambulance)}</p>
+        <p>Dificuldades: {resident.health_difficulties ?? "-"}</p>
+        <p>Escolaridade: {resident.education_level ?? "-"}</p>
+        <p>Escola: {formatBool(resident.education_has_school)}</p>
+        <p>Transporte: {formatBool(resident.education_has_transport)}</p>
+        <p>Material: {formatBool(resident.education_material_support)}</p>
+        <p>Internet estudo: {formatBool(resident.education_has_internet)}</p>
+      </div>
+      <div>
+        <strong>Renda e moradia</strong>
+        <p>Renda: {resident.income_monthly ?? "-"}</p>
+        <p>Contribuintes: {resident.income_contributors ?? "-"}</p>
+        <p>OcupaÃ§Ã£o: {resident.income_occupation_type ?? "-"}</p>
+        <p>Programa social: {formatBool(resident.income_has_social_program)}</p>
+        <p>Qual: {resident.income_social_program ?? "-"}</p>
+        <p>Moradia: {resident.housing_type ?? "-"}</p>
+        <p>Quartos: {resident.housing_rooms ?? "-"}</p>
+        <p>Ãrea (m2): {resident.housing_area_m2 ?? "-"}</p>
+        <p>Terreno (m2): {resident.housing_land_m2 ?? "-"}</p>
+        <p>Material: {resident.housing_material ?? "-"}</p>
+        <p>Banheiro: {formatBool(resident.housing_has_bathroom)}</p>
+        <p>Ãgua tratada: {formatBool(resident.housing_has_water_treated)}</p>
+        <p>CondiÃ§Ã£o: {resident.housing_condition ?? "-"}</p>
+        <p>Riscos: {resident.housing_risks ?? "-"}</p>
+      </div>
+      <div>
+        <strong>SeguranÃ§a e participaÃ§Ã£o</strong>
+        <p>Delegacia: {formatBool(resident.security_has_police_station)}</p>
+        <p>Patrulhamento: {formatBool(resident.security_has_patrol)}</p>
+        <p>Guarda: {formatBool(resident.security_has_guard)}</p>
+        <p>OcorrÃªncias: {resident.security_occurrences ?? "-"}</p>
+        <p>ParticipaÃ§Ã£o: {resident.participation_types ?? "-"}</p>
+        <p>Eventos: {resident.participation_events ?? "-"}</p>
+        <p>Engajamento: {resident.participation_engagement ?? "-"}</p>
+      </div>
+      <div>
+        <strong>Demandas e avaliaÃ§Ã£o</strong>
+        <p>Demandas: {resident.demand_priorities ?? "-"}</p>
+        <p>Registros visuais: {resident.photo_types ?? "-"}</p>
+        <p>Vulnerabilidade: {resident.vulnerability_level ?? "-"}</p>
+        <p>Problemas: {resident.technical_issues ?? "-"}</p>
+        <p>Encaminhamentos: {resident.referrals ?? "-"}</p>
+        <p>Ã“rgÃ£os: {resident.agencies_contacted ?? "-"}</p>
+      </div>
+    </div>
+  );
+
   if (!isLoggedIn) {
     return (
       <div className="page news-page">
@@ -930,8 +1030,12 @@ export default function Reports() {
                 </thead>
                 <tbody>
                   {filteredResidents.length > 0 ? (
-                    filteredResidents.map((resident) => (
-                      <tr key={resident.id}>
+                    filteredResidents.map((resident) => {
+                      const isExpanded = expandedResidentId === resident.id;
+
+                      return (
+                        <Fragment key={resident.id}>
+                          <tr>
                         <td className="reports-id">{resident.id}</td>
                         <td className="reports-name-cell">
                           <strong className="reports-name-main">
@@ -957,8 +1061,23 @@ export default function Reports() {
                           {new Date(resident.created_at).toLocaleDateString("pt-BR")}
                         </td>
                         <td>
-                          <details>
-                            <summary>Ver detalhes</summary>
+                          <button
+                            type="button"
+                            className={`reports-detail-toggle${isExpanded ? " is-open" : ""}`}
+                            onClick={() =>
+                              setExpandedResidentId((current) =>
+                                current === resident.id ? null : resident.id
+                              )
+                            }
+                            aria-expanded={isExpanded}
+                          >
+                            {isExpanded ? "Ocultar" : "Ver detalhes"}
+                          </button>
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr className="reports-detail-row">
+                          <td colSpan={10} className="reports-detail-cell">
                             <div className="details-grid">
                               <div>
                                 <strong>Identificação</strong>
@@ -1044,10 +1163,12 @@ export default function Reports() {
                                 <p>Órgãos: {resident.agencies_contacted ?? "-"}</p>
                               </div>
                             </div>
-                          </details>
                         </td>
                       </tr>
-                    ))
+                      )}
+                        </Fragment>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan={10}>
