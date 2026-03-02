@@ -2415,8 +2415,48 @@ textarea {
 .auth-footer {
   display: flex;
   justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
   margin-top: 1.5rem;
   font-size: 0.9rem;
+}
+
+.auth-footer a {
+  flex: 1 1 180px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--color-forest-rgb), 0.18);
+  background: rgba(var(--color-forest-rgb), 0.06);
+  color: var(--color-ink);
+  text-decoration: none;
+  font-weight: 600;
+  transition:
+    transform 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.auth-footer a:hover {
+  transform: translateY(-1px);
+  background: rgba(var(--color-forest-rgb), 0.1);
+  box-shadow: 0 12px 20px rgba(var(--color-ink-rgb), 0.08);
+}
+
+.auth-footer a:last-child {
+  background: var(--color-forest);
+  color: var(--color-white);
+  border-color: var(--color-forest);
+}
+
+.auth-footer a:last-child:hover {
+  background: var(--color-teal);
+  border-color: var(--color-teal);
 }
 
 .dashboard-hero {
