@@ -33,6 +33,8 @@ export default function Footer() {
   ];
   const supportLines = footer.contactItems.filter(Boolean);
   const versionText = footer.version.trim();
+  const licenseText =
+    "Texto destinado a exibição das informações relacionadas à licença de uso.";
 
   const handleScrollTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -179,6 +181,7 @@ export default function Footer() {
             ↑
           </button>
         </div>
+        <div className="footer-license-note">{licenseText}</div>
       </div>
     </footer>
   );
