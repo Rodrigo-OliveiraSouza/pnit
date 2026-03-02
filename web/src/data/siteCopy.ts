@@ -43,7 +43,7 @@ export const DEFAULT_SITE_COPY: SiteCopy = {
     eyebrow: "Acesso restrito",
     title: "Entrar no painel",
     description:
-      "Credenciais de funcionário garantem acesso completo a cadastro, edição, associações e auditoria.",
+      "Credenciais de agente garantem acesso completo a cadastro, edição, associações e auditoria.",
     buttonLabel: "Entrar",
     createAccountLabel: "Criar conta",
   },
