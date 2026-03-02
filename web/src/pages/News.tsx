@@ -135,7 +135,7 @@ export default function News() {
             aria-expanded={territoryFilterOpen}
             aria-controls="news-territory-filter-options"
           >
-            Territorio
+            Território
           </button>
           {territoryFilterOpen && (
             <div id="news-territory-filter-options" className="news-filter-menu">
