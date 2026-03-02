@@ -3208,72 +3208,6 @@ th {
   overflow: clip;
 }
 
-.footer-scene {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  min-height: 122px;
-  background: #f3f0ea;
-  overflow: hidden;
-}
-
-.footer-scene-side {
-  position: relative;
-  min-height: 122px;
-}
-
-.footer-scene-orb {
-  position: absolute;
-  bottom: 34px;
-  width: 86px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-}
-
-.footer-scene-orb-gold {
-  left: 15%;
-  background: #ffcf00;
-}
-
-.footer-scene-orb-blue {
-  right: 17%;
-  background: #2d43ef;
-}
-
-.footer-scene-hill {
-  position: absolute;
-  bottom: -18px;
-  height: 74px;
-  border-radius: 999px 999px 0 0;
-}
-
-.footer-scene-hill-blue {
-  left: -3%;
-  width: 76%;
-  background: #2d43ef;
-  transform: rotate(-2deg);
-}
-
-.footer-scene-hill-cream {
-  left: 35%;
-  width: 34%;
-  background: #f3f0ea;
-  bottom: -28px;
-}
-
-.footer-scene-hill-red {
-  right: -4%;
-  width: 76%;
-  background: #ad1b0f;
-  transform: rotate(2deg);
-}
-
-.footer-scene-hill-sand {
-  right: 38%;
-  width: 28%;
-  background: #f3f0ea;
-  bottom: -26px;
-}
-
 .footer-support {
   display: grid;
   justify-items: center;
@@ -3567,10 +3501,6 @@ th {
   .header-actions {
     width: 100%;
     justify-content: flex-start;
-  }
-
-  .footer-scene {
-    min-height: 88px;
   }
 
   .footer-support {

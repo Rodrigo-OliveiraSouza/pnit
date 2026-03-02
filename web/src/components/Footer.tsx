@@ -42,19 +42,6 @@ export default function Footer() {
 
   return (
     <footer className="site-footer">
-      <div className="footer-scene" aria-hidden="true">
-        <div className="footer-scene-side footer-scene-left">
-          <span className="footer-scene-orb footer-scene-orb-gold" />
-          <span className="footer-scene-hill footer-scene-hill-blue" />
-          <span className="footer-scene-hill footer-scene-hill-cream" />
-        </div>
-        <div className="footer-scene-side footer-scene-right">
-          <span className="footer-scene-orb footer-scene-orb-blue" />
-          <span className="footer-scene-hill footer-scene-hill-red" />
-          <span className="footer-scene-hill footer-scene-hill-sand" />
-        </div>
-      </div>
-
       <div className="footer-support">
         <span className="footer-support-icon" aria-hidden="true">
           ?
