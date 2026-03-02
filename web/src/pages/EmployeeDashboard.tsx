@@ -210,11 +210,11 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
   }
   if (form.healthHasEmergency) {
     healthScore += 3;
-    healthParts.push("emergencia");
+    healthParts.push("emergência");
   }
   if (form.healthHasCommunityAgent) {
     healthScore += 2;
-    healthParts.push("agente comunitario");
+    healthParts.push("agente comunitário");
   }
 
   let educationScore = 2;
@@ -281,12 +281,12 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
   if (area !== null) {
     if (area >= 80) housingScore += 2;
     else if (area >= 50) housingScore += 1;
-    housingParts.push(`${area}m2`);
+    housingParts.push(`${area} m²`);
   }
   if (land !== null) {
     if (land >= 150) housingScore += 2;
     else if (land >= 100) housingScore += 1;
-    housingParts.push(`terreno ${land}m2`);
+    housingParts.push(`terreno ${land} m²`);
   }
   if (form.housingType.trim()) {
     housingScore += 1;
@@ -1195,10 +1195,10 @@ export default function EmployeeDashboard() {
 
     <div class="section">
       <h2>13) Avaliação técnica do agente</h2>
-      <div class="field">Nivel de vulnerabilidade: <span class="line"></span></div>
+      <div class="field">Grau de vulnerabilidade: <span class="line"></span></div>
       <div class="field">Principais problemas identificados: <span class="line"></span></div>
       <div class="field">Encaminhamentos realizados: <span class="line"></span></div>
-      <div class="field">Orgaos acionados: <span class="line"></span></div>
+      <div class="field">Órgãos acionados: <span class="line"></span></div>
     </div>
 
     <div class="section">
@@ -1644,7 +1644,7 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Quantas criancas
+                  Quantas crianças
                   <input
                     type="number"
                     placeholder="0"
@@ -1666,7 +1666,7 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Pessoas com deficiencia (PCD)
+                  Pessoas com deficiência (PCD)
                   <input
                     type="number"
                     placeholder="0"
@@ -1994,7 +1994,7 @@ export default function EmployeeDashboard() {
               </div>
               <div className="form-row">
                 <label>
-                  Tipo de area
+                  Tipo de área
                   <select
                     className="select"
                     value={formState.areaType}
@@ -2089,7 +2089,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Foto do ponto (obrigatoria)
+                Foto do ponto (obrigatória)
                 <input
                   type="file"
                   accept="image/*"
@@ -2127,11 +2127,11 @@ export default function EmployeeDashboard() {
               </label>
 
               <div className="form-note">
-                <strong>Infraestrutura basica</strong>
+                <strong>Infraestrutura básica</strong>
               </div>
               <div className="form-row">
                 <label>
-                  Energia eletrica
+                  Energia elétrica
                   <select
                     className="select"
                     value={formState.energyAccess}
@@ -2146,7 +2146,7 @@ export default function EmployeeDashboard() {
                   </select>
                 </label>
                 <label>
-                  Abastecimento de agua
+                  Abastecimento de água
                   <select
                     className="select"
                     value={formState.waterSupply}
@@ -2164,7 +2164,7 @@ export default function EmployeeDashboard() {
               </div>
               <div className="form-row">
                 <label>
-                  Tratamento da agua
+                  Tratamento da água
                   <select
                     className="select"
                     value={formState.waterTreatment}
@@ -2178,7 +2178,7 @@ export default function EmployeeDashboard() {
                   </select>
                 </label>
                 <label>
-                  Esgotamento sanitario
+                  Esgotamento sanitário
                   <select
                     className="select"
                     value={formState.sewageType}
@@ -2210,7 +2210,7 @@ export default function EmployeeDashboard() {
                   </select>
                 </label>
                 <label>
-                  Acesso a internet
+                  Acesso à internet
                   <select
                     className="select"
                     value={formState.internetAccess ? "sim" : formState.internetAccess === false ? "nao" : ""}
@@ -2255,7 +2255,7 @@ export default function EmployeeDashboard() {
                     value={indicators.health.score}
                     readOnly
                   />
-                  <span className="muted">Criterios: {indicators.health.note}</span>
+                  <span className="muted">Critérios: {indicators.health.note}</span>
                 </label>
                 <label>
                   Educação
@@ -2267,7 +2267,7 @@ export default function EmployeeDashboard() {
                     readOnly
                   />
                   <span className="muted">
-                    Criterios: {indicators.education.note}
+                    Critérios: {indicators.education.note}
                   </span>
                 </label>
               </div>
@@ -2281,7 +2281,7 @@ export default function EmployeeDashboard() {
                     value={indicators.income.score}
                     readOnly
                   />
-                  <span className="muted">Criterios: {indicators.income.note}</span>
+                  <span className="muted">Critérios: {indicators.income.note}</span>
                 </label>
                 <label>
                   Moradia
@@ -2292,7 +2292,7 @@ export default function EmployeeDashboard() {
                     value={indicators.housing.score}
                     readOnly
                   />
-                  <span className="muted">Criterios: {indicators.housing.note}</span>
+                  <span className="muted">Critérios: {indicators.housing.note}</span>
                 </label>
                 <label>
                   Segurança
@@ -2304,7 +2304,7 @@ export default function EmployeeDashboard() {
                     readOnly
                   />
                   <span className="muted">
-                    Criterios: {indicators.security.note}
+                    Critérios: {indicators.security.note}
                   </span>
                 </label>
               </div>
@@ -2321,7 +2321,7 @@ export default function EmployeeDashboard() {
                       handleFieldChange("healthHasClinic", event.target.checked)
                     }
                   />
-                  Ha posto ou unidade basica perto?
+                  Há posto ou unidade básica perto?
                 </label>
                 <label>
                   <input
@@ -2334,7 +2334,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Ha atendimento de emergencia?
+                  Há atendimento de emergência?
                 </label>
                 <label>
                   <input
@@ -2347,7 +2347,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Acesso a agente comunitario?
+                  Acesso a agente comunitário?
                 </label>
                 <label>
                   <input
@@ -2373,7 +2373,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Possui ambulancia?
+                  Possui ambulância?
                 </label>
               </div>
               <div className="form-row">
@@ -2392,7 +2392,7 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Tempo medio de deslocamento
+                  Tempo médio de deslocamento
                   <input
                     type="text"
                     placeholder="Ex: 30 min"
@@ -2418,7 +2418,7 @@ export default function EmployeeDashboard() {
                 Observações de saúde
                 <textarea
                   rows={2}
-                  placeholder="Qualidade do atendimento, distancia, etc."
+                  placeholder="Qualidade do atendimento, distância, etc."
                   value={formState.healthNotes}
                   onChange={(event) =>
                     handleFieldChange("healthNotes", event.target.value)
@@ -2430,10 +2430,10 @@ export default function EmployeeDashboard() {
                 <strong>Educação</strong>
               </div>
               <label>
-                Nivel de escolaridade
+                Nível de escolaridade
                 <input
                   type="text"
-                  placeholder="Ensino fundamental, medio, superior..."
+                  placeholder="Ensino fundamental, médio, superior..."
                   value={formState.educationLevel}
                   onChange={(event) =>
                     handleFieldChange("educationLevel", event.target.value)
@@ -2462,7 +2462,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Ha transporte escolar?
+                  Há transporte escolar?
                 </label>
                 <label>
                   <input
@@ -2488,7 +2488,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Acesso a internet para estudo?
+                  Acesso à internet para estudo?
                 </label>
               </div>
               <label>
@@ -2630,7 +2630,7 @@ export default function EmployeeDashboard() {
                       handleFieldChange("assetsHasLand", event.target.checked)
                     }
                   />
-                  Possui terreno proprio
+                  Possui terreno próprio
                 </label>
               </div>
 
@@ -2650,7 +2650,7 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Area da casa (m2)
+                  Área da casa (m²)
                   <input
                     type="number"
                     placeholder="0"
@@ -2740,7 +2740,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Possui agua tratada?
+                  Possui água tratada?
                 </label>
               </div>
               <label>
@@ -2783,7 +2783,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Ha patrulhamento regular?
+                  Há patrulhamento regular?
                 </label>
                 <label>
                   <input
@@ -2796,7 +2796,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Ha guarda municipal?
+                  Há guarda municipal?
                 </label>
               </div>
               <label>
@@ -2814,7 +2814,7 @@ export default function EmployeeDashboard() {
                 Observações de segurança
                 <textarea
                   rows={2}
-                  placeholder="Percepcao de risco, ocorrencias, etc."
+                  placeholder="Percepção de risco, ocorrências, etc."
                   value={formState.securityNotes}
                   onChange={(event) =>
                     handleFieldChange("securityNotes", event.target.value)
@@ -2840,7 +2840,7 @@ export default function EmployeeDashboard() {
                 Narrativa do território
                 <textarea
                   rows={3}
-                  placeholder="Resumo da historia, identidade e dinamicas locais"
+                  placeholder="Resumo da história, identidade e dinâmicas locais"
                   value={formState.territoryNarrative}
                   onChange={(event) =>
                     handleFieldChange("territoryNarrative", event.target.value)
@@ -2848,10 +2848,10 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Memoriais e referencias
+                Memórias e referências
                 <textarea
                   rows={3}
-                  placeholder="Memoria coletiva, marcos simbolicos"
+                  placeholder="Memória coletiva, marcos simbólicos"
                   value={formState.territoryMemories}
                   onChange={(event) =>
                     handleFieldChange("territoryMemories", event.target.value)
@@ -2859,7 +2859,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Conflitos e tensoes
+                Conflitos e tensões
                 <textarea
                   rows={3}
                   placeholder="Conflitos territoriais, disputas, etc."
@@ -2873,7 +2873,7 @@ export default function EmployeeDashboard() {
                 Manifestações culturais
                 <textarea
                   rows={3}
-                  placeholder="Festas, praticas culturais, coletivos"
+                  placeholder="Festas, práticas culturais, coletivos"
                   value={formState.territoryCulture}
                   onChange={(event) =>
                     handleFieldChange("territoryCulture", event.target.value)
@@ -2896,7 +2896,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Ja participou de
+                Já participou de
                 <input
                   type="text"
                   placeholder="Audiências, conferências, capacitações..."
@@ -2907,7 +2907,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Grau de engajamento comunitario
+                Grau de engajamento comunitário
                 <select
                   className="select"
                   value={formState.participationEngagement}
@@ -2920,13 +2920,13 @@ export default function EmployeeDashboard() {
                 >
                   <option value="">Selecione</option>
                   <option value="alto">Alto</option>
-                  <option value="medio">Medio</option>
+                  <option value="medio">Médio</option>
                   <option value="baixo">Baixo</option>
                 </select>
               </label>
 
               <div className="form-note">
-                <strong>Demandas prioritarias</strong>
+                <strong>Demandas prioritárias</strong>
               </div>
               <label>
                 Demandas
@@ -2944,7 +2944,7 @@ export default function EmployeeDashboard() {
                 <strong>Avaliação técnica do agente</strong>
               </div>
               <label>
-                Nivel de vulnerabilidade
+                Grau de vulnerabilidade
                 <select
                   className="select"
                   value={formState.vulnerabilityLevel}
@@ -2954,7 +2954,7 @@ export default function EmployeeDashboard() {
                 >
                   <option value="">Selecione</option>
                   <option value="baixo">Baixo</option>
-                  <option value="medio">Medio</option>
+                  <option value="medio">Médio</option>
                   <option value="alto">Alto</option>
                 </select>
               </label>
@@ -2979,7 +2979,7 @@ export default function EmployeeDashboard() {
                 />
               </label>
               <label>
-                Orgaos acionados
+                Órgãos acionados
                 <textarea
                   rows={3}
                   value={formState.agenciesContacted}
@@ -3296,7 +3296,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.precision)}</p>
                               </div>
                               <div>
-                                <strong>Tipo de area</strong>
+                                <strong>Tipo de área</strong>
                                 <p>{formatValue(item.area_type)}</p>
                               </div>
                               <div>
@@ -3526,11 +3526,11 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.housing_rooms)}</p>
                               </div>
                               <div>
-                                <strong>Area da casa</strong>
+                                <strong>Área da casa</strong>
                                 <p>{formatValue(item.housing_area_m2)}</p>
                               </div>
                               <div>
-                                <strong>Area do terreno</strong>
+                                <strong>Área do terreno</strong>
                                 <p>{formatValue(item.housing_land_m2)}</p>
                               </div>
                               <div>
@@ -3626,7 +3626,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.participation_types)}</p>
                               </div>
                               <div>
-                                <strong>Ja participou</strong>
+                                <strong>Já participou</strong>
                                 <p>{formatValue(item.participation_events)}</p>
                               </div>
                               <div>
@@ -3664,7 +3664,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.referrals)}</p>
                               </div>
                               <div>
-                                <strong>Orgaos acionados</strong>
+                                <strong>Órgãos acionados</strong>
                                 <p>{formatValue(item.agencies_contacted)}</p>
                               </div>
                               <div>
