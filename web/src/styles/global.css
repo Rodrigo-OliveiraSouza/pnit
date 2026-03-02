@@ -2330,6 +2330,8 @@ textarea {
 }
 
 .auth-visual {
+  position: relative;
+  z-index: 0;
   background: linear-gradient(160deg, var(--color-sky), var(--color-white));
   border-radius: var(--radius-lg);
   padding: clamp(1.8rem, 2vw, 2.5rem);
@@ -2338,6 +2340,7 @@ textarea {
   align-items: center;
   justify-content: center;
   min-height: clamp(420px, 70vh, 640px);
+  overflow: hidden;
 }
 
 .auth-carousel {
@@ -2370,6 +2373,8 @@ textarea {
 }
 
 .auth-card {
+  position: relative;
+  z-index: 2;
   background: var(--color-white);
   border-radius: var(--radius-lg);
   padding: 2.5rem;
@@ -2413,6 +2418,8 @@ textarea {
 }
 
 .auth-footer {
+  position: relative;
+  z-index: 3;
   display: flex;
   justify-content: space-between;
   gap: 0.8rem;
@@ -2422,6 +2429,8 @@ textarea {
 }
 
 .auth-footer a {
+  position: relative;
+  z-index: 1;
   flex: 1 1 180px;
   display: inline-flex;
   align-items: center;
@@ -2434,6 +2443,7 @@ textarea {
   color: var(--color-ink);
   text-decoration: none;
   font-weight: 600;
+  pointer-events: auto;
   transition:
     transform 180ms ease,
     background-color 180ms ease,
