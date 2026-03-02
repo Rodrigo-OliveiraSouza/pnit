@@ -21,13 +21,13 @@ export default function Footer() {
     { label: "Canal de denúncias", href: `${baseUrl}denuncias` },
   ];
   const socialLinks = [
-    { label: "Instagram gov.br", href: "https://www.instagram.com/govbr/" },
+    { label: "Gov.br", href: "https://www.instagram.com/govbr/" },
     {
-      label: "Instagram MIR",
+      label: "MIR",
       href: "https://www.instagram.com/ministerioigualdaderacial/",
     },
     {
-      label: "Site Diversifica",
+      label: "Diversifica",
       href: "https://www.avadiversifica.com.br/",
     },
   ];
