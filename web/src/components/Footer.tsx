@@ -14,7 +14,7 @@ export default function Footer() {
   ];
   const infoLinks = [
     {
-      label: "Minist..rio da Igualdade Racial",
+      label: "Minist\u00e9rio da Igualdade Racial",
       href: "https://www.gov.br/igualdaderacial/pt-br",
     },
     { label: "Portal Gov.br", href: "https://www.gov.br/pt-br" },
