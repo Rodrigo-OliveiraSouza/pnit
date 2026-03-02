@@ -322,9 +322,9 @@ img.theme-ignore,
 }
 
 .btn {
-  --btn-bg: var(--button-secondary-bg, #fff);
-  --btn-text: var(--button-secondary-text, #000);
-  --btn-border: currentColor;
+  --btn-bg: var(--button-primary-bg, var(--color-clay));
+  --btn-text: var(--button-primary-text, var(--color-white));
+  --btn-border: rgba(var(--color-earth-rgb), 0.18);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -349,14 +349,14 @@ img.theme-ignore,
     linear-gradient(
       180deg,
       rgba(255, 255, 255, 0.18),
-      rgba(32, 39, 48, 0.08)
+      rgba(67, 28, 6, 0.16)
     ),
     linear-gradient(
       120deg,
       transparent 24%,
-      rgba(248, 250, 252, 0.88) 42%,
-      rgba(214, 220, 228, 0.58) 50%,
-      rgba(248, 250, 252, 0.88) 58%,
+      rgba(251, 237, 220, 0.46) 42%,
+      rgba(255, 255, 255, 0.18) 50%,
+      rgba(251, 237, 220, 0.42) 58%,
       transparent 76%
     );
   background-repeat: no-repeat;
@@ -364,8 +364,8 @@ img.theme-ignore,
   background-position: 0 0, 165% 0;
   color: var(--btn-text);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.34),
-    0 8px 18px rgba(var(--color-ink-rgb), 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 12px 22px rgba(63, 26, 7, 0.22);
   will-change: transform, background-position, box-shadow;
 }
 
@@ -380,47 +380,46 @@ img.theme-ignore,
   transform: translateY(-1px);
   background-position: 0 0, -72% 0;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    0 14px 28px rgba(var(--color-ink-rgb), 0.14),
-    0 0 0 1px rgba(214, 220, 228, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 16px 30px rgba(63, 26, 7, 0.28),
+    0 0 0 1px rgba(255, 219, 188, 0.2);
 }
 
 .btn:active:not(:disabled) {
   transform: translateY(0);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 6px 14px rgba(var(--color-ink-rgb), 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 8px 16px rgba(63, 26, 7, 0.2);
 }
 
 .btn-primary {
-  --btn-bg: var(--button-primary-bg, #fff);
-  --btn-text: var(--button-primary-text, #000);
-  --btn-border: var(--button-primary-bg, #000);
-  box-shadow: none;
+  --btn-bg: var(--button-primary-bg, var(--color-clay));
+  --btn-text: var(--button-primary-text, var(--color-white));
+  --btn-border: rgba(var(--color-earth-rgb), 0.18);
 }
 
 .btn-outline {
-  --btn-bg: var(--button-secondary-bg, #fff);
-  --btn-text: var(--button-secondary-text, #000);
-  --btn-border: var(--button-secondary-text, #000);
+  --btn-bg: var(--button-primary-bg, var(--color-clay));
+  --btn-text: var(--button-primary-text, var(--color-white));
+  --btn-border: rgba(var(--color-earth-rgb), 0.18);
 }
 
 .btn-pdf {
-  --btn-bg: var(--button-secondary-bg, #fff);
-  --btn-text: var(--button-secondary-text, #000);
-  --btn-border: var(--button-secondary-text, #000);
+  --btn-bg: var(--button-primary-bg, var(--color-clay));
+  --btn-text: var(--button-primary-text, var(--color-white));
+  --btn-border: rgba(var(--color-earth-rgb), 0.18);
 }
 
 .btn-ghost {
-  --btn-bg: var(--button-secondary-bg, #fff);
-  --btn-text: var(--button-secondary-text, #000);
-  --btn-border: var(--button-secondary-text, #000);
+  --btn-bg: var(--button-primary-bg, var(--color-clay));
+  --btn-text: var(--button-primary-text, var(--color-white));
+  --btn-border: rgba(var(--color-earth-rgb), 0.18);
 }
 
 .site-header .btn-ghost {
-  --btn-bg: var(--button-secondary-bg, #fff);
-  --btn-text: var(--button-secondary-text, #000);
-  --btn-border: var(--button-secondary-text, #000);
+  --btn-bg: var(--button-primary-bg, var(--color-clay));
+  --btn-text: var(--button-primary-text, var(--color-white));
+  --btn-border: rgba(var(--color-earth-rgb), 0.18);
 }
 
 .btn-sm {
@@ -2485,35 +2484,47 @@ textarea {
   min-height: 46px;
   padding: 0.75rem 1rem;
   border-radius: 999px;
-  border: 1px solid rgba(var(--color-forest-rgb), 0.18);
-  background: rgba(var(--color-forest-rgb), 0.06);
-  color: var(--color-ink);
+  border: 1px solid rgba(var(--color-earth-rgb), 0.18);
+  background-color: var(--button-primary-bg, var(--color-clay));
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18),
+      rgba(67, 28, 6, 0.16)
+    ),
+    linear-gradient(
+      120deg,
+      transparent 24%,
+      rgba(251, 237, 220, 0.46) 42%,
+      rgba(255, 255, 255, 0.18) 50%,
+      rgba(251, 237, 220, 0.42) 58%,
+      transparent 76%
+    );
+  background-repeat: no-repeat;
+  background-size: 100% 100%, 240% 100%;
+  background-position: 0 0, 165% 0;
+  color: var(--button-primary-text, var(--color-white));
   text-decoration: none;
   font-weight: 600;
   pointer-events: auto;
   transition:
     transform 180ms ease,
-    background-color 180ms ease,
+    background-position 520ms ease,
     color 180ms ease,
     border-color 180ms ease,
-    box-shadow 180ms ease;
+    box-shadow 260ms ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 12px 22px rgba(63, 26, 7, 0.22);
 }
 
 .auth-footer a:hover {
   transform: translateY(-1px);
-  background: rgba(var(--color-forest-rgb), 0.1);
-  box-shadow: 0 12px 20px rgba(var(--color-ink-rgb), 0.08);
-}
-
-.auth-footer a:last-child {
-  background: var(--color-forest);
-  color: var(--color-white);
-  border-color: var(--color-forest);
-}
-
-.auth-footer a:last-child:hover {
-  background: var(--color-teal);
-  border-color: var(--color-teal);
+  background-position: 0 0, -72% 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 16px 30px rgba(63, 26, 7, 0.28),
+    0 0 0 1px rgba(255, 219, 188, 0.2);
 }
 
 .dashboard-hero {
@@ -3382,14 +3393,7 @@ th {
 .footer-support-button {
   margin-top: 0.45rem;
   min-width: 220px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #7a4316;
-  border-color: transparent;
-  box-shadow: 0 16px 28px rgba(34, 14, 4, 0.2);
-}
-
-.footer-support-button:hover {
-  transform: translateY(-1px);
+  color: var(--button-primary-text, var(--color-white));
 }
 
 .footer-panel {
