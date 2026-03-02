@@ -271,6 +271,16 @@ export default function Complaints() {
               </a>
             </p>
             <p>
+              <a
+                className="complaints-support-link"
+                href="https://apps.apple.com/br/app/aprender-a-proteger/id6450999412"
+                target="_blank"
+                rel="noreferrer"
+              >
+                App Aprender a Proteger (App Store)
+              </a>
+            </p>
+            <p>
               <strong>Redes sociais</strong> (não é o canal mais rápido para denúncia,
               mas serve para informações):
             </p>
