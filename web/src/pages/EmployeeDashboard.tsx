@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import MapEditor, { type SelectedLocation } from "../components/MapEditor";
 import { AdminPanel } from "./Admin";
 import citiesData from "../data/brazil-cities.json";
@@ -439,6 +439,10 @@ export default function EmployeeDashboard() {
     if (!name) return "";
     return communityOptions.includes(name) ? name : "__custom__";
   }, [editForm?.communityName, communityOptions]);
+
+  if (role === "content") {
+    return <Navigate to="/admin" replace />;
+  }
 
   const loadResidents = async () => {
     try {

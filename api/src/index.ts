@@ -88,7 +88,7 @@ type ThemeTypography = {
 
 type UserClaims = {
   sub: string;
-  role: "admin" | "manager" | "registrar" | "teacher";
+  role: "admin" | "manager" | "registrar" | "teacher" | "content";
   email: string;
   exp: number;
 };
@@ -468,6 +468,11 @@ function requireStaff(claims: UserClaims | null) {
   );
 }
 
+function canManageSiteContent(claims: UserClaims | null) {
+  if (!claims) return false;
+  return claims.role === "admin" || claims.role === "content";
+}
+
 function requireSupervisor(claims: UserClaims | null) {
   if (!claims) return false;
   return (
@@ -497,6 +502,17 @@ function normalizeRole(role: string | null | undefined): UserClaims["role"] {
   }
   if (normalized === "teacher" || normalized === "professor") {
     return "teacher";
+  }
+  if (
+    normalized === "content" ||
+    normalized === "editor" ||
+    normalized === "site_editor" ||
+    normalized === "site editor" ||
+    normalized === "editor de conteudo" ||
+    normalized === "editor de conteúdo" ||
+    normalized === "editor do site"
+  ) {
+    return "content";
   }
   if (normalized === "registrar" || normalized === "cadastrante") {
     return "registrar";
@@ -4831,7 +4847,7 @@ app.post("/admin/users", async (c) => {
     | {
         email?: string;
         password?: string;
-        role?: "admin" | "manager" | "registrar" | "teacher";
+        role?: "admin" | "manager" | "registrar" | "teacher" | "content";
         status?: "active" | "pending" | "disabled";
         full_name?: string;
         phone?: string;
@@ -4856,7 +4872,8 @@ app.post("/admin/users", async (c) => {
     requestedRole !== "admin" &&
     requestedRole !== "manager" &&
     requestedRole !== "registrar" &&
-    requestedRole !== "teacher"
+    requestedRole !== "teacher" &&
+    requestedRole !== "content"
   ) {
     return jsonError(c, 400, "role is invalid");
   }
@@ -4938,6 +4955,26 @@ app.put("/admin/users/:id", async (c) => {
   );
   if (updates.length === 0) {
     return jsonError(c, 400, "No valid fields to update");
+  }
+  const nextRole = body.role;
+  if (
+    nextRole !== undefined &&
+    nextRole !== "admin" &&
+    nextRole !== "manager" &&
+    nextRole !== "registrar" &&
+    nextRole !== "teacher" &&
+    nextRole !== "content"
+  ) {
+    return jsonError(c, 400, "role is invalid");
+  }
+  const nextStatus = body.status;
+  if (
+    nextStatus !== undefined &&
+    nextStatus !== "active" &&
+    nextStatus !== "pending" &&
+    nextStatus !== "disabled"
+  ) {
+    return jsonError(c, 400, "status is invalid");
   }
   const id = c.req.param("id");
   if (isManagerTeacher && !isAdminUser) {
@@ -6489,7 +6526,7 @@ app.post("/admin/news", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!canManageSiteContent(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   const bucket = c.env.R2_BUCKET;
@@ -6657,7 +6694,7 @@ app.put("/admin/news/:id", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!canManageSiteContent(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
 
@@ -6892,7 +6929,7 @@ app.delete("/admin/news/:id", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!canManageSiteContent(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   if (!c.env.R2_BUCKET) {
@@ -6999,7 +7036,7 @@ app.post("/media/news", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!canManageSiteContent(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   if (!c.env.R2_BUCKET) {
@@ -7044,7 +7081,7 @@ app.delete("/media/news/:id", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!canManageSiteContent(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   if (!c.env.R2_BUCKET) {
@@ -7093,7 +7130,7 @@ app.post("/media/reports", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!canManageSiteContent(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   if (!c.env.R2_BUCKET) {
@@ -7145,7 +7182,7 @@ app.delete("/media/reports/:id", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  if (claims.role !== "admin") {
+  if (!canManageSiteContent(claims)) {
     return jsonError(c, 403, "Forbidden", "FORBIDDEN");
   }
   if (!c.env.R2_BUCKET) {

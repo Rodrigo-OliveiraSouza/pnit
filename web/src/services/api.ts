@@ -13,7 +13,12 @@ const AUTH_TOKEN_KEY = "pnit_auth_token";
 const AUTH_ROLE_KEY = "pnit_auth_role";
 const AUTH_USER_ID_KEY = "pnit_auth_user_id";
 
-export type UserRole = "admin" | "manager" | "registrar" | "teacher";
+export type UserRole =
+  | "admin"
+  | "manager"
+  | "registrar"
+  | "teacher"
+  | "content";
 
 export function setAuthToken(token: string | null) {
   if (token) {
@@ -53,10 +58,22 @@ export function getAuthRole(): UserRole | null {
     return "teacher";
   }
   if (
+    value === "content" ||
+    value === "editor" ||
+    value === "site_editor" ||
+    value === "site editor" ||
+    value === "editor do site" ||
+    value === "editor de conteudo" ||
+    value === "editor de conteúdo"
+  ) {
+    return "content";
+  }
+  if (
     value === "admin" ||
     value === "manager" ||
     value === "registrar" ||
-    value === "teacher"
+    value === "teacher" ||
+    value === "content"
   ) {
     return value;
   }
@@ -1575,6 +1592,25 @@ export async function updateAdminUser(
 ): Promise<{ ok: boolean }> {
   return apiFetch<{ ok: boolean }>(`/admin/users/${id}`, {
     method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function createAdminUser(payload: {
+  email: string;
+  password: string;
+  full_name: string;
+  role: UserRole;
+  status?: "active" | "pending" | "disabled";
+  phone?: string;
+  organization?: string;
+  city?: string;
+  state?: string;
+  territory?: string;
+  access_reason?: string;
+}): Promise<{ user: AdminUser }> {
+  return apiFetch<{ user: AdminUser }>("/admin/users", {
+    method: "POST",
     body: JSON.stringify(payload),
   });
 }

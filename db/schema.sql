@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS app_users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   cognito_sub text NOT NULL UNIQUE,
   email text NOT NULL,
-  role text NOT NULL CHECK (role IN ('admin', 'manager', 'registrar', 'teacher')),
+  role text NOT NULL CHECK (role IN ('admin', 'manager', 'registrar', 'teacher', 'content')),
   status text NOT NULL CHECK (status IN ('active', 'disabled', 'pending')),
   full_name text NULL,
   phone text NULL,

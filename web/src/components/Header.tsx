@@ -15,13 +15,16 @@ export default function Header() {
   const [authToken, setAuthTokenState] = useState(getAuthToken());
   const role = getAuthRole();
   const isAdmin = role === "admin";
+  const isContentManager = role === "content";
   const isSupervisor =
     role === "admin" || role === "manager" || role === "teacher";
-  const panelLink = isAdmin
-    ? "/painel?tab=admin"
-    : isSupervisor
-      ? "/painel?tab=management"
-      : "/painel?tab=register";
+  const panelLink = isContentManager
+    ? "/admin"
+    : isAdmin
+      ? "/painel?tab=admin"
+      : isSupervisor
+        ? "/painel?tab=management"
+        : "/painel?tab=register";
   const { copy } = useSiteCopy();
   const isLoggedIn = Boolean(authToken);
   const [isHidden, setIsHidden] = useState(false);
@@ -113,7 +116,7 @@ export default function Header() {
                 {copy.header.navAccessCode}
               </NavLink>
             )}
-            {isLoggedIn && (
+            {isLoggedIn && !isContentManager && (
               <NavLink
                 to="/relatorios"
                 className={({ isActive }) =>
@@ -123,7 +126,7 @@ export default function Header() {
                 {copy.header.navReports}
               </NavLink>
             )}
-            {isAdmin && (
+            {(isAdmin || isContentManager) && (
               <NavLink
                 to="/imagens-noticias"
                 className={({ isActive }) =>

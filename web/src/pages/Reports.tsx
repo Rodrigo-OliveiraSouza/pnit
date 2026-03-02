@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import NewsCarousel from "../components/NewsCarousel";
 import PublicMapSection from "../components/PublicMapSection";
 import citiesData from "../data/brazil-cities.json";
@@ -202,6 +202,10 @@ export default function Reports() {
   const isLoggedIn = Boolean(getAuthToken());
   const authRole = getAuthRole();
   const reportCopy = getReportCopy(authRole);
+
+  if (authRole === "content") {
+    return <Navigate to="/admin" replace />;
+  }
 
   const formatBool = (value?: boolean | null) =>
     value === null || value === undefined ? "-" : value ? "Sim" : "Não";

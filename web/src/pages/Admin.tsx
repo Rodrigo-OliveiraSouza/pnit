@@ -3,6 +3,7 @@ import type { ChangeEvent } from "react";
 import { Link } from "react-router-dom";
 import { formatStatus } from "../utils/format";
 import type { AuditEntry } from "../types/models";
+import AdminMediaManager from "../components/AdminMediaManager";
 import AdminNewsManager from "../components/AdminNewsManager";
 import AdminTeamManager from "../components/AdminTeamManager";
 import {
@@ -23,6 +24,7 @@ import {
   listLinkCodes,
   refreshPublicMapCache,
   resetTheme,
+  createAdminUser,
   updateAdminUser,
   updateAdminComplaintsConfig,
   updateComplaintStatus,
@@ -58,19 +60,23 @@ export function AdminPanel() {
   const isAdmin = role === "admin";
   const isManager = role === "manager";
   const isTeacher = role === "teacher";
+  const isContentManager = role === "content";
   const isSupervisor = isAdmin || isManager || isTeacher;
+  const canManageSiteContent = isAdmin || isContentManager;
   const [activeTab, setActiveTab] = useState<
     | "requests"
     | "users"
     | "complaints"
     | "news"
+    | "media"
     | "team"
     | "productivity"
     | "management"
     | "settings"
+    | "siteUsers"
     | "audit"
     | "theme"
-  >("requests");
+  >(isContentManager ? "news" : "requests");
   const [pendingUsers, setPendingUsers] = useState<AdminUser[]>([]);
   const [allUsers, setAllUsers] = useState<AdminUser[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -156,6 +162,13 @@ export function AdminPanel() {
   const [textDraft, setTextDraft] = useState<SiteCopy>(copy);
   const [textSaving, setTextSaving] = useState(false);
   const [textFeedback, setTextFeedback] = useState<string | null>(null);
+  const [siteUserDraft, setSiteUserDraft] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+  });
+  const [siteUserSaving, setSiteUserSaving] = useState(false);
+  const [siteUserFeedback, setSiteUserFeedback] = useState<string | null>(null);
 
   const toThemeDraft = (theme?: ThemePalette | null) => ({
     id: theme?.id ?? null,
@@ -249,12 +262,20 @@ export function AdminPanel() {
   }, [isSupervisor, isAdmin]);
 
   useEffect(() => {
+    if (isContentManager) {
+      if (activeTab !== "news" && activeTab !== "media") {
+        setActiveTab("news");
+      }
+      return;
+    }
     if (
       !isAdmin &&
       (activeTab === "complaints" ||
         activeTab === "settings" ||
         activeTab === "news" ||
-        activeTab === "team")
+        activeTab === "team" ||
+        activeTab === "media" ||
+        activeTab === "siteUsers")
     ) {
       setActiveTab("requests");
       return;
@@ -265,7 +286,7 @@ export function AdminPanel() {
     if (!isAdmin && activeTab === "theme") {
       setActiveTab("requests");
     }
-  }, [activeTab, isAdmin, isSupervisor]);
+  }, [activeTab, isAdmin, isSupervisor, isContentManager]);
 
   useEffect(() => {
     setTextDraft(copy);
@@ -293,6 +314,38 @@ export function AdminPanel() {
   const handleEnable = async (id: string) => {
     await updateAdminUser(id, { status: "active" });
     await loadUsers();
+  };
+
+  const handleCreateSiteUser = async () => {
+    if (!isAdmin) return;
+    if (
+      !siteUserDraft.full_name.trim() ||
+      !siteUserDraft.email.trim() ||
+      !siteUserDraft.password.trim()
+    ) {
+      setSiteUserFeedback("Preencha nome, email e senha para criar o editor.");
+      return;
+    }
+    setSiteUserSaving(true);
+    setSiteUserFeedback(null);
+    try {
+      await createAdminUser({
+        full_name: siteUserDraft.full_name.trim(),
+        email: siteUserDraft.email.trim().toLowerCase(),
+        password: siteUserDraft.password,
+        role: "content",
+        status: "active",
+      });
+      setSiteUserDraft({ full_name: "", email: "", password: "" });
+      setSiteUserFeedback("Editor do site criado com sucesso.");
+      await loadUsers();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Falha ao criar editor do site.";
+      setSiteUserFeedback(message);
+    } finally {
+      setSiteUserSaving(false);
+    }
   };
 
   const handleCreateLinkCode = async () => {
@@ -820,8 +873,10 @@ export function AdminPanel() {
   const roleLabel = isAdmin
     ? "Administrador"
     : isManager
-    ? "Gerente"
-    : "Professor";
+      ? "Gerente"
+      : isTeacher
+        ? "Professor"
+        : "Editor de conteúdo";
 
   const formatRoleLabel = (value?: string | null) => {
     switch (value) {
@@ -831,6 +886,8 @@ export function AdminPanel() {
         return "Gerente";
       case "teacher":
         return "Professor";
+      case "content":
+        return "Editor do site";
       case "registrar":
         return "Cadastrante";
       default:
@@ -854,6 +911,7 @@ export function AdminPanel() {
   const isThemeActive = Boolean(themeDraft?.id && themeDraft.id === activeThemeId);
   const activeTheme = themes.find((theme) => theme.id === activeThemeId) ?? null;
   const savedThemes = themes.filter((theme) => theme.id !== activeThemeId);
+  const siteUsers = allUsers.filter((user) => user.role === "content");
 
   const renderThemeCard = (theme: ThemePalette, pinned = false) => {
     const resolved = resolveThemeColors(theme.colors ?? DEFAULT_THEME_COLORS);
@@ -968,6 +1026,51 @@ export function AdminPanel() {
     carousel.scrollBy({ left: amount, behavior: "smooth" });
   };
 
+  if (isContentManager) {
+    return (
+      <>
+        <section className="dashboard-hero admin-panel-hero">
+          <div>
+            <span className="eyebrow">{roleLabel}</span>
+            <h1>Gestão de notícias e carrosséis</h1>
+            <p>
+              Atualize o mural de notícias e as imagens do site sem acessar
+              cadastros, relatórios ou auditoria.
+            </p>
+          </div>
+          <div className="dashboard-actions">
+            <Link className="btn btn-primary" to="/noticias">
+              Ver notícias públicas
+            </Link>
+            <Link className="btn btn-primary" to="/imagens-noticias">
+              Abrir carrosséis
+            </Link>
+          </div>
+        </section>
+
+        <section className="module-section">
+          <div className="tabs">
+            <button
+              className={`tab ${activeTab === "news" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("news")}
+            >
+              Notícias
+            </button>
+            <button
+              className={`tab ${activeTab === "media" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("media")}
+            >
+              Carrosséis
+            </button>
+          </div>
+          {activeTab === "media" ? <AdminMediaManager /> : <AdminNewsManager />}
+        </section>
+      </>
+    );
+  }
+
   return (
     <>
       <section className="dashboard-hero admin-panel-hero">
@@ -1010,6 +1113,7 @@ export function AdminPanel() {
 
       <section className="module-section">
         <div className="tabs">
+          {!isContentManager && (
           <button
             className={`tab ${activeTab === "requests" ? "active" : ""}`}
             type="button"
@@ -1018,6 +1122,8 @@ export function AdminPanel() {
             Cadastros pendentes
             {pendingUsers.length > 0 ? ` (${pendingUsers.length})` : ""}
           </button>
+          )}
+          {!isContentManager && (
           <button
             className={`tab ${activeTab === "users" ? "active" : ""}`}
             type="button"
@@ -1025,7 +1131,8 @@ export function AdminPanel() {
           >
             Cadastros registrados
           </button>
-          {isSupervisor && (
+          )}
+          {isSupervisor && !isContentManager && (
             <button
               className={`tab ${activeTab === "management" ? "active" : ""}`}
               type="button"
@@ -1043,13 +1150,22 @@ export function AdminPanel() {
               Denúncias
             </button>
           )}
-          {isAdmin && (
+          {canManageSiteContent && (
             <button
               className={`tab ${activeTab === "news" ? "active" : ""}`}
               type="button"
               onClick={() => setActiveTab("news")}
             >
               Notícias
+            </button>
+          )}
+          {canManageSiteContent && (
+            <button
+              className={`tab ${activeTab === "media" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("media")}
+            >
+              Carrosséis
             </button>
           )}
           {isAdmin && (
@@ -1075,6 +1191,15 @@ export function AdminPanel() {
               onClick={() => setActiveTab("settings")}
             >
               Configurações
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className={`tab ${activeTab === "siteUsers" ? "active" : ""}`}
+              type="button"
+              onClick={() => setActiveTab("siteUsers")}
+            >
+              Editores do site
             </button>
           )}
           {isAdmin && (
@@ -1566,7 +1691,157 @@ export function AdminPanel() {
           </div>
         )}
         {activeTab === "news" && <AdminNewsManager />}
+        {activeTab === "media" && <AdminMediaManager />}
         {activeTab === "team" && <AdminTeamManager />}
+        {activeTab === "siteUsers" && (
+          <div className="admin-news-layout">
+            <div className="dashboard-card admin-news-card">
+              <div className="form-header">
+                <div>
+                  <span className="eyebrow">Acesso ao site</span>
+                  <h3>Criar editor do site</h3>
+                  <p className="muted">
+                    Esse perfil não aparece no cadastro público e acessa apenas
+                    notícias e carrosséis.
+                  </p>
+                </div>
+              </div>
+              <div className="admin-news-grid">
+                <label>
+                  Nome completo
+                  <input
+                    type="text"
+                    placeholder="Nome do editor"
+                    value={siteUserDraft.full_name}
+                    onChange={(event) =>
+                      setSiteUserDraft((current) => ({
+                        ...current,
+                        full_name: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Email de acesso
+                  <input
+                    type="email"
+                    placeholder="editor@instituicao.gov.br"
+                    value={siteUserDraft.email}
+                    onChange={(event) =>
+                      setSiteUserDraft((current) => ({
+                        ...current,
+                        email: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Senha inicial
+                  <input
+                    type="password"
+                    placeholder="Crie uma senha inicial"
+                    value={siteUserDraft.password}
+                    onChange={(event) =>
+                      setSiteUserDraft((current) => ({
+                        ...current,
+                        password: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+              <div className="form-actions">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={() => void handleCreateSiteUser()}
+                  disabled={siteUserSaving}
+                >
+                  {siteUserSaving ? "Criando..." : "Criar editor do site"}
+                </button>
+              </div>
+              {siteUserFeedback && <div className="alert">{siteUserFeedback}</div>}
+            </div>
+
+            <div className="dashboard-card admin-news-list-card">
+              <div className="form-header">
+                <div>
+                  <span className="eyebrow">Equipe de conteúdo</span>
+                  <h3>Logins já cadastrados</h3>
+                  <p className="muted">
+                    Ative ou desative editores responsáveis por notícias e imagens.
+                  </p>
+                </div>
+              </div>
+              <div className="table-card">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                      <th>Último acesso</th>
+                      <th>Opções</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={5}>
+                          <div className="table-empty">Carregando...</div>
+                        </td>
+                      </tr>
+                    ) : siteUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5}>
+                          <div className="table-empty">
+                            Nenhum editor do site cadastrado ainda.
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      siteUsers.map((user) => (
+                        <tr key={user.id}>
+                          <td>{user.full_name ?? "-"}</td>
+                          <td>{user.email}</td>
+                          <td>
+                            <span className={`status ${user.status}`}>
+                              {formatStatus(user.status)}
+                            </span>
+                          </td>
+                          <td>
+                            {user.last_login_at
+                              ? new Date(user.last_login_at).toLocaleString("pt-BR")
+                              : "Nunca acessou"}
+                          </td>
+                          <td>
+                            {user.status === "disabled" ? (
+                              <button
+                                className="btn btn-ghost"
+                                type="button"
+                                onClick={() => void handleEnable(user.id)}
+                              >
+                                Ativar
+                              </button>
+                            ) : (
+                              <button
+                                className="btn btn-ghost"
+                                type="button"
+                                onClick={() => void handleDisable(user.id)}
+                              >
+                                Desativar
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
         {activeTab === "productivity" && (
           <div className="dashboard-card">
             <h3>Relatório de usuários</h3>
@@ -2454,7 +2729,12 @@ export function AdminPanel() {
 
 export default function Admin() {
   const role = getAuthRole();
-  if (role !== "admin" && role !== "manager" && role !== "teacher") {
+  if (
+    role !== "admin" &&
+    role !== "manager" &&
+    role !== "teacher" &&
+    role !== "content"
+  ) {
     return (
       <div className="page">
         <div className="alert">Acesso restrito ao painel admin.</div>

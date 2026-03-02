@@ -22,7 +22,7 @@ export default function Login() {
       setAuthToken(response.token);
       setAuthRole(response.user.role);
       setAuthUserId(response.user.id);
-      navigate("/painel");
+      navigate(response.user.role === "content" ? "/admin" : "/painel");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Falha ao entrar.";
       setError(message);
