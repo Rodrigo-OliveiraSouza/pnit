@@ -123,6 +123,48 @@ const formatMonthLabel = (value: string) => {
   return MONTH_FORMATTER.format(parsedDate);
 };
 
+const getMostFrequentLabel = (values: Array<string | null | undefined>) => {
+  const counts = new Map<string, { label: string; total: number }>();
+
+  values.forEach((value) => {
+    const label = value?.trim() ?? "";
+    const key = normalizeText(label);
+    if (!key) return;
+
+    const current = counts.get(key);
+    if (current) {
+      current.total += 1;
+      return;
+    }
+
+    counts.set(key, { label, total: 1 });
+  });
+
+  return (
+    Array.from(counts.values()).sort(
+      (left, right) =>
+        right.total - left.total ||
+        left.label.localeCompare(right.label, "pt-BR")
+    )[0] ?? null
+  );
+};
+
+const formatStatusLabel = (value?: string | null) => {
+  const normalizedValue = normalizeText(value);
+
+  if (normalizedValue === "active" || normalizedValue === "ativo") {
+    return "Ativo";
+  }
+  if (normalizedValue === "inactive" || normalizedValue === "inativo") {
+    return "Inativo";
+  }
+  if (normalizedValue === "pending" || normalizedValue === "pendente") {
+    return "Pendente";
+  }
+
+  return value ?? "-";
+};
+
 const getReportCopy = (role: UserRole | null) => {
   if (role === "admin") {
     return {
@@ -380,6 +422,78 @@ export default function Reports() {
     summaryLoading,
   ]);
 
+  const reportInsights = useMemo(() => {
+    const topState = getMostFrequentLabel(
+      filteredResidents.map((resident) => {
+        const stateCode = getStateCode(resident.state);
+        return stateCode ? getStateName(stateCode) : resident.state;
+      })
+    );
+    const topCity = getMostFrequentLabel(
+      filteredResidents.map((resident) => resident.city)
+    );
+    const topCommunity = getMostFrequentLabel(
+      filteredResidents.map((resident) => resident.community_name)
+    );
+    const householdValues = filteredResidents
+      .map((resident) => resident.household_size)
+      .filter((value): value is number => typeof value === "number");
+    const averageHousehold =
+      householdValues.length > 0
+        ? householdValues.reduce((total, value) => total + value, 0) /
+          householdValues.length
+        : null;
+
+    return [
+      {
+        label: "Estado em destaque",
+        value: topState?.label ?? "Sem dados",
+        note: topState ? `${topState.total} registros` : "Sem registros para comparar",
+      },
+      {
+        label: "Cidade com mais cadastros",
+        value: topCity?.label ?? "Sem dados",
+        note: topCity ? `${topCity.total} registros` : "Sem registros para comparar",
+      },
+      {
+        label: "Comunidade recorrente",
+        value: topCommunity?.label ?? "Sem dados",
+        note: topCommunity
+          ? `${topCommunity.total} registros vinculados`
+          : "Nenhuma comunidade destacada",
+      },
+      {
+        label: "Média de moradores",
+        value:
+          averageHousehold === null
+            ? "Sem dados"
+            : `${SCORE_FORMATTER.format(averageHousehold)} por cadastro`,
+        note:
+          householdValues.length > 0
+            ? `${householdValues.length} registros com moradia informada`
+            : "Sem base suficiente no recorte",
+      },
+    ];
+  }, [filteredResidents]);
+
+  const monthlyPeak = useMemo(
+    () => Math.max(1, ...monthlySeries.map((item) => item.total)),
+    [monthlySeries]
+  );
+
+  const indicatorCards = [
+    { label: "Saúde", value: indicatorSummary.health, tone: "forest" },
+    { label: "Educação", value: indicatorSummary.education, tone: "sky" },
+    { label: "Renda", value: indicatorSummary.income, tone: "sun" },
+    {
+      label: "Renda média",
+      value: indicatorSummary.incomeMonthly,
+      tone: "clay",
+    },
+    { label: "Moradia", value: indicatorSummary.housing, tone: "ink" },
+    { label: "Segurança", value: indicatorSummary.security, tone: "earth" },
+  ] as const;
+
   useEffect(() => {
     if (!isLoggedIn) {
       return;
@@ -539,174 +653,262 @@ export default function Reports() {
         </div>
       </section>
       <PublicMapSection mode="reports" />
-      <section className="module-section">
-        <div className="module-header">
-          <span className="eyebrow">Relatório individual</span>
-          <h2>{reportCopy.title}</h2>
-          <p className="muted">{reportCopy.description}</p>
-        </div>
-        <div className="info-grid">
-          <div className="info-card">
-            <h3>Registros filtrados</h3>
-            <p className="muted">{reportMeta.filteredResidents} registros</p>
-            <p className="muted">Filtro: {reportMeta.filterLabel}</p>
+      <section className="module-section reports-module-section">
+        <div className="reports-panel">
+          <div className="reports-panel-hero">
+            <div className="reports-panel-copy">
+              <span className="eyebrow">Relatório individual</span>
+              <h2>{reportCopy.title}</h2>
+              <p className="muted">{reportCopy.description}</p>
+            </div>
+            <div className="reports-panel-meta">
+              <div className="reports-meta-pill">
+                <span>Recorte</span>
+                <strong>{reportMeta.filterLabel}</strong>
+              </div>
+              <div className="reports-meta-pill">
+                <span>Estados disponíveis</span>
+                <strong>{availableStates.length}</strong>
+              </div>
+              <div className="reports-meta-pill">
+                <span>Cidades mapeadas</span>
+                <strong>{availableCityCount}</strong>
+              </div>
+            </div>
           </div>
-          <div className="info-card">
-            <h3>Total de cadastros</h3>
-            <p className="muted">{reportMeta.totalResidents} registros</p>
-            <p className="muted">{reportCopy.totalDescription}</p>
+
+          <div className="reports-kpi-grid">
+            <article className="reports-kpi-card">
+              <span className="reports-kpi-label">Registros filtrados</span>
+              <strong className="reports-kpi-value">
+                {reportMeta.filteredResidents}
+              </strong>
+              <p className="reports-kpi-footer">
+                Recorte atual: {reportMeta.filterLabel}
+              </p>
+            </article>
+            <article className="reports-kpi-card">
+              <span className="reports-kpi-label">Total de cadastros</span>
+              <strong className="reports-kpi-value">
+                {reportMeta.totalResidents}
+              </strong>
+              <p className="reports-kpi-footer">{reportCopy.totalDescription}</p>
+            </article>
+            <article className="reports-kpi-card">
+              <span className="reports-kpi-label">Usuários ativos</span>
+              <strong className="reports-kpi-value">
+                {reportMeta.activeUsers}
+              </strong>
+              <p className="reports-kpi-footer">
+                {reportCopy.activeUsersDescription}
+              </p>
+            </article>
+            <article className="reports-kpi-card">
+              <span className="reports-kpi-label">Última atualização</span>
+              <strong className="reports-kpi-value reports-kpi-value-date">
+                {reportMeta.lastUpdate}
+              </strong>
+              <p className="reports-kpi-footer">
+                Dados mais recentes cadastrados no recorte.
+              </p>
+            </article>
           </div>
-          <div className="info-card">
-            <h3>Usuários ativos</h3>
-            <p className="muted">{reportMeta.activeUsers}</p>
-            <p className="muted">{reportCopy.activeUsersDescription}</p>
+
+          <div className="reports-insight-grid">
+            {reportInsights.map((insight) => (
+              <article key={insight.label} className="reports-insight-card">
+                <span>{insight.label}</span>
+                <strong>{insight.value}</strong>
+                <p>{insight.note}</p>
+              </article>
+            ))}
           </div>
-          <div className="info-card">
-            <h3>Última atualização</h3>
-            <p className="muted">{reportMeta.lastUpdate}</p>
-            <p className="muted">Dados mais recentes cadastrados no recorte.</p>
-          </div>
-        </div>
-        <div className="form-row reports-filter-row">
-          <label>
-            Estado
-            <select
-              className="select"
-              value={filterState}
-              onChange={(event) => handleStateChange(event.target.value)}
-            >
-              <option value="">Selecione um estado</option>
-              {availableStates.map((state) => (
-                <option key={state.code} value={state.code}>
-                  {state.code} - {state.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Cidade
-            <select
-              className="select"
-              value={selectedCityValue}
-              onChange={(event) => handleCityChange(event.target.value)}
-              disabled={!filterState}
-            >
-              <option value="">
-                {filterState
-                  ? "Selecione uma cidade"
-                  : "Selecione um estado primeiro"}
-              </option>
-              {availableCities.map((city) => (
-                <option
-                  key={`${city.name}-${city.state}`}
-                  value={`${city.name}__${city.state}`}
+          <div className="reports-filter-card">
+            <div className="reports-filter-header">
+              <div>
+                <span className="eyebrow">Filtros do relatório</span>
+                <h3>Ajuste o recorte e exporte com mais contexto</h3>
+              </div>
+              <div className="reports-filter-pills">
+                <span className="reports-filter-pill">
+                  {reportMeta.filteredResidents} registros no recorte
+                </span>
+                <span className="reports-filter-pill">
+                  {hasActiveFilters ? "Filtros ativos" : "Sem filtros aplicados"}
+                </span>
+              </div>
+            </div>
+            <div className="form-row reports-filter-row">
+              <label>
+                Estado
+                <select
+                  className="select"
+                  value={filterState}
+                  onChange={(event) => handleStateChange(event.target.value)}
                 >
-                  {city.name} ({city.state})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Formato
-            <select
-              className="select"
-              value={exportFormat}
-              onChange={(event) =>
-                setExportFormat(event.target.value as "PDF" | "CSV" | "JSON")
-              }
-            >
-              <option value="PDF">PDF</option>
-              <option value="CSV">CSV</option>
-              <option value="JSON">JSON</option>
-            </select>
-          </label>
-          <label>
-            Nome do arquivo
-            <input
-              type="text"
-              placeholder="relatorio-usuario"
-              value={exportName}
-              onChange={(event) => setExportName(event.target.value)}
-            />
-          </label>
-          <div className="reports-filter-actions">
-            <button
-              className="btn btn-primary"
-              type="button"
-              onClick={handleExportUserReport}
-              disabled={exportLoading}
-            >
-              {exportLoading ? "Exportando..." : "Exportar relatório filtrado"}
-            </button>
-            <button
-              className="btn btn-ghost"
-              type="button"
-              onClick={handleClearFilters}
-              disabled={!hasActiveFilters}
-            >
-              Limpar filtros
-            </button>
+                  <option value="">Selecione um estado</option>
+                  {availableStates.map((state) => (
+                    <option key={state.code} value={state.code}>
+                      {state.code} - {state.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Cidade
+                <select
+                  className="select"
+                  value={selectedCityValue}
+                  onChange={(event) => handleCityChange(event.target.value)}
+                  disabled={!filterState}
+                >
+                  <option value="">
+                    {filterState
+                      ? "Selecione uma cidade"
+                      : "Selecione um estado primeiro"}
+                  </option>
+                  {availableCities.map((city) => (
+                    <option
+                      key={`${city.name}-${city.state}`}
+                      value={`${city.name}__${city.state}`}
+                    >
+                      {city.name} ({city.state})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Formato
+                <select
+                  className="select"
+                  value={exportFormat}
+                  onChange={(event) =>
+                    setExportFormat(event.target.value as "PDF" | "CSV" | "JSON")
+                  }
+                >
+                  <option value="PDF">PDF</option>
+                  <option value="CSV">CSV</option>
+                  <option value="JSON">JSON</option>
+                </select>
+              </label>
+              <label>
+                Nome do arquivo
+                <input
+                  type="text"
+                  placeholder="relatorio-usuario"
+                  value={exportName}
+                  onChange={(event) => setExportName(event.target.value)}
+                />
+              </label>
+              <div className="reports-filter-actions">
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={handleExportUserReport}
+                  disabled={exportLoading}
+                >
+                  {exportLoading ? "Exportando..." : "Exportar relatório filtrado"}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  type="button"
+                  onClick={handleClearFilters}
+                  disabled={!hasActiveFilters}
+                >
+                  Limpar filtros
+                </button>
+              </div>
+            </div>
+            <p className="reports-filter-hint">
+              {availableStates.length} estados e {availableCityCount} cidades com
+              cadastros disponíveis neste escopo.
+            </p>
           </div>
-        </div>
-        <p className="reports-filter-hint">
-          {availableStates.length} estados e {availableCityCount} cidades com
-          cadastros disponíveis neste escopo.
-        </p>
-        {summaryLoading && !userSummary && (
-          <div className="alert alert-success">Carregando relatório...</div>
-        )}
-        {exportFeedback && <div className="alert">{exportFeedback}</div>}
-        {summaryError && <div className="alert">{summaryError}</div>}
+
+          {summaryLoading && !userSummary && (
+            <div className="alert alert-success">Carregando relatório...</div>
+          )}
+          {exportFeedback && <div className="alert">{exportFeedback}</div>}
+          {summaryError && <div className="alert">{summaryError}</div>}
         {userSummary && (
           <>
-            <div className="info-grid">
-              <div className="info-card">
-                <h3>Médias dos indicadores</h3>
-                <div className="summary-grid">
+            <div className="reports-analytics-grid">
+              <article className="info-card reports-indicator-card">
+                <div className="reports-card-heading">
                   <div>
-                    <span>Saúde</span>
-                    <strong>{indicatorSummary.health}</strong>
+                    <span className="eyebrow">Indicadores</span>
+                    <h3>Médias do recorte selecionado</h3>
                   </div>
-                  <div>
-                    <span>Educação</span>
-                    <strong>{indicatorSummary.education}</strong>
-                  </div>
-                  <div>
-                    <span>Renda</span>
-                    <strong>{indicatorSummary.income}</strong>
-                  </div>
-                  <div>
-                    <span>Renda média (R$)</span>
-                    <strong>{indicatorSummary.incomeMonthly}</strong>
-                  </div>
-                  <div>
-                    <span>Moradia</span>
-                    <strong>{indicatorSummary.housing}</strong>
-                  </div>
-                  <div>
-                    <span>Segurança</span>
-                    <strong>{indicatorSummary.security}</strong>
-                  </div>
+                  <p className="muted">
+                    Leitura consolidada dos principais eixos sociais.
+                  </p>
                 </div>
-              </div>
-              <div className="info-card">
-                <h3>Cadastros por mês</h3>
+                <div className="reports-indicator-grid">
+                  {indicatorCards.map((item) => (
+                    <div
+                      key={item.label}
+                      className={`reports-indicator-tile reports-indicator-${item.tone}`}
+                    >
+                      <span className="reports-indicator-swatch" />
+                      <span className="reports-indicator-label">{item.label}</span>
+                      <strong className="reports-indicator-value">
+                        {item.value}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              </article>
+              <article className="info-card reports-monthly-card">
+                <div className="reports-card-heading">
+                  <div>
+                    <span className="eyebrow">Ritmo mensal</span>
+                    <h3>Evolução dos cadastros</h3>
+                  </div>
+                  <p className="muted">
+                    Distribuição visual dos registros mais recentes.
+                  </p>
+                </div>
                 {monthlySeries.length > 0 ? (
-                  <ul className="activity-list">
+                  <div className="reports-month-list">
                     {monthlySeries.map((item) => (
-                      <li key={item.month} className="empty-row">
-                        {formatMonthLabel(item.month)}: {item.total}
-                      </li>
+                      <div key={item.month} className="reports-month-row">
+                        <span className="reports-month-label">
+                          {formatMonthLabel(item.month)}
+                        </span>
+                        <div className="reports-month-track">
+                          <span
+                            className="reports-month-fill"
+                            style={{
+                              width: `${Math.max(
+                                12,
+                                (item.total / monthlyPeak) * 100
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                        <strong className="reports-month-total">
+                          {item.total}
+                        </strong>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
                   <p className="muted">
                     Nenhum registro mensal encontrado no recorte atual.
                   </p>
                 )}
-              </div>
+              </article>
             </div>
-            <div className="table-card">
+            <div className="table-card reports-table-card">
+              <div className="reports-table-header">
+                <div>
+                  <span className="eyebrow">Registros detalhados</span>
+                  <h3>Pessoas cadastradas no recorte atual</h3>
+                </div>
+                <p className="reports-table-subtitle">
+                  {reportMeta.filteredResidents} registros prontos para consulta.
+                </p>
+              </div>
               <table>
                 <thead>
                   <tr>
@@ -726,14 +928,27 @@ export default function Reports() {
                   {filteredResidents.length > 0 ? (
                     filteredResidents.map((resident) => (
                       <tr key={resident.id}>
-                        <td>{resident.id}</td>
-                        <td>{resident.full_name}</td>
+                        <td className="reports-id">{resident.id}</td>
+                        <td className="reports-name-cell">
+                          <strong className="reports-name-main">
+                            {resident.full_name}
+                          </strong>
+                          <span className="reports-name-meta">
+                            {resident.email ?? resident.phone ?? "Sem contato informado"}
+                          </span>
+                        </td>
                         <td>{resident.community_name ?? "-"}</td>
                         <td>{resident.city ?? "-"}</td>
                         <td>{resident.state ?? "-"}</td>
                         <td>{resident.neighborhood ?? "-"}</td>
                         <td>{resident.household_size ?? "-"}</td>
-                        <td>{resident.status}</td>
+                        <td>
+                          <span
+                            className={`status ${normalizeText(resident.status)}`}
+                          >
+                            {formatStatusLabel(resident.status)}
+                          </span>
+                        </td>
                         <td>
                           {new Date(resident.created_at).toLocaleDateString("pt-BR")}
                         </td>
@@ -847,6 +1062,7 @@ export default function Reports() {
             </div>
           </>
         )}
+        </div>
       </section>
     </div>
   );
