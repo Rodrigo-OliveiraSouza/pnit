@@ -3372,20 +3372,39 @@ th {
 }
 
 .footer-logos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 0.95rem 1rem;
+  align-items: center;
+  max-width: 420px;
+}
+
+.footer-logos a {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
+  justify-content: center;
+  min-height: 86px;
 }
 
 .footer-logos .logo-governo,
 .footer-logos .logo-diversifica,
+.footer-logos .logo-mir,
+.footer-logos .logo-ufrb {
+  width: min(100%, 132px);
+  object-fit: contain;
+}
+
+.footer-logos .logo-governo,
+.footer-logos .logo-diversifica {
+  height: 74px;
+}
+
 .footer-logos .logo-mir {
-  height: 76px;
+  height: 70px;
 }
 
 .footer-logos .logo-ufrb {
-  height: 68px;
+  height: 64px;
 }
 
 .footer-column {
