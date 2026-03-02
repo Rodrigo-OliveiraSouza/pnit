@@ -7,105 +7,419 @@ import { BRAZIL_STATES } from "../data/brazil-states";
 import {
   exportReport,
   fetchUserSummary,
+  getAuthRole,
   getAuthToken,
+  type UserRole,
   type UserSummaryResponse,
 } from "../services/api";
 
+type BrazilCity = { name: string; state: string };
+type ResidentRecord = NonNullable<UserSummaryResponse["residents"]>[number];
+type NumericResidentField =
+  | "health_score"
+  | "education_score"
+  | "income_score"
+  | "income_monthly"
+  | "housing_score"
+  | "security_score";
+
+const BRAZIL_CITIES = citiesData as BrazilCity[];
+const SCORE_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+const CURRENCY_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+const MONTH_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  month: "short",
+  year: "numeric",
+});
+
+const normalizeText = (value?: string | null) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+const STATE_CODE_LOOKUP = new Map<string, string>(
+  BRAZIL_STATES.flatMap((state) => [
+    [normalizeText(state.code), state.code],
+    [normalizeText(state.name), state.code],
+  ])
+);
+
+const getStateCode = (value?: string | null) => {
+  const normalizedValue = normalizeText(value);
+  if (!normalizedValue) return "";
+  return (
+    STATE_CODE_LOOKUP.get(normalizedValue) ?? String(value).trim().toUpperCase()
+  );
+};
+
+const getStateName = (code?: string | null) =>
+  BRAZIL_STATES.find((state) => state.code === code)?.name ?? code ?? "";
+
+const toNumber = (value?: string | number | null) => {
+  if (value === null || value === undefined) return null;
+  const numeric = Number(String(value).replace(",", "."));
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const formatScore = (value?: string | number | null) => {
+  const numeric = toNumber(value);
+  return numeric === null ? "-" : SCORE_FORMATTER.format(numeric);
+};
+
+const formatCurrency = (value?: string | number | null) => {
+  const numeric = toNumber(value);
+  return numeric === null ? "-" : CURRENCY_FORMATTER.format(numeric);
+};
+
+const getResidentAverage = (
+  residents: ResidentRecord[],
+  field: NumericResidentField
+) => {
+  const values = residents
+    .map((resident) =>
+      toNumber(resident[field] as string | number | null | undefined)
+    )
+    .filter((value): value is number => value !== null);
+
+  if (values.length === 0) {
+    return null;
+  }
+
+  return values.reduce((total, value) => total + value, 0) / values.length;
+};
+
+const buildMonthlySeries = (residents: ResidentRecord[]) => {
+  const totals = new Map<string, number>();
+
+  residents.forEach((resident) => {
+    if (!resident.created_at) return;
+    const createdAt = new Date(resident.created_at);
+    if (Number.isNaN(createdAt.getTime())) return;
+
+    const key = `${createdAt.getFullYear()}-${String(
+      createdAt.getMonth() + 1
+    ).padStart(2, "0")}`;
+    totals.set(key, (totals.get(key) ?? 0) + 1);
+  });
+
+  return Array.from(totals.entries())
+    .sort((left, right) => right[0].localeCompare(left[0]))
+    .slice(0, 12)
+    .map(([month, total]) => ({ month, total }));
+};
+
+const formatMonthLabel = (value: string) => {
+  const parsedDate = new Date(`${value}-01T00:00:00`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+  return MONTH_FORMATTER.format(parsedDate);
+};
+
+const getReportCopy = (role: UserRole | null) => {
+  if (role === "admin") {
+    return {
+      title: "Resumo geral da plataforma",
+      description:
+        "Acompanhe os cadastros e indicadores disponíveis em toda a plataforma.",
+      totalDescription: "Cobertura geral da plataforma.",
+      activeUsersDescription: "Usuários ativos com acesso ao sistema.",
+      emptyHint: "Ainda não há cadastros disponíveis para este recorte.",
+    };
+  }
+
+  if (role === "manager" || role === "teacher") {
+    return {
+      title: "Resumo da rede vinculada",
+      description:
+        "Acompanhe os cadastros do seu perfil e dos usuários aprovados por você.",
+      totalDescription: "Cobertura geral da sua rede vinculada.",
+      activeUsersDescription: "Usuários ativos ligados ao seu perfil.",
+      emptyHint: "Ainda não há cadastros aprovados ou criados neste escopo.",
+    };
+  }
+
+  return {
+    title: "Resumo do usuário logado",
+    description:
+      "Visão executiva do desempenho de cadastros e indicadores do seu perfil.",
+    totalDescription: "Cobertura geral do seu perfil.",
+    activeUsersDescription: "Disponível para perfis supervisores.",
+    emptyHint: "Cadastre pessoas no painel para começar a visualizar indicadores.",
+  };
+};
+
 export default function Reports() {
   const isLoggedIn = Boolean(getAuthToken());
+  const authRole = getAuthRole();
+  const reportCopy = getReportCopy(authRole);
+
   const formatBool = (value?: boolean | null) =>
     value === null || value === undefined ? "-" : value ? "Sim" : "Não";
+
   const [filterState, setFilterState] = useState("");
   const [filterCity, setFilterCity] = useState("");
-  const [exportFormat, setExportFormat] = useState<"PDF" | "CSV" | "JSON">("PDF");
+  const [exportFormat, setExportFormat] = useState<"PDF" | "CSV" | "JSON">(
+    "PDF"
+  );
   const [exportName, setExportName] = useState("");
   const [exportLoading, setExportLoading] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<string | null>(null);
   const [userSummary, setUserSummary] = useState<UserSummaryResponse | null>(
     null
   );
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
-  type BrazilCity = { name: string; state: string };
-  const BRAZIL_CITIES = citiesData as BrazilCity[];
+  const allResidents = userSummary?.residents ?? [];
+  const availableStates = useMemo(() => {
+    const codes = new Set(
+      allResidents
+        .map((resident) => getStateCode(resident.state))
+        .filter((value): value is string => Boolean(value))
+    );
+
+    if (codes.size === 0) {
+      return BRAZIL_STATES;
+    }
+
+    return BRAZIL_STATES.filter((state) => codes.has(state.code));
+  }, [allResidents]);
+
   const availableCities = useMemo(() => {
-    if (!filterState) return BRAZIL_CITIES;
-    return BRAZIL_CITIES.filter((city) => city.state === filterState);
-  }, [BRAZIL_CITIES, filterState]);
-  const selectedCityValue =
-    filterCity && filterState ? `${filterCity}__${filterState}` : "";
-  const filteredResidents = useMemo(() => {
-    if (!userSummary?.residents) {
+    if (!filterState) {
       return [];
     }
-    return userSummary.residents.filter((resident) => {
-      const matchesState = !filterState || resident.state === filterState;
-      const matchesCity = !filterCity || resident.city === filterCity;
-      return matchesState && matchesCity;
+
+    const residentsCities = new Map<string, BrazilCity>();
+    allResidents.forEach((resident) => {
+      const residentState = getStateCode(resident.state);
+      const residentCity = resident.city?.trim();
+      if (!residentCity || residentState !== filterState) {
+        return;
+      }
+
+      const key = `${normalizeText(residentCity)}__${residentState}`;
+      residentsCities.set(key, { name: residentCity, state: residentState });
     });
-  }, [filterCity, filterState, userSummary]);
 
-  const toNumber = (value?: string | number | null) => {
-    if (value === null || value === undefined) return null;
-    const numeric = Number(String(value).replace(",", "."));
-    return Number.isFinite(numeric) ? numeric : null;
-  };
+    if (residentsCities.size > 0) {
+      return Array.from(residentsCities.values()).sort((left, right) =>
+        left.name.localeCompare(right.name, "pt-BR")
+      );
+    }
 
-  const reportMeta = useMemo(() => {
-    const scores = [
-      userSummary?.averages?.health_score,
-      userSummary?.averages?.education_score,
-      userSummary?.averages?.income_score,
-      userSummary?.averages?.housing_score,
-      userSummary?.averages?.security_score,
-    ]
-      .map(toNumber)
-      .filter((value): value is number => value !== null);
+    return BRAZIL_CITIES.filter((city) => city.state === filterState).sort(
+      (left, right) => left.name.localeCompare(right.name, "pt-BR")
+    );
+  }, [allResidents, filterState]);
 
-    const averageScore =
-      scores.length > 0
-        ? (scores.reduce((total, value) => total + value, 0) / scores.length).toFixed(1)
-        : "-";
+  const availableCityCount = useMemo(() => {
+    const cityKeys = new Set<string>();
 
-    const latestDate = userSummary?.residents?.reduce((latest, resident) => {
-      if (!resident.created_at) return latest;
-      const current = new Date(resident.created_at);
-      if (!latest || current > latest) return current;
-      return latest;
-    }, null as Date | null);
+    allResidents.forEach((resident) => {
+      const residentState = getStateCode(resident.state);
+      const residentCity = resident.city?.trim();
+      if (!residentState || !residentCity) {
+        return;
+      }
+
+      cityKeys.add(`${normalizeText(residentCity)}__${residentState}`);
+    });
+
+    return cityKeys.size;
+  }, [allResidents]);
+
+  const selectedCityValue =
+    filterCity && filterState ? `${filterCity}__${filterState}` : "";
+  const filteredResidents = useMemo(
+    () =>
+      allResidents.filter((resident) => {
+        const residentState = getStateCode(resident.state);
+        const residentCity = normalizeText(resident.city);
+        const matchesState = !filterState || residentState === filterState;
+        const matchesCity =
+          !filterCity || residentCity === normalizeText(filterCity);
+
+        return matchesState && matchesCity;
+      }),
+    [allResidents, filterCity, filterState]
+  );
+
+  const hasActiveFilters = Boolean(filterState || filterCity);
+  const indicatorSummary = useMemo(() => {
+    const fallbackAverages = {
+      health: getResidentAverage(allResidents, "health_score"),
+      education: getResidentAverage(allResidents, "education_score"),
+      income: getResidentAverage(allResidents, "income_score"),
+      incomeMonthly: getResidentAverage(allResidents, "income_monthly"),
+      housing: getResidentAverage(allResidents, "housing_score"),
+      security: getResidentAverage(allResidents, "security_score"),
+    };
+
+    if (!hasActiveFilters) {
+      return {
+        health: formatScore(
+          userSummary?.averages?.health_score ?? fallbackAverages.health
+        ),
+        education: formatScore(
+          userSummary?.averages?.education_score ?? fallbackAverages.education
+        ),
+        income: formatScore(
+          userSummary?.averages?.income_score ?? fallbackAverages.income
+        ),
+        incomeMonthly: formatCurrency(
+          userSummary?.averages?.income_monthly ?? fallbackAverages.incomeMonthly
+        ),
+        housing: formatScore(
+          userSummary?.averages?.housing_score ?? fallbackAverages.housing
+        ),
+        security: formatScore(
+          userSummary?.averages?.security_score ?? fallbackAverages.security
+        ),
+      };
+    }
 
     return {
-      totalResidents: userSummary?.summary?.total_residents ?? 0,
+      health: formatScore(getResidentAverage(filteredResidents, "health_score")),
+      education: formatScore(
+        getResidentAverage(filteredResidents, "education_score")
+      ),
+      income: formatScore(getResidentAverage(filteredResidents, "income_score")),
+      incomeMonthly: formatCurrency(
+        getResidentAverage(filteredResidents, "income_monthly")
+      ),
+      housing: formatScore(
+        getResidentAverage(filteredResidents, "housing_score")
+      ),
+      security: formatScore(
+        getResidentAverage(filteredResidents, "security_score")
+      ),
+    };
+  }, [allResidents, filteredResidents, hasActiveFilters, userSummary]);
+
+  const monthlySeries = useMemo(
+    () => buildMonthlySeries(filteredResidents),
+    [filteredResidents]
+  );
+  const latestDate = useMemo(
+    () =>
+      filteredResidents.reduce((latest, resident) => {
+        if (!resident.created_at) return latest;
+        const current = new Date(resident.created_at);
+        if (Number.isNaN(current.getTime())) return latest;
+        if (!latest || current > latest) return current;
+        return latest;
+      }, null as Date | null),
+    [filteredResidents]
+  );
+
+  const reportMeta = useMemo(() => {
+    const stateLabel = filterState ? getStateName(filterState) : "";
+    const activeUsers =
+      typeof userSummary?.active_users === "number"
+        ? String(userSummary.active_users)
+        : authRole === "admin" || authRole === "manager" || authRole === "teacher"
+          ? "-"
+          : "Não disponível";
+
+    return {
+      totalResidents: userSummary?.summary?.total_residents ?? allResidents.length,
       filteredResidents: filteredResidents.length,
-      averageScore,
-      activeUsers: userSummary?.active_users ?? "Disponível para admins",
-      lastUpdate: latestDate ? latestDate.toLocaleDateString() : "-",
+      activeUsers,
+      lastUpdate: latestDate ? latestDate.toLocaleDateString("pt-BR") : "-",
       filterLabel:
         filterState && filterCity
-          ? `${filterCity} / ${filterState}`
-          : "Todos os registros",
+          ? `${filterCity} / ${stateLabel}`
+          : filterState
+            ? stateLabel
+            : "Todos os registros",
     };
-  }, [filterCity, filterState, filteredResidents.length, userSummary]);
+  }, [
+    allResidents.length,
+    authRole,
+    filterCity,
+    filterState,
+    filteredResidents.length,
+    latestDate,
+    userSummary,
+  ]);
 
+  const emptyState = useMemo(() => {
+    if (summaryLoading) {
+      return null;
+    }
+
+    if (allResidents.length === 0) {
+      return {
+        title: "Nenhum cadastro disponível neste escopo.",
+        description: reportCopy.emptyHint,
+      };
+    }
+
+    if (filteredResidents.length === 0) {
+      return {
+        title: "Nenhum cadastro encontrado para o filtro selecionado.",
+        description:
+          "Limpe os filtros ou escolha outro estado e cidade para visualizar os registros.",
+      };
+    }
+
+    return null;
+  }, [
+    allResidents.length,
+    filteredResidents.length,
+    reportCopy.emptyHint,
+    summaryLoading,
+  ]);
 
   useEffect(() => {
     if (!isLoggedIn) {
       return;
     }
+
+    setSummaryLoading(true);
+    setSummaryError(null);
+
     fetchUserSummary()
       .then((response) => setUserSummary(response))
       .catch((error) => {
         const message =
           error instanceof Error ? error.message : "Falha ao carregar relatório.";
         setSummaryError(message);
+      })
+      .finally(() => {
+        setSummaryLoading(false);
       });
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    if (!filterCity) {
+      return;
+    }
+
+    const cityStillAvailable = availableCities.some(
+      (city) => normalizeText(city.name) === normalizeText(filterCity)
+    );
+
+    if (!cityStillAvailable) {
+      setFilterCity("");
+    }
+  }, [availableCities, filterCity]);
 
   const handleCityChange = (value: string) => {
     if (!value) {
       setFilterCity("");
       return;
     }
+
     const [city, state] = value.split("__");
     setFilterState(state);
     setFilterCity(city);
@@ -114,23 +428,33 @@ export default function Reports() {
   const handleStateChange = (value: string) => {
     setFilterState(value);
     setFilterCity("");
+    setExportFeedback(null);
+  };
+
+  const handleClearFilters = () => {
+    setFilterState("");
+    setFilterCity("");
+    setExportFeedback(null);
   };
 
   const handleExportUserReport = async () => {
-    if (!filterState || !filterCity) {
-      setExportFeedback("Selecione cidade e estado para exportar.");
+    if (!filterState && !filterCity) {
+      setExportFeedback("Selecione ao menos um estado para exportar o recorte.");
       return;
     }
+
     setExportLoading(true);
     setExportFeedback(null);
+
     try {
       const response = await exportReport({
         format: exportFormat,
         filters: {
-          city: filterCity,
-          state: filterState,
+          city: filterCity || undefined,
+          state: filterState || undefined,
         },
       });
+
       const contentType = response.content_type ?? "text/plain";
       const safeName = exportName
         .trim()
@@ -143,6 +467,7 @@ export default function Reports() {
       const filename =
         response.filename ??
         `${safeName || fallbackName}.${exportFormat.toLowerCase()}`;
+
       if (response.content_base64) {
         const binary = window.atob(response.content_base64);
         const bytes = new Uint8Array(binary.length);
@@ -158,6 +483,7 @@ export default function Reports() {
         URL.revokeObjectURL(url);
         return;
       }
+
       if (response.content) {
         const blob = new Blob([response.content], { type: contentType });
         const url = URL.createObjectURL(blob);
@@ -168,6 +494,7 @@ export default function Reports() {
         URL.revokeObjectURL(url);
         return;
       }
+
       setExportFeedback("Não foi possível exportar o relatório.");
     } catch (error) {
       const message =
@@ -206,8 +533,8 @@ export default function Reports() {
           <span className="eyebrow">Relatórios</span>
           <h1>Selecione áreas e gere relatórios territoriais</h1>
           <p className="lead">
-            Use o mapa interativo para recortar áreas e exportar dados públicos
-            em diferentes formatos.
+            Use o mapa interativo para recortar áreas e exportar dados públicos em
+            diferentes formatos.
           </p>
         </div>
       </section>
@@ -215,10 +542,8 @@ export default function Reports() {
       <section className="module-section">
         <div className="module-header">
           <span className="eyebrow">Relatório individual</span>
-          <h2>Resumo do usuário logado</h2>
-          <p className="muted">
-            Visão executiva do desempenho de cadastros e indicadores do seu perfil.
-          </p>
+          <h2>{reportCopy.title}</h2>
+          <p className="muted">{reportCopy.description}</p>
         </div>
         <div className="info-grid">
           <div className="info-card">
@@ -229,20 +554,20 @@ export default function Reports() {
           <div className="info-card">
             <h3>Total de cadastros</h3>
             <p className="muted">{reportMeta.totalResidents} registros</p>
-            <p className="muted">Cobertura geral do usuário.</p>
+            <p className="muted">{reportCopy.totalDescription}</p>
           </div>
           <div className="info-card">
             <h3>Usuários ativos</h3>
             <p className="muted">{reportMeta.activeUsers}</p>
-            <p className="muted">Acompanhamento de acesso ao painel.</p>
+            <p className="muted">{reportCopy.activeUsersDescription}</p>
           </div>
           <div className="info-card">
             <h3>Última atualização</h3>
             <p className="muted">{reportMeta.lastUpdate}</p>
-            <p className="muted">Dados mais recentes cadastrados.</p>
+            <p className="muted">Dados mais recentes cadastrados no recorte.</p>
           </div>
         </div>
-        <div className="form-row" style={{ alignItems: "flex-end" }}>
+        <div className="form-row reports-filter-row">
           <label>
             Estado
             <select
@@ -251,7 +576,7 @@ export default function Reports() {
               onChange={(event) => handleStateChange(event.target.value)}
             >
               <option value="">Selecione um estado</option>
-              {BRAZIL_STATES.map((state) => (
+              {availableStates.map((state) => (
                 <option key={state.code} value={state.code}>
                   {state.code} - {state.name}
                 </option>
@@ -264,8 +589,13 @@ export default function Reports() {
               className="select"
               value={selectedCityValue}
               onChange={(event) => handleCityChange(event.target.value)}
+              disabled={!filterState}
             >
-              <option value="">Selecione uma cidade</option>
+              <option value="">
+                {filterState
+                  ? "Selecione uma cidade"
+                  : "Selecione um estado primeiro"}
+              </option>
               {availableCities.map((city) => (
                 <option
                   key={`${city.name}-${city.state}`}
@@ -299,15 +629,32 @@ export default function Reports() {
               onChange={(event) => setExportName(event.target.value)}
             />
           </label>
-          <button
-            className="btn btn-primary"
-            type="button"
-            onClick={handleExportUserReport}
-            disabled={exportLoading}
-          >
-            {exportLoading ? "Exportando..." : "Exportar relatório filtrado"}
-          </button>
+          <div className="reports-filter-actions">
+            <button
+              className="btn btn-primary"
+              type="button"
+              onClick={handleExportUserReport}
+              disabled={exportLoading}
+            >
+              {exportLoading ? "Exportando..." : "Exportar relatório filtrado"}
+            </button>
+            <button
+              className="btn btn-ghost"
+              type="button"
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+            >
+              Limpar filtros
+            </button>
+          </div>
         </div>
+        <p className="reports-filter-hint">
+          {availableStates.length} estados e {availableCityCount} cidades com
+          cadastros disponíveis neste escopo.
+        </p>
+        {summaryLoading && !userSummary && (
+          <div className="alert alert-success">Carregando relatório...</div>
+        )}
         {exportFeedback && <div className="alert">{exportFeedback}</div>}
         {summaryError && <div className="alert">{summaryError}</div>}
         {userSummary && (
@@ -318,44 +665,44 @@ export default function Reports() {
                 <div className="summary-grid">
                   <div>
                     <span>Saúde</span>
-                    <strong>{userSummary.averages?.health_score ?? "-"}</strong>
+                    <strong>{indicatorSummary.health}</strong>
                   </div>
                   <div>
                     <span>Educação</span>
-                    <strong>{userSummary.averages?.education_score ?? "-"}</strong>
+                    <strong>{indicatorSummary.education}</strong>
                   </div>
                   <div>
                     <span>Renda</span>
-                    <strong>{userSummary.averages?.income_score ?? "-"}</strong>
+                    <strong>{indicatorSummary.income}</strong>
                   </div>
                   <div>
                     <span>Renda média (R$)</span>
-                    <strong>
-                      {userSummary.averages?.income_monthly ?? "-"}
-                    </strong>
+                    <strong>{indicatorSummary.incomeMonthly}</strong>
                   </div>
                   <div>
                     <span>Moradia</span>
-                    <strong>{userSummary.averages?.housing_score ?? "-"}</strong>
+                    <strong>{indicatorSummary.housing}</strong>
                   </div>
                   <div>
                     <span>Segurança</span>
-                    <strong>{userSummary.averages?.security_score ?? "-"}</strong>
+                    <strong>{indicatorSummary.security}</strong>
                   </div>
                 </div>
               </div>
               <div className="info-card">
                 <h3>Cadastros por mês</h3>
-                {userSummary.monthly && userSummary.monthly.length > 0 ? (
+                {monthlySeries.length > 0 ? (
                   <ul className="activity-list">
-                    {userSummary.monthly.map((item) => (
+                    {monthlySeries.map((item) => (
                       <li key={item.month} className="empty-row">
-                        {item.month}: {item.total}
+                        {formatMonthLabel(item.month)}: {item.total}
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="muted">Nenhum registro mensal ainda.</p>
+                  <p className="muted">
+                    Nenhum registro mensal encontrado no recorte atual.
+                  </p>
                 )}
               </div>
             </div>
@@ -388,7 +735,7 @@ export default function Reports() {
                         <td>{resident.household_size ?? "-"}</td>
                         <td>{resident.status}</td>
                         <td>
-                          {new Date(resident.created_at).toLocaleDateString()}
+                          {new Date(resident.created_at).toLocaleDateString("pt-BR")}
                         </td>
                         <td>
                           <details>
@@ -485,8 +832,12 @@ export default function Reports() {
                   ) : (
                     <tr>
                       <td colSpan={10}>
-                        <div className="table-empty">
-                          Nenhum cadastro registrado ainda.
+                        <div className="table-empty reports-empty-state">
+                          <strong>{emptyState?.title ?? "Nenhum cadastro registrado."}</strong>
+                          <span>
+                            {emptyState?.description ??
+                              "Cadastre pessoas no painel para começar a visualizar os dados."}
+                          </span>
                         </div>
                       </td>
                     </tr>
@@ -500,4 +851,3 @@ export default function Reports() {
     </div>
   );
 }
-

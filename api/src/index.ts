@@ -4268,13 +4268,14 @@ app.get("/reports/user-summary", async (c) => {
   if (!claims) {
     return jsonError(c, 401, "Unauthorized", "UNAUTHORIZED");
   }
-  const requestedUser =
-    requireSupervisor(claims)
-      ? c.req.query("user_id")
-      : null;
+  const requestedUser = requireSupervisor(claims) ? c.req.query("user_id") : null;
   const formatRaw = c.req.query("format") ?? "";
   const format = formatRaw.toUpperCase();
-  if (!isAdmin(claims) && requestedUser) {
+  const city = c.req.query("city")?.trim() ?? "";
+  const state = c.req.query("state")?.trim() ?? "";
+  const isAdminUser = isAdmin(claims);
+  const isManagerTeacher = isManagerOrTeacher(claims);
+  if (!isAdminUser && requestedUser && requestedUser !== claims.sub) {
     const allowed = await sql(
       "SELECT 1 FROM app_users WHERE id = $1 AND approved_by = $2",
       [requestedUser, claims.sub]
@@ -4284,13 +4285,40 @@ app.get("/reports/user-summary", async (c) => {
     }
   }
   const userId = requestedUser ?? claims.sub;
+  const residentFilters: string[] = ["r.deleted_at IS NULL"];
+  const residentParams: (string | number)[] = [];
+  if (city) {
+    residentParams.push(`%${city}%`);
+    residentFilters.push(`r.city ILIKE $${residentParams.length}`);
+  }
+  if (state) {
+    residentParams.push(`%${state}%`);
+    residentFilters.push(`r.state ILIKE $${residentParams.length}`);
+  }
+  if (requestedUser) {
+    residentParams.push(requestedUser);
+    residentFilters.push(`r.created_by = $${residentParams.length}`);
+  } else if (isManagerTeacher) {
+    residentParams.push(claims.sub);
+    residentFilters.push(
+      `r.created_by IN (
+        SELECT id
+        FROM app_users
+        WHERE approved_by = $${residentParams.length} OR id = $${residentParams.length}
+      )`
+    );
+  } else if (!isAdminUser) {
+    residentParams.push(claims.sub);
+    residentFilters.push(`r.created_by = $${residentParams.length}`);
+  }
+  const residentWhere = residentFilters.join(" AND ");
   const summaryRows = await sql(
     `
     SELECT COUNT(*)::int AS total_residents
-    FROM residents
-    WHERE created_by = $1 AND deleted_at IS NULL
+    FROM residents r
+    WHERE ${residentWhere}
     `,
-    [userId]
+    residentParams
   );
   const averages = await sql(
     `
@@ -4303,21 +4331,21 @@ app.get("/reports/user-summary", async (c) => {
       AVG(rp.security_score)::numeric(10,2) AS security_score
     FROM resident_profiles rp
     JOIN residents r ON r.id = rp.resident_id
-    WHERE r.created_by = $1 AND r.deleted_at IS NULL
+    WHERE ${residentWhere}
     `,
-    [userId]
+    residentParams
   );
   const monthly = await sql(
     `
-    SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month,
+    SELECT to_char(date_trunc('month', r.created_at), 'YYYY-MM') AS month,
            COUNT(*)::int AS total
-    FROM residents
-    WHERE created_by = $1 AND deleted_at IS NULL
+    FROM residents r
+    WHERE ${residentWhere}
     GROUP BY 1
     ORDER BY 1 DESC
     LIMIT 12
     `,
-    [userId]
+    residentParams
   );
   const residents = await sql(
     `
@@ -4401,11 +4429,10 @@ app.get("/reports/user-summary", async (c) => {
     LEFT JOIN resident_point_assignments rpa
       ON rpa.resident_id = r.id AND rpa.active = true
     LEFT JOIN map_points mp ON mp.id = rpa.point_id
-    WHERE r.created_by = $1 AND r.deleted_at IS NULL
+    WHERE ${residentWhere}
     ORDER BY r.created_at DESC
-    LIMIT 500
     `,
-    [userId]
+    residentParams
   );
   if (format === "PDF") {
     const summary = summaryRows[0] as { total_residents?: number };
@@ -4584,12 +4611,26 @@ app.get("/reports/user-summary", async (c) => {
       filename: `relatorio-usuario-${Date.now()}.pdf`,
     });
   }
-  const activeUsers =
-    claims.role === "admin"
+  const activeUsers = requestedUser
+    ? await sql(
+        "SELECT COUNT(*)::int AS total FROM app_users WHERE status = 'active' AND id = $1",
+        [requestedUser]
+      )
+    : isAdminUser
       ? await sql(
           "SELECT COUNT(*)::int AS total FROM app_users WHERE status = 'active'"
         )
-      : [{ total: null }];
+      : isManagerTeacher
+        ? await sql(
+            `
+            SELECT COUNT(*)::int AS total
+            FROM app_users
+            WHERE status = 'active'
+              AND (approved_by = $1 OR id = $1)
+            `,
+            [claims.sub]
+          )
+        : [{ total: null }];
   return c.json({
     summary: summaryRows[0] ?? null,
     averages: averages[0] ?? null,

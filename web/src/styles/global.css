@@ -1317,6 +1317,41 @@ img.theme-ignore,
   max-width: 72ch;
 }
 
+.reports-filter-row {
+  align-items: end;
+}
+
+.reports-filter-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.reports-filter-actions .btn {
+  flex: 1 1 180px;
+}
+
+.reports-filter-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: rgba(var(--color-ink-rgb), 0.66);
+}
+
+.reports-empty-state {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 0;
+}
+
+.reports-empty-state strong {
+  font-size: 1rem;
+  color: var(--color-ink);
+}
+
+.reports-empty-state span {
+  color: rgba(var(--color-ink-rgb), 0.68);
+}
+
 .complaints-hero {
   align-items: stretch;
 }
