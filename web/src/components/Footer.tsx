@@ -151,11 +151,6 @@ export default function Footer() {
                   </li>
                 );
               })}
-              {footer.transparencyItems.map((item) => (
-                <li key={item} className="footer-copy-item">
-                  {item}
-                </li>
-              ))}
             </ul>
           </div>
 
