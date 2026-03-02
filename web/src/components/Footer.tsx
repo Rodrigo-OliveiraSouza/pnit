@@ -100,6 +100,13 @@ export default function Footer() {
                   className="logo logo-mir theme-ignore"
                 />
               </a>
+              <a href="https://ufrb.edu.br/" target="_blank" rel="noreferrer">
+                <img
+                  src={`${baseUrl}logos/ufrb.jpg`}
+                  alt="UFRB - Universidade Federal do Reconcavo da Bahia"
+                  className="logo logo-ufrb theme-ignore"
+                />
+              </a>
               <a
                 href="https://www.avadiversifica.com.br/"
                 target="_blank"

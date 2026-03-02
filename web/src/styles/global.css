@@ -2897,6 +2897,10 @@ th {
   height: 76px;
 }
 
+.footer-logos .logo-ufrb {
+  height: 68px;
+}
+
 .footer-column {
   display: grid;
   gap: 1rem;
