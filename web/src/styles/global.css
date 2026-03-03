@@ -3449,27 +3449,18 @@ th {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  inline-size: clamp(96px, 16vw, 112px);
+  block-size: clamp(56px, 10vw, 72px);
+  flex: 0 0 auto;
 }
 
 .footer-logos .logo-governo,
 .footer-logos .logo-diversifica,
 .footer-logos .logo-mir,
 .footer-logos .logo-ufrb {
-  width: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-}
-
-.footer-logos .logo-governo,
-.footer-logos .logo-diversifica {
-  height: 74px;
-}
-
-.footer-logos .logo-mir {
-  height: 70px;
-}
-
-.footer-logos .logo-ufrb {
-  height: 64px;
 }
 
 .footer-column {
