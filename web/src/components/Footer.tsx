@@ -47,8 +47,7 @@ export default function Footer() {
     };
   });
   const versionText = footer.version.trim();
-  const licenseText =
-    "Texto destinado a exibição das informações relacionadas à licença de uso.";
+  const licenseText = "© 2025 E-SINAPIR. Todos os direitos reservados.";
 
   const handleScrollTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
