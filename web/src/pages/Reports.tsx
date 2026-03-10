@@ -638,30 +638,30 @@ export default function Reports() {
   const renderResidentDetails = (resident: ResidentRecord) => (
     <div className="details-grid">
       <div>
-        <strong>IdentificaÃ§Ã£o</strong>
+        <strong>Identificação</strong>
         <p>CPF/RG: {resident.doc_id ?? "-"}</p>
         <p>Nascimento: {resident.birth_date ?? "-"}</p>
         <p>Sexo: {resident.sex ?? "-"}</p>
         <p>Telefone: {resident.phone ?? "-"}</p>
         <p>Email: {resident.email ?? "-"}</p>
-        <p>EndereÃ§o: {resident.address ?? "-"}</p>
-        <p>CrianÃ§as: {resident.children_count ?? "-"}</p>
+        <p>Endereço: {resident.address ?? "-"}</p>
+        <p>Crianças: {resident.children_count ?? "-"}</p>
         <p>Idosos: {resident.elderly_count ?? "-"}</p>
         <p>PCD: {resident.pcd_count ?? "-"}</p>
       </div>
       <div>
-        <strong>LocalizaÃ§Ã£o</strong>
+        <strong>Localização</strong>
         <p>Cidade: {resident.city ?? "-"}</p>
         <p>Estado: {resident.state ?? "-"}</p>
         <p>Bairro: {resident.neighborhood ?? "-"}</p>
-        <p>Ãrea: {resident.point_area_type ?? "-"}</p>
-        <p>ReferÃªncia: {resident.point_reference_point ?? "-"}</p>
-        <p>PrecisÃ£o: {resident.point_precision ?? "-"}</p>
+        <p>Área: {resident.point_area_type ?? "-"}</p>
+        <p>Referência: {resident.point_reference_point ?? "-"}</p>
+        <p>Precisão: {resident.point_precision ?? "-"}</p>
       </div>
       <div>
         <strong>Infraestrutura</strong>
         <p>Energia: {resident.energy_access ?? "-"}</p>
-        <p>Ãgua: {resident.water_supply ?? "-"}</p>
+        <p>Água: {resident.water_supply ?? "-"}</p>
         <p>Tratamento: {resident.water_treatment ?? "-"}</p>
         <p>Esgoto: {resident.sewage_type ?? "-"}</p>
         <p>Lixo: {resident.garbage_collection ?? "-"}</p>
@@ -669,14 +669,14 @@ export default function Reports() {
         <p>Transporte: {formatBool(resident.transport_access)}</p>
       </div>
       <div>
-        <strong>SaÃºde e educaÃ§Ã£o</strong>
+        <strong>Saúde e educação</strong>
         <p>Posto: {formatBool(resident.health_has_clinic)}</p>
-        <p>EmergÃªncia: {formatBool(resident.health_has_emergency)}</p>
+        <p>Emergência: {formatBool(resident.health_has_emergency)}</p>
         <p>Agente: {formatBool(resident.health_has_community_agent)}</p>
         <p>Unidade (km): {resident.health_unit_distance_km ?? "-"}</p>
         <p>Tempo: {resident.health_travel_time ?? "-"}</p>
         <p>Regular: {formatBool(resident.health_has_regular_service)}</p>
-        <p>AmbulÃ¢ncia: {formatBool(resident.health_has_ambulance)}</p>
+        <p>Ambulância: {formatBool(resident.health_has_ambulance)}</p>
         <p>Dificuldades: {resident.health_difficulties ?? "-"}</p>
         <p>Escolaridade: {resident.education_level ?? "-"}</p>
         <p>Escola: {formatBool(resident.education_has_school)}</p>
@@ -688,37 +688,37 @@ export default function Reports() {
         <strong>Renda e moradia</strong>
         <p>Renda: {resident.income_monthly ?? "-"}</p>
         <p>Contribuintes: {resident.income_contributors ?? "-"}</p>
-        <p>OcupaÃ§Ã£o: {resident.income_occupation_type ?? "-"}</p>
+        <p>Ocupação: {resident.income_occupation_type ?? "-"}</p>
         <p>Programa social: {formatBool(resident.income_has_social_program)}</p>
         <p>Qual: {resident.income_social_program ?? "-"}</p>
         <p>Moradia: {resident.housing_type ?? "-"}</p>
         <p>Quartos: {resident.housing_rooms ?? "-"}</p>
-        <p>Ãrea (m2): {resident.housing_area_m2 ?? "-"}</p>
+        <p>Área (m2): {resident.housing_area_m2 ?? "-"}</p>
         <p>Terreno (m2): {resident.housing_land_m2 ?? "-"}</p>
         <p>Material: {resident.housing_material ?? "-"}</p>
         <p>Banheiro: {formatBool(resident.housing_has_bathroom)}</p>
-        <p>Ãgua tratada: {formatBool(resident.housing_has_water_treated)}</p>
-        <p>CondiÃ§Ã£o: {resident.housing_condition ?? "-"}</p>
+        <p>Água tratada: {formatBool(resident.housing_has_water_treated)}</p>
+        <p>Condição: {resident.housing_condition ?? "-"}</p>
         <p>Riscos: {resident.housing_risks ?? "-"}</p>
       </div>
       <div>
-        <strong>SeguranÃ§a e participaÃ§Ã£o</strong>
+        <strong>Segurança e participação</strong>
         <p>Delegacia: {formatBool(resident.security_has_police_station)}</p>
         <p>Patrulhamento: {formatBool(resident.security_has_patrol)}</p>
         <p>Guarda: {formatBool(resident.security_has_guard)}</p>
-        <p>OcorrÃªncias: {resident.security_occurrences ?? "-"}</p>
-        <p>ParticipaÃ§Ã£o: {resident.participation_types ?? "-"}</p>
+        <p>Ocorrências: {resident.security_occurrences ?? "-"}</p>
+        <p>Participação: {resident.participation_types ?? "-"}</p>
         <p>Eventos: {resident.participation_events ?? "-"}</p>
         <p>Engajamento: {resident.participation_engagement ?? "-"}</p>
       </div>
       <div>
-        <strong>Demandas e avaliaÃ§Ã£o</strong>
+        <strong>Demandas e avaliação</strong>
         <p>Demandas: {resident.demand_priorities ?? "-"}</p>
         <p>Registros visuais: {resident.photo_types ?? "-"}</p>
         <p>Vulnerabilidade: {resident.vulnerability_level ?? "-"}</p>
         <p>Problemas: {resident.technical_issues ?? "-"}</p>
         <p>Encaminhamentos: {resident.referrals ?? "-"}</p>
-        <p>Ã“rgÃ£os: {resident.agencies_contacted ?? "-"}</p>
+        <p>Órgãos: {resident.agencies_contacted ?? "-"}</p>
       </div>
     </div>
   );

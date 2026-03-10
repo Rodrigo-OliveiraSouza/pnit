@@ -139,6 +139,7 @@ body {
   --btn-bg: rgba(255, 250, 244, 0.96);
   --btn-text: var(--color-ink);
   --btn-border: rgba(33, 21, 59, 0.12);
+  font-weight: 700;
 }
 
 input,
@@ -265,7 +266,8 @@ select {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 700;
 }
 
 .header-ribbon-links a:hover {
@@ -355,11 +357,22 @@ select {
   color: var(--color-ink);
 }
 
+.site-header .nav-link {
+  color: var(--color-heading);
+  background: rgba(19, 0, 142, 0.05);
+  border: 1px solid rgba(19, 0, 142, 0.12);
+}
+
 .nav-link:hover,
 .nav-link.active {
   color: var(--color-white);
   background: linear-gradient(135deg, var(--color-header-start), var(--color-header-end));
   border-color: transparent;
+}
+
+.site-header .nav-link:hover,
+.site-header .nav-link.active {
+  color: var(--color-white);
 }
 
 .header-auth-actions {
@@ -370,13 +383,21 @@ select {
   justify-content: flex-end;
 }
 
+.site-header .btn-outline,
+.site-header .btn-ghost {
+  --btn-bg: rgba(255, 250, 244, 0.98);
+  --btn-text: var(--color-heading);
+  --btn-border: rgba(33, 21, 59, 0.18);
+}
+
 .header-status-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 0.45rem 0.8rem;
   border-radius: 999px;
-  background: rgba(var(--color-sun-rgb), 0.18);
+  border: 1px solid rgba(var(--color-clay-rgb), 0.14);
+  background: rgba(var(--color-sun-rgb), 0.24);
   color: var(--color-clay);
   font-size: 0.84rem;
   font-weight: 700;

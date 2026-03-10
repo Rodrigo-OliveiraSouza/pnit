@@ -16,26 +16,26 @@ const BRAZIL_CITIES = citiesData as BrazilCity[];
 
 const quickAccessCards = [
   {
-    eyebrow: "Mapa p\u00fablico",
+    eyebrow: "Mapa público",
     title: "Estados, cidades e comunidades em leitura aberta",
     description:
-      "Acesse o recorte territorial com filtros claros, linguagem editorial e navega\u00e7\u00e3o visual.",
+      "Acesse o recorte territorial com filtros claros, linguagem editorial e navegação visual.",
     href: "#relatorios",
     isAnchor: true,
   },
   {
-    eyebrow: "Publica\u00e7\u00f5es",
-    title: "Not\u00edcias, registros visuais e atualiza\u00e7\u00f5es institucionais",
+    eyebrow: "Publicações",
+    title: "Notícias, registros visuais e atualizações institucionais",
     description:
-      "Organize o acompanhamento da plataforma em um bloco com leitura semelhante ao portal de refer\u00eancia.",
+      "Organize o acompanhamento da plataforma em um bloco com leitura semelhante ao portal de referência.",
     href: "/noticias",
     isAnchor: false,
   },
   {
     eyebrow: "Canal seguro",
-    title: "Encaminhamento de den\u00fancias e demandas com acesso r\u00e1pido",
+    title: "Encaminhamento de denúncias e demandas com acesso rápido",
     description:
-      "Mantenha destaque para o servi\u00e7o mais sens\u00edvel com contraste forte e bot\u00f5es claros.",
+      "Mantenha destaque para o serviço mais sensível com contraste forte e botões claros.",
     href: "/denuncias",
     isAnchor: false,
   },
@@ -44,21 +44,21 @@ const quickAccessCards = [
 const workflowCards = [
   {
     step: "01",
-    title: "Consulta p\u00fablica",
+    title: "Consulta pública",
     description:
-      "O visitante entra por um hero institucional, entende o prop\u00f3sito e escolhe o recorte inicial.",
+      "O visitante entra por um hero institucional, entende o propósito e escolhe o recorte inicial.",
   },
   {
     step: "02",
     title: "Leitura territorial",
     description:
-      "O mapa revela recortes p\u00fablicos com superf\u00edcies leves, divis\u00f5es org\u00e2nicas e foco na navega\u00e7\u00e3o.",
+      "O mapa revela recortes públicos com superfícies leves, divisões orgânicas e foco na navegação.",
   },
   {
     step: "03",
-    title: "A\u00e7\u00e3o guiada",
+    title: "Ação guiada",
     description:
-      "Not\u00edcias, relat\u00f3rios e den\u00fancias ficam acess\u00edveis em cart\u00f5es institucionais e contrastantes.",
+      "Notícias, relatórios e denúncias ficam acessíveis em cartões institucionais e contrastantes.",
   },
 ];
 
@@ -112,15 +112,15 @@ export default function Home() {
           <span className="eyebrow">Plataforma territorial</span>
           <h1>Design institucional com base clara, azul profundo e acentos terrosos</h1>
           <p className="home-hero-text">
-            A home agora assume uma linguagem mais pr\u00f3xima do portal de
-            refer\u00eancia: hero editorial, blocos de consulta, contrastes fortes e
-            uma navega\u00e7\u00e3o organizada por servi\u00e7os.
+            A home agora assume uma linguagem mais próxima do portal de
+            referência: hero editorial, blocos de consulta, contrastes fortes e
+            uma navegação organizada por serviços.
           </p>
 
           <div className="home-search-card">
             <div className="home-search-header">
               <strong>Explorar por recorte inicial</strong>
-              <span>Escolha um estado e uma cidade para abrir o mapa p\u00fablico.</span>
+              <span>Escolha um estado e uma cidade para abrir o mapa público.</span>
             </div>
             <div className="home-search-grid">
               <label>
@@ -166,13 +166,13 @@ export default function Home() {
 
           <div className="home-hero-actions">
             <button className="btn btn-outline" type="button" onClick={handleExploreMap}>
-              Ver mapa p\u00fablico
+              Ver mapa público
             </button>
             <Link to="/noticias" className="btn btn-ghost">
-              Acompanhar not\u00edcias
+              Acompanhar notícias
             </Link>
             <Link to="/denuncias" className="btn btn-ghost">
-              Canal de den\u00fancias
+              Canal de denúncias
             </Link>
           </div>
         </div>
@@ -180,7 +180,7 @@ export default function Home() {
         <div className="home-hero-media">
           <div className="home-hero-frame">
             <div className="home-hero-badge">
-              Curadoria visual e navega\u00e7\u00e3o institucional
+              Curadoria visual e navegação institucional
             </div>
             <NewsCarousel
               className="news-carousel-hero news-carousel-media home-hero-carousel"
@@ -188,11 +188,11 @@ export default function Home() {
               imageOnly
             />
             <div className="home-hero-overlay-card">
-              <span className="eyebrow">Leitura p\u00fablica</span>
-              <strong>Superf\u00edcies claras, cabe\u00e7alho forte e blocos de servi\u00e7o</strong>
+              <span className="eyebrow">Leitura pública</span>
+              <strong>Superfícies claras, cabeçalho forte e blocos de serviço</strong>
               <p>
-                O novo layout aproxima o portal de uma experi\u00eancia editorial
-                e institucional, mantendo o mapa como pe\u00e7a central.
+                O novo layout aproxima o portal de uma experiência editorial e
+                institucional, mantendo o mapa como peça central.
               </p>
             </div>
           </div>
@@ -202,7 +202,7 @@ export default function Home() {
       <section className="home-quick-access">
         <div className="home-section-heading">
           <span className="eyebrow">Acessos principais</span>
-          <h2>Entradas r\u00e1pidas organizadas como trilhas de servi\u00e7o</h2>
+          <h2>Entradas rápidas organizadas como trilhas de serviço</h2>
         </div>
         <div className="home-card-grid">
           {quickAccessCards.map((item) =>
@@ -230,12 +230,12 @@ export default function Home() {
 
       <section className="home-workflow-band">
         <div className="home-workflow-copy">
-          <span className="eyebrow">Formato inspirado na refer\u00eancia</span>
-          <h2>Uma p\u00e1gina de entrada mais editorial, com divis\u00f5es fluidas e foco em orienta\u00e7\u00e3o</h2>
+          <span className="eyebrow">Formato inspirado na referência</span>
+          <h2>Uma página de entrada mais editorial, com divisões fluidas e foco em orientação</h2>
           <p>
-            O cabe\u00e7alho institucional, os cart\u00f5es em grade e a faixa em azul
+            O cabeçalho institucional, os cartões em grade e a faixa em azul
             profundo estruturam o percurso entre consulta, leitura territorial e
-            servi\u00e7os sens\u00edveis.
+            serviços sensíveis.
           </p>
         </div>
         <div className="home-workflow-grid">

@@ -6,10 +6,10 @@ export default function Footer() {
   const { footer } = copy;
   const helpEmail = "agentesterritoriais2@gmail.com";
   const pageLinks = [
-    { label: "P\u00e1gina inicial", href: baseUrl },
-    { label: "Cadastro com c\u00f3digo", href: `${baseUrl}acesso` },
-    { label: "Not\u00edcias", href: `${baseUrl}noticias` },
-    { label: "Den\u00fancias", href: `${baseUrl}denuncias` },
+    { label: "Página inicial", href: baseUrl },
+    { label: "Cadastro com código", href: `${baseUrl}acesso` },
+    { label: "Notícias", href: `${baseUrl}noticias` },
+    { label: "Denúncias", href: `${baseUrl}denuncias` },
     { label: "Entrar no painel", href: `${baseUrl}login` },
   ];
   const institutionalLinks = [
@@ -18,7 +18,7 @@ export default function Footer() {
       href: "https://www.gov.br/pt-br",
     },
     {
-      label: "Minist\u00e9rio da Igualdade Racial",
+      label: "Ministério da Igualdade Racial",
       href: "https://www.gov.br/igualdaderacial/pt-br",
     },
     {
@@ -40,7 +40,7 @@ export default function Footer() {
   const supportLines = footer.contactItems.filter(Boolean);
   const transparencyItems = footer.transparencyItems.filter(Boolean);
   const versionText = footer.version.trim();
-  const licenseText = "\u00a9 2026 PNIT. Ambiente p\u00fablico com leitura territorial e suporte institucional.";
+  const licenseText = "© 2026 PNIT. Ambiente público com leitura territorial e suporte institucional.";
 
   const supportLinks = supportLines.map((item, index) => {
     if (index === 1) {
@@ -66,7 +66,7 @@ export default function Footer() {
       <div className="footer-hero">
         <div className="footer-hero-copy">
           <span className="footer-badge">Canais de atendimento</span>
-          <h2>Suporte institucional para acesso, opera\u00e7\u00e3o e leitura do mapa</h2>
+          <h2>Suporte institucional para acesso, operação e leitura do mapa</h2>
           <p>
             {footer.description}
           </p>
@@ -113,14 +113,14 @@ export default function Footer() {
               >
                 <img
                   src={`${baseUrl}logos/mir2.jpeg`}
-                  alt="Minist\u00e9rio da Igualdade Racial"
+                  alt="Ministério da Igualdade Racial"
                   className="logo logo-mir theme-ignore"
                 />
               </a>
               <a href="https://ufrb.edu.br/" target="_blank" rel="noreferrer">
                 <img
                   src={`${baseUrl}logos/ufrb.jpg`}
-                  alt="Universidade Federal do Rec\u00f4ncavo da Bahia"
+                  alt="Universidade Federal do Recôncavo da Bahia"
                   className="logo logo-ufrb theme-ignore"
                 />
               </a>
@@ -131,7 +131,7 @@ export default function Footer() {
               >
                 <img
                   src={`${baseUrl}logos/diversifica.png`}
-                  alt="Diversifica Inclus\u00e3o e Diversidade"
+                  alt="Diversifica Inclusão e Diversidade"
                   className="logo logo-diversifica theme-ignore"
                 />
               </a>
@@ -140,7 +140,7 @@ export default function Footer() {
           </div>
 
           <div className="footer-column">
-            <h4>P\u00e1ginas</h4>
+            <h4>Páginas</h4>
             <ul className="footer-link-list">
               {pageLinks.map((item) => (
                 <li key={item.href}>
@@ -151,7 +151,7 @@ export default function Footer() {
           </div>
 
           <div className="footer-column">
-            <h4>{footer.transparencyTitle || "Transpar\u00eancia"}</h4>
+            <h4>{footer.transparencyTitle || "Transparência"}</h4>
             <ul className="footer-link-list">
               {transparencyItems.map((item) => (
                 <li key={item} className="footer-copy-item">
@@ -189,7 +189,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <span>{versionText || "Vers\u00e3o institucional em opera\u00e7\u00e3o."}</span>
+          <span>{versionText || "Versão institucional em operação."}</span>
           <button
             type="button"
             className="footer-scroll-top"

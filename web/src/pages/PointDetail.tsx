@@ -104,7 +104,7 @@ export default function PointDetail() {
           <h3>Informações públicas</h3>
           <div className="detail-list">
             <div>
-              <span>{"Territ\u00f3rio"}</span>
+              <span>Território</span>
               <strong>{mapPoint.region}</strong>
             </div>
             {(mapPoint.city || mapPoint.state) && (

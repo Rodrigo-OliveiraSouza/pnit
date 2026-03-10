@@ -32,7 +32,7 @@ export default function Header() {
   const homeAnchor = `${baseUrl}#relatorios`;
   const brandSubtitle =
     copy.header.brandSub.trim() ||
-    "Mapa p\u00fablico, relat\u00f3rios export\u00e1veis e leitura institucional dos territ\u00f3rios.";
+    "Mapa público, relatórios exportáveis e leitura institucional dos territórios.";
 
   useEffect(() => {
     const handler = () => setAuthTokenState(getAuthToken());
@@ -71,21 +71,21 @@ export default function Header() {
     <header className={`site-header${isHidden ? " is-hidden" : ""}`}>
       <div className="header-ribbon">
         <div className="header-ribbon-copy">
-          <span className="header-ribbon-label">Plataforma p\u00fablica</span>
+          <span className="header-ribbon-label">Plataforma pública</span>
           <p>
-            Inspirada em portais institucionais de forma\u00e7\u00e3o e servi\u00e7o,
-            com navega\u00e7\u00e3o editorial, contraste alto e tons terrosos.
+            Inspirada em portais institucionais de formação e serviço, com
+            navegação editorial, contraste alto e tons terrosos.
           </p>
         </div>
         <div className="header-ribbon-links">
           <a href={homeAnchor}>Explorar mapa</a>
-          <Link to="/noticias">Publica\u00e7\u00f5es</Link>
+          <Link to="/noticias">Publicações</Link>
         </div>
       </div>
 
       <div className="header-main">
         <div className="header-brand-group">
-          <Link to="/" className="header-logo-link" aria-label="Ir para a p\u00e1gina inicial">
+          <Link to="/" className="header-logo-link" aria-label="Ir para a página inicial">
             <img
               src={`${baseUrl}logos/agentes-territoriais.png`}
               alt="Agentes Territoriais"
@@ -94,13 +94,13 @@ export default function Header() {
           </Link>
           <div className="brand">
             <span className="brand-kicker">PNIT</span>
-            <strong className="brand-mark">Painel territorial com leitura p\u00fablica</strong>
+            <strong className="brand-mark">Painel territorial com leitura pública</strong>
             <span className="brand-sub">{brandSubtitle}</span>
           </div>
         </div>
 
         <div className="header-nav-wrap">
-          <nav className="site-nav" aria-label="Navega\u00e7\u00e3o principal">
+          <nav className="site-nav" aria-label="Navegação principal">
             <NavLink
               to="/"
               end
@@ -116,7 +116,7 @@ export default function Header() {
                 `nav-link${isActive ? " active" : ""}`
               }
             >
-              Not\u00edcias
+              Notícias
             </NavLink>
             <NavLink
               to="/equipe"
@@ -168,7 +168,7 @@ export default function Header() {
 
           <div className="header-auth-actions">
             <span className="header-status-pill">
-              Atualiza\u00e7\u00e3o institucional
+              Atualização institucional
             </span>
             {isLoggedIn ? (
               <>
