@@ -72,26 +72,33 @@ export default function Footer() {
           </p>
         </div>
         <div className="footer-hero-panel">
-          <a className="footer-email" href={`mailto:${helpEmail}`}>
-            {helpEmail}
-          </a>
-          {supportLinks.length > 0 && (
-            <div className="footer-contact-list">
-              {supportLinks.map((item) => (
-                <a
-                  key={item.label}
-                  className="footer-contact-chip"
-                  href={item.href}
-                  {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                >
-                  {item.label}
-                </a>
-              ))}
-            </div>
-          )}
-          <a className="btn btn-primary footer-hero-button" href={`mailto:${helpEmail}`}>
-            Falar com suporte
-          </a>
+          <div className="footer-panel-stack">
+            <span className="footer-panel-label">Atendimento direto</span>
+            <a className="footer-email" href={`mailto:${helpEmail}`}>
+              {helpEmail}
+            </a>
+            <p className="footer-panel-copy">
+              Escolha o canal institucional mais adequado para suporte,
+              ouvidoria e orientacao.
+            </p>
+            {supportLinks.length > 0 && (
+              <div className="footer-contact-list">
+                {supportLinks.map((item) => (
+                  <a
+                    key={item.label}
+                    className="footer-contact-chip"
+                    href={item.href}
+                    {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+            )}
+            <a className="btn btn-primary footer-hero-button" href={`mailto:${helpEmail}`}>
+              Falar com suporte
+            </a>
+          </div>
         </div>
       </div>
 
