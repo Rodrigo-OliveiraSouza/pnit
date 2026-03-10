@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
-import FloatingSymbols from "./FloatingSymbols";
 import { fetchActiveTheme } from "../services/api";
 import {
   applyThemeToRoot,
@@ -40,7 +39,6 @@ export default function Layout() {
   return (
     <SiteCopyProvider>
       <div className="app-shell">
-        <FloatingSymbols />
         <Header />
         <main className="app-main">
           <Outlet />

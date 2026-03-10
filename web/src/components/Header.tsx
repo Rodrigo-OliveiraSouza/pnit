@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   getAuthRole,
@@ -7,7 +8,6 @@ import {
   setAuthUserId,
 } from "../services/api";
 import { useSiteCopy } from "../providers/SiteCopyProvider";
-import { useEffect, useRef, useState } from "react";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -29,6 +29,10 @@ export default function Header() {
   const isLoggedIn = Boolean(authToken);
   const [isHidden, setIsHidden] = useState(false);
   const lastScrollY = useRef(0);
+  const homeAnchor = `${baseUrl}#relatorios`;
+  const brandSubtitle =
+    copy.header.brandSub.trim() ||
+    "Mapa p\u00fablico, relat\u00f3rios export\u00e1veis e leitura institucional dos territ\u00f3rios.";
 
   useEffect(() => {
     const handler = () => setAuthTokenState(getAuthToken());
@@ -65,25 +69,41 @@ export default function Header() {
 
   return (
     <header className={`site-header${isHidden ? " is-hidden" : ""}`}>
-      <div className="header-top header-top-logos header-bar">
-        <div className="header-left">
-          <div className="header-logos">
-            <Link to="/" className="logo-link">
-              <img
-                src={`${baseUrl}logos/agentes-territoriais.png`}
-                alt="Agentes Territoriais"
-                className="logo logo-agentes theme-ignore"
-              />
-            </Link>
-          </div>
+      <div className="header-ribbon">
+        <div className="header-ribbon-copy">
+          <span className="header-ribbon-label">Plataforma p\u00fablica</span>
+          <p>
+            Inspirada em portais institucionais de forma\u00e7\u00e3o e servi\u00e7o,
+            com navega\u00e7\u00e3o editorial, contraste alto e tons terrosos.
+          </p>
+        </div>
+        <div className="header-ribbon-links">
+          <a href={homeAnchor}>Explorar mapa</a>
+          <Link to="/noticias">Publica\u00e7\u00f5es</Link>
+        </div>
+      </div>
+
+      <div className="header-main">
+        <div className="header-brand-group">
+          <Link to="/" className="header-logo-link" aria-label="Ir para a p\u00e1gina inicial">
+            <img
+              src={`${baseUrl}logos/agentes-territoriais.png`}
+              alt="Agentes Territoriais"
+              className="logo logo-agentes theme-ignore"
+            />
+          </Link>
           <div className="brand">
-            <span className="brand-sub">{copy.header.brandSub}</span>
+            <span className="brand-kicker">PNIT</span>
+            <strong className="brand-mark">Painel territorial com leitura p\u00fablica</strong>
+            <span className="brand-sub">{brandSubtitle}</span>
           </div>
         </div>
-        <div className="header-actions">
-          <nav className="nav">
+
+        <div className="header-nav-wrap">
+          <nav className="site-nav" aria-label="Navega\u00e7\u00e3o principal">
             <NavLink
               to="/"
+              end
               className={({ isActive }) =>
                 `nav-link${isActive ? " active" : ""}`
               }
@@ -96,7 +116,7 @@ export default function Header() {
                 `nav-link${isActive ? " active" : ""}`
               }
             >
-              Noticias
+              Not\u00edcias
             </NavLink>
             <NavLink
               to="/equipe"
@@ -144,9 +164,15 @@ export default function Header() {
             >
               {copy.header.navComplaints}
             </NavLink>
+          </nav>
+
+          <div className="header-auth-actions">
+            <span className="header-status-pill">
+              Atualiza\u00e7\u00e3o institucional
+            </span>
             {isLoggedIn ? (
               <>
-                <Link to={panelLink} className="btn btn-ghost">
+                <Link to={panelLink} className="btn btn-outline">
                   {copy.header.panelLabel}
                 </Link>
                 <button
@@ -162,10 +188,9 @@ export default function Header() {
                 {copy.header.loginButton}
               </Link>
             )}
-          </nav>
+          </div>
         </div>
       </div>
     </header>
   );
 }
-

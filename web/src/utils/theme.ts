@@ -1,20 +1,20 @@
 import type { ThemeColors, ThemeImageStyles, ThemeTypography } from "../types/theme";
 
 export const DEFAULT_THEME_COLORS: ThemeColors = {
-  primary: "#c8651e",
-  secondary: "#b85a16",
-  accent: "#f0a23a",
-  background: "#f4f4f4",
-  text: "#2b1a12",
-  text_muted: "#6b6158",
-  heading: "#2b1a12",
-  border: "#d6d6d6",
-  header_start: "#1f2a4a",
-  header_end: "#2b3a66",
-  button_primary_bg: "#c8651e",
+  primary: "#b35a2d",
+  secondary: "#8a4722",
+  accent: "#d7a344",
+  background: "#f5ecdf",
+  text: "#2d1f18",
+  text_muted: "#6a584d",
+  heading: "#21153b",
+  border: "#dccab3",
+  header_start: "#13008e",
+  header_end: "#31206c",
+  button_primary_bg: "#b35a2d",
   button_primary_text: "#ffffff",
   button_secondary_bg: "#ffffff",
-  button_secondary_text: "#2b1a12",
+  button_secondary_text: "#2d1f18",
 };
 
 export const DEFAULT_THEME_IMAGE_STYLES: ThemeImageStyles = {
@@ -28,9 +28,9 @@ export const DEFAULT_THEME_IMAGE_STYLES: ThemeImageStyles = {
 };
 
 export const DEFAULT_THEME_TYPOGRAPHY: Required<ThemeTypography> = {
-  body: "\"Source Sans 3\", \"Segoe UI\", sans-serif",
-  heading: "\"Newsreader\", serif",
-  button: "\"Source Sans 3\", \"Segoe UI\", sans-serif",
+  body: "\"Fira Sans\", \"Segoe UI\", sans-serif",
+  heading: "\"Bree Serif\", Georgia, serif",
+  button: "\"Fira Sans\", \"Segoe UI\", sans-serif",
 };
 
 const clampNumber = (value: number, min: number, max: number) =>

@@ -6,19 +6,25 @@ export default function Footer() {
   const { footer } = copy;
   const helpEmail = "agentesterritoriais2@gmail.com";
   const pageLinks = [
-    { label: "Página inicial", href: baseUrl },
-    { label: "Cadastro com código", href: `${baseUrl}acesso` },
-    { label: "Notícias", href: `${baseUrl}noticias` },
-    { label: "Denúncias", href: `${baseUrl}denuncias` },
+    { label: "P\u00e1gina inicial", href: baseUrl },
+    { label: "Cadastro com c\u00f3digo", href: `${baseUrl}acesso` },
+    { label: "Not\u00edcias", href: `${baseUrl}noticias` },
+    { label: "Den\u00fancias", href: `${baseUrl}denuncias` },
     { label: "Entrar no painel", href: `${baseUrl}login` },
   ];
-  const infoLinks = [
+  const institutionalLinks = [
+    {
+      label: "Portal Gov.br",
+      href: "https://www.gov.br/pt-br",
+    },
     {
       label: "Minist\u00e9rio da Igualdade Racial",
       href: "https://www.gov.br/igualdaderacial/pt-br",
     },
-    { label: "Portal Gov.br", href: "https://www.gov.br/pt-br" },
-    { label: "Canal de denúncias", href: `${baseUrl}denuncias` },
+    {
+      label: "Canal Fala.BR",
+      href: "https://falabr.cgu.gov.br/web/home",
+    },
   ];
   const socialLinks = [
     { label: "Gov.br", href: "https://www.instagram.com/govbr/" },
@@ -32,6 +38,10 @@ export default function Footer() {
     },
   ];
   const supportLines = footer.contactItems.filter(Boolean);
+  const transparencyItems = footer.transparencyItems.filter(Boolean);
+  const versionText = footer.version.trim();
+  const licenseText = "\u00a9 2026 PNIT. Ambiente p\u00fablico com leitura territorial e suporte institucional.";
+
   const supportLinks = supportLines.map((item, index) => {
     if (index === 1) {
       return {
@@ -46,8 +56,6 @@ export default function Footer() {
       external: false,
     };
   });
-  const versionText = footer.version.trim();
-  const licenseText = "© 2025 E-SINAPIR. Todos os direitos reservados.";
 
   const handleScrollTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -55,35 +63,36 @@ export default function Footer() {
 
   return (
     <footer className="site-footer">
-      <div className="footer-support">
-        <span className="footer-support-icon" aria-hidden="true">
-          ?
-        </span>
-        <span className="footer-support-label">{footer.contactTitle}</span>
-        <h2>Precisa de ajuda com a plataforma?</h2>
-        <p>
-          Consulte nossos canais institucionais e entre em contato com a equipe
-          de suporte do projeto para orientações de acesso e uso da plataforma.
-        </p>
-        <a className="footer-support-email" href={`mailto:${helpEmail}`}>
-          {helpEmail}
-        </a>
-        {supportLinks.length > 0 && (
-          <div className="footer-support-lines">
-            {supportLinks.map((item) => (
-              <a
-                key={item.label}
-                href={item.href}
-                {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
-        )}
-        <a className="btn footer-support-button" href={`mailto:${helpEmail}`}>
-          Falar com suporte
-        </a>
+      <div className="footer-hero">
+        <div className="footer-hero-copy">
+          <span className="footer-badge">Canais de atendimento</span>
+          <h2>Suporte institucional para acesso, opera\u00e7\u00e3o e leitura do mapa</h2>
+          <p>
+            {footer.description}
+          </p>
+        </div>
+        <div className="footer-hero-panel">
+          <a className="footer-email" href={`mailto:${helpEmail}`}>
+            {helpEmail}
+          </a>
+          {supportLinks.length > 0 && (
+            <div className="footer-contact-list">
+              {supportLinks.map((item) => (
+                <a
+                  key={item.label}
+                  className="footer-contact-chip"
+                  href={item.href}
+                  {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                >
+                  {item.label}
+                </a>
+              ))}
+            </div>
+          )}
+          <a className="btn btn-primary footer-hero-button" href={`mailto:${helpEmail}`}>
+            Falar com suporte
+          </a>
+        </div>
       </div>
 
       <div className="footer-panel">
@@ -104,14 +113,14 @@ export default function Footer() {
               >
                 <img
                   src={`${baseUrl}logos/mir2.jpeg`}
-                  alt="MIR - Ministério da Igualdade Racial"
+                  alt="Minist\u00e9rio da Igualdade Racial"
                   className="logo logo-mir theme-ignore"
                 />
               </a>
               <a href="https://ufrb.edu.br/" target="_blank" rel="noreferrer">
                 <img
                   src={`${baseUrl}logos/ufrb.jpg`}
-                  alt="UFRB - Universidade Federal do Reconcavo da Bahia"
+                  alt="Universidade Federal do Rec\u00f4ncavo da Bahia"
                   className="logo logo-ufrb theme-ignore"
                 />
               </a>
@@ -122,7 +131,7 @@ export default function Footer() {
               >
                 <img
                   src={`${baseUrl}logos/diversifica.png`}
-                  alt="Diversifica Inclusão e Diversidade"
+                  alt="Diversifica Inclus\u00e3o e Diversidade"
                   className="logo logo-diversifica theme-ignore"
                 />
               </a>
@@ -131,7 +140,7 @@ export default function Footer() {
           </div>
 
           <div className="footer-column">
-            <h4>Páginas</h4>
+            <h4>P\u00e1ginas</h4>
             <ul className="footer-link-list">
               {pageLinks.map((item) => (
                 <li key={item.href}>
@@ -142,28 +151,31 @@ export default function Footer() {
           </div>
 
           <div className="footer-column">
-            <h4>{footer.transparencyTitle || "Acesso à informação"}</h4>
+            <h4>{footer.transparencyTitle || "Transpar\u00eancia"}</h4>
             <ul className="footer-link-list">
-              {infoLinks.map((item) => {
-                const isExternal = item.href.startsWith("http");
-                return (
-                  <li key={item.href}>
-                    <a
-                      href={item.href}
-                      {...(isExternal
-                        ? { target: "_blank", rel: "noreferrer" }
-                        : {})}
-                    >
-                      {item.label}
-                    </a>
-                  </li>
-                );
-              })}
+              {transparencyItems.map((item) => (
+                <li key={item} className="footer-copy-item">
+                  {item}
+                </li>
+              ))}
             </ul>
           </div>
 
           <div className="footer-column">
-            <h4>Redes sociais</h4>
+            <h4>Institucional</h4>
+            <ul className="footer-link-list">
+              {institutionalLinks.map((item) => (
+                <li key={item.href}>
+                  <a href={item.href} target="_blank" rel="noreferrer">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="footer-column">
+            <h4>Redes e parceiros</h4>
             <ul className="footer-link-list">
               {socialLinks.map((item) => (
                 <li key={item.href}>
@@ -177,14 +189,14 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <span>{versionText || "\u00A0"}</span>
+          <span>{versionText || "Vers\u00e3o institucional em opera\u00e7\u00e3o."}</span>
           <button
             type="button"
             className="footer-scroll-top"
             onClick={handleScrollTop}
             aria-label="Voltar ao topo"
           >
-            ↑
+            ^
           </button>
         </div>
         <div className="footer-license-note">{licenseText}</div>
@@ -192,4 +204,3 @@ export default function Footer() {
     </footer>
   );
 }
-

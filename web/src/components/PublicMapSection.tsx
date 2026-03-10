@@ -76,6 +76,7 @@ const BRAZIL_CITIES = citiesData as BrazilCity[];
 type PublicMapMode = "public" | "reports";
 type PublicMapSectionProps = {
   mode?: PublicMapMode;
+  publicFilterOverride?: Partial<PointFilters> | null;
 };
 
 function mapPointFromApi(point: PublicPointDto): MapPoint {
@@ -96,7 +97,10 @@ function mapPointFromApi(point: PublicPointDto): MapPoint {
   };
 }
 
-export default function PublicMapSection({ mode = "reports" }: PublicMapSectionProps) {
+export default function PublicMapSection({
+  mode = "reports",
+  publicFilterOverride = null,
+}: PublicMapSectionProps) {
   const isPublicMode = mode === "public";
   const [selectionActive, setSelectionActive] = useState(false);
   const [selectedBounds, setSelectedBounds] = useState<Bounds | null>(null);
@@ -534,6 +538,22 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
   }, [isPublicMode, loadPointsForBounds, publicFilters]);
 
   useEffect(() => {
+    if (!isPublicMode || !publicFilterOverride) {
+      return;
+    }
+
+    setPublicFilters({
+      status: "all",
+      precision: "all",
+      updatedWithinDays: null,
+      city: publicFilterOverride.city ?? "",
+      state: publicFilterOverride.state ?? "",
+      region: "",
+      community: publicFilterOverride.community ?? "",
+    });
+  }, [isPublicMode, publicFilterOverride]);
+
+  useEffect(() => {
     activeFiltersRef.current = isPublicMode ? publicFilters : appliedFilters;
   }, [appliedFilters, isPublicMode, publicFilters]);
 
@@ -821,11 +841,11 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
         {isPublicMode ? (
           <aside className="map-filters">
             <div className="filter-block">
-              <span className="eyebrow">Navegação</span>
-              <h3>Mapa público</h3>
+              <span className="eyebrow">Consulta pública</span>
+              <h3>Mapa territorial</h3>
               <p>
-                Navegue pelos pontos cadastrados e filtre por estado, cidade ou
-                comunidade.
+                Explore os pontos cadastrados com filtros por estado, cidade e
+                comunidade em uma leitura visual mais institucional.
               </p>
             </div>
 
@@ -938,7 +958,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
               </span>
               <h2>
                 {isPublicMode
-                  ? "Navegação por cidade e comunidade"
+                  ? "Leitura territorial por cidade e comunidade"
                   : "Navegação pública com seleção de áreas"}
               </h2>
             </div>
@@ -973,7 +993,7 @@ export default function PublicMapSection({ mode = "reports" }: PublicMapSectionP
           <div className="map-info-grid">
             <div className="info-card">
               <span className="eyebrow">Informações</span>
-              <h3>Pontos públicos</h3>
+              <h3>Recorte atual</h3>
               {pointsLoading ? (
                 <p className="muted">Carregando pontos da área atual.</p>
               ) : pointsError ? (
