@@ -10,8 +10,12 @@ import {
   resolveThemeTypography,
 } from "../utils/theme";
 import { SiteCopyProvider } from "../providers/SiteCopyProvider";
+import { useAppVersionSync } from "../hooks/useAppVersionSync";
 
 export default function Layout() {
+  const baseUrl = import.meta.env.BASE_URL || "/";
+  useAppVersionSync(baseUrl);
+
   useEffect(() => {
     let active = true;
     const loadTheme = async () => {
