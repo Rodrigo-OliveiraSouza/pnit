@@ -46,7 +46,7 @@ export default function News() {
         const message =
           loadError instanceof Error
             ? loadError.message
-            : "Falha ao carregar noticias.";
+            : "Falha ao carregar notícias.";
         setError(message);
       } finally {
         if (active) {
@@ -149,7 +149,7 @@ export default function News() {
                   setTerritoryFilterOpen(false);
                 }}
               >
-                Todos os territorios
+                Todos os territórios
               </button>
               {territoryOptions.map((territory) => (
                 <button
@@ -174,7 +174,7 @@ export default function News() {
             type="button"
             className="news-filter-chip"
             onClick={() => setSelectedTerritory(ALL_TERRITORIES)}
-            aria-label={`Remover filtro de territorio ${selectedTerritory}`}
+            aria-label={`Remover filtro de território ${selectedTerritory}`}
           >
             <span>{selectedTerritory}</span>
             <span className="news-filter-chip-close" aria-hidden="true">
@@ -186,15 +186,15 @@ export default function News() {
 
       <section className="news-strip">
         {loading ? (
-          <div className="empty-card">Carregando noticias...</div>
+          <div className="empty-card">Carregando notícias...</div>
         ) : error ? (
           <div className="alert">{error}</div>
         ) : filteredPosts.length === 0 ? (
           selectedTerritory === ALL_TERRITORIES ? (
-            <div className="empty-card">Nenhuma noticia publicada ainda.</div>
+            <div className="empty-card">Nenhuma notícia publicada ainda.</div>
           ) : (
             <div className="empty-card">
-              Nenhuma noticia encontrada para o territorio selecionado.
+              Nenhuma notícia encontrada para o território selecionado.
             </div>
           )
         ) : (
@@ -242,7 +242,7 @@ export default function News() {
             </span>
             {selectedPost.territory && (
               <p className="news-article-territory">
-                Territorio: {selectedPost.territory}
+                Território: {selectedPost.territory}
               </p>
             )}
             <h2 className="news-article-title">{selectedPost.title}</h2>
@@ -274,7 +274,7 @@ export default function News() {
                   src={selectedPost.support_url}
                   alt={
                     selectedPost.support_image_description ||
-                    "Imagem de apoio da noticia"
+                    "Imagem de apoio da notícia"
                   }
                 />
                 <figcaption>

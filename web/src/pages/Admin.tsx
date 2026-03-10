@@ -339,7 +339,7 @@ export function AdminPanel() {
     });
     setSiteUserPasswordVisible(false);
     setSiteUserFeedback(
-      "Edite os dados do editor. A senha atual nao e exibida por seguranca."
+      "Edite os dados do editor. A senha atual não é exibida por segurança."
     );
   };
 
@@ -351,7 +351,7 @@ export function AdminPanel() {
     if (!fullName || !email || (!siteUserEditingId && !hasPassword)) {
       setSiteUserFeedback(
         siteUserEditingId
-          ? "Preencha nome e email. Informe uma nova senha apenas se quiser altera-la."
+          ? "Preencha nome e email. Informe uma nova senha apenas se quiser alterá-la."
           : "Preencha nome, email e senha para criar o editor."
       );
       return;
@@ -400,7 +400,7 @@ export function AdminPanel() {
     if (!isAdmin) return;
     const label = (user.full_name ?? "").trim() || user.email;
     const confirmed = window.confirm(
-      `Excluir o editor ${label}? Essa acao so funciona para contas sem historico vinculado.`
+      `Excluir o editor ${label}? Essa ação só funciona para contas sem histórico vinculado.`
     );
     if (!confirmed) return;
     setSiteUserDeletingId(user.id);
@@ -733,7 +733,7 @@ export function AdminPanel() {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao carregar configuracao de denuncias.";
+          : "Falha ao carregar configuração de denúncias.";
       setComplaintsConfigError(message);
     } finally {
       setComplaintsConfigLoading(false);
@@ -751,7 +751,7 @@ export function AdminPanel() {
       const message =
         err instanceof Error
           ? err.message
-          : "Falha ao atualizar configuracao de denuncias.";
+          : "Falha ao atualizar configuração de denúncias.";
       setComplaintsConfigError(message);
     } finally {
       setComplaintsConfigSaving(false);
@@ -1645,13 +1645,13 @@ export function AdminPanel() {
           <div className="table-card">
             <div className="table-header" style={{ marginBottom: "0.8rem" }}>
               <div>
-                <span className="eyebrow">Canal publico</span>
+                <span className="eyebrow">Canal público</span>
                 <h3>
-                  Registro de denuncias:{" "}
+                  Registro de denúncias:{" "}
                   {complaintsEnabled ? "Ativo" : "Desativado"}
                 </h3>
                 <p className="muted">
-                  Quando desativado, o formulario publico some e permanecem
+                  Quando desativado, o formulário público some e permanecem
                   apenas os contatos oficiais.
                 </p>
               </div>
@@ -1844,7 +1844,7 @@ export function AdminPanel() {
               </div>
               <div className="form-note">
                 {isEditingSiteUser
-                  ? "A senha atual nao e exibida por seguranca. Informe uma nova senha apenas se precisar redefini-la."
+                  ? "A senha atual não é exibida por segurança. Informe uma nova senha apenas se precisar redefini-la."
                   : "Use Mostrar para conferir a senha antes de criar o editor do site."}
               </div>
               <div className="form-actions">
@@ -1859,7 +1859,7 @@ export function AdminPanel() {
                       ? "Salvando..."
                       : "Criando..."
                     : isEditingSiteUser
-                      ? "Salvar alteracoes"
+                      ? "Salvar alterações"
                       : "Criar editor do site"}
                 </button>
                 {isEditingSiteUser && (
@@ -1869,7 +1869,7 @@ export function AdminPanel() {
                     onClick={resetSiteUserForm}
                     disabled={siteUserSaving}
                   >
-                    Cancelar edicao
+                    Cancelar edição
                   </button>
                 )}
               </div>
@@ -2209,7 +2209,7 @@ export function AdminPanel() {
                       className="carousel-arrow"
                       type="button"
                       onClick={() => scrollThemeCarousel("next")}
-                      aria-label="Ver pr?xima paleta"
+                      aria-label="Ver próxima paleta"
                     >
                       ?
                     </button>
@@ -2232,7 +2232,7 @@ export function AdminPanel() {
                       className="carousel-arrow"
                       type="button"
                       onClick={() => scrollThemeCarousel("next")}
-                      aria-label="Ver pr?xima paleta"
+                      aria-label="Ver próxima paleta"
                     >
                       ?
                     </button>

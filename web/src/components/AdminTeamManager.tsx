@@ -117,11 +117,11 @@ export default function AdminTeamManager() {
 
   const handleSubmit = async () => {
     if (!draft.occupation.trim()) {
-      setFeedback("O campo ocupacao e obrigatorio.");
+      setFeedback("O campo ocupação é obrigatório.");
       return;
     }
     if (!draft.name.trim()) {
-      setFeedback("O campo nome e obrigatorio.");
+      setFeedback("O campo nome é obrigatório.");
       return;
     }
 
@@ -177,15 +177,15 @@ export default function AdminTeamManager() {
             <h3>{isEditing ? "Editar pessoa da equipe" : "Adicionar pessoa na equipe"}</h3>
             <p className="muted">
               {isEditing
-                ? "Atualize os campos e salve as alteracoes. A imagem so muda se voce selecionar um novo arquivo."
-                : "Defina a posicao da lista. Ao inserir em uma posicao existente, as demais pessoas descem automaticamente."}
+                ? "Atualize os campos e salve as alterações. A imagem só muda se você selecionar um novo arquivo."
+                : "Defina a posição da lista. Ao inserir em uma posição existente, as demais pessoas descem automaticamente."}
             </p>
           </div>
         </div>
 
         <div className="admin-news-grid">
           <label>
-            Ocupacao
+            Ocupação
             <input
               type="text"
               placeholder="Ex: Coordenador geral"
@@ -246,7 +246,7 @@ export default function AdminTeamManager() {
             {saving
               ? "Salvando..."
               : isEditing
-                ? "Salvar alteracoes"
+                ? "Salvar alterações"
                 : "Adicionar pessoa"}
           </button>
           {isEditing && (
@@ -256,7 +256,7 @@ export default function AdminTeamManager() {
               onClick={() => resetDraft(Math.max(1, items.length + 1))}
               disabled={saving}
             >
-              Cancelar edicao
+              Cancelar edição
             </button>
           )}
         </div>

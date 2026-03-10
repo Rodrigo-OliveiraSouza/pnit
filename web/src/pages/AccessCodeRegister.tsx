@@ -38,7 +38,7 @@ const initialFormState = {
   elderlyCount: "",
   pcdCount: "",
   status: "active" as "active" | "inactive",
-  category: "Residencia",
+  category: "Residência",
   precision: "approx" as "approx" | "exact",
   areaType: "",
   referencePoint: "",
@@ -135,24 +135,24 @@ function computeIndicators(form: AccessFormState): IndicatorSet {
   const healthParts: string[] = [];
   if (form.healthHasClinic) {
     healthScore += 3;
-    healthParts.push("posto proximo");
+    healthParts.push("posto próximo");
   } else {
     healthParts.push("sem posto");
   }
   if (form.healthHasEmergency) {
     healthScore += 3;
-    healthParts.push("emergencia");
+    healthParts.push("emergência");
   }
   if (form.healthHasCommunityAgent) {
     healthScore += 2;
-    healthParts.push("agente comunitario");
+    healthParts.push("agente comunitário");
   }
 
   let educationScore = 2;
   const educationParts: string[] = [];
   if (form.educationHasSchool) {
     educationScore += 3;
-    educationParts.push("escola proxima");
+    educationParts.push("escola próxima");
   }
   if (form.educationHasTransport) {
     educationScore += 2;
@@ -164,7 +164,7 @@ function computeIndicators(form: AccessFormState): IndicatorSet {
   }
   if (form.educationLevel.trim()) {
     educationScore += 1;
-    educationParts.push(`nivel: ${form.educationLevel.trim()}`);
+    educationParts.push(`nível: ${form.educationLevel.trim()}`);
   }
 
   let incomeScore = 2;
@@ -192,7 +192,7 @@ function computeIndicators(form: AccessFormState): IndicatorSet {
   }
   if (form.assetsHasFurniture) {
     incomeScore += 1;
-    incomeParts.push("moveis");
+    incomeParts.push("móveis");
   }
   if (form.assetsHasLand) {
     incomeScore += 1;
@@ -238,23 +238,23 @@ function computeIndicators(form: AccessFormState): IndicatorSet {
   return {
     health: {
       score: clampScore(healthScore),
-      note: healthParts.join(", ") || "sem informacoes",
+      note: healthParts.join(", ") || "sem informações",
     },
     education: {
       score: clampScore(educationScore),
-      note: educationParts.join(", ") || "sem informacoes",
+      note: educationParts.join(", ") || "sem informações",
     },
     income: {
       score: clampScore(incomeScore),
-      note: incomeParts.join(", ") || "sem informacoes",
+      note: incomeParts.join(", ") || "sem informações",
     },
     housing: {
       score: clampScore(housingScore),
-      note: housingParts.join(", ") || "sem informacoes",
+      note: housingParts.join(", ") || "sem informações",
     },
     security: {
       score: clampScore(securityScore),
-      note: securityParts.join(", ") || "sem informacoes",
+      note: securityParts.join(", ") || "sem informações",
     },
   };
 }
@@ -299,14 +299,14 @@ export default function AccessCodeRegister() {
   const handleValidateCode = async () => {
     setCodeError(null);
     if (!code.trim()) {
-      setCodeError("Informe o codigo de acesso.");
+      setCodeError("Informe o código de acesso.");
       return;
     }
     setCodeLoading(true);
     try {
       const response = await validateAccessCode(code.trim().toUpperCase());
       if (!response.ok) {
-        setCodeError("Codigo invalido ou expirado.");
+        setCodeError("Código inválido ou expirado.");
         setCodeValidated(false);
         return;
       }
@@ -314,7 +314,7 @@ export default function AccessCodeRegister() {
       setCodeValidated(true);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Falha ao validar o codigo.";
+        error instanceof Error ? error.message : "Falha ao validar o código.";
       setCodeError(message);
       setCodeValidated(false);
     } finally {
@@ -325,11 +325,11 @@ export default function AccessCodeRegister() {
   const handleSubmit = async () => {
     setFeedback(null);
     if (!codeValidated) {
-      setFeedback({ type: "error", message: "Valide o codigo de acesso." });
+      setFeedback({ type: "error", message: "Valide o código de acesso." });
       return;
     }
     if (!code.trim()) {
-      setFeedback({ type: "error", message: "Informe o codigo de acesso." });
+      setFeedback({ type: "error", message: "Informe o código de acesso." });
       return;
     }
     if (!formState.fullName.trim()) {
@@ -354,7 +354,7 @@ export default function AccessCodeRegister() {
     if (!resolvedLocation) {
       setFeedback({
         type: "error",
-        message: "Informe a localizacao no mapa ou cole a coordenada.",
+        message: "Informe a localização no mapa ou cole a coordenada.",
       });
       return;
     }
@@ -481,7 +481,7 @@ export default function AccessCodeRegister() {
       setFeedback({
         type: "success",
         message:
-          "Cadastro enviado. O responsavel pelo codigo fara a aprovacao.",
+          "Cadastro enviado. O responsável pelo código fará a aprovação.",
       });
       setCode("");
       setFormState(initialFormState);
@@ -502,11 +502,11 @@ export default function AccessCodeRegister() {
       <section className="form-section">
         <div className="form-header">
           <div>
-            <span className="eyebrow">Cadastro com codigo</span>
-            <h1>Registrar pessoa com acesso unico</h1>
+            <span className="eyebrow">Cadastro com código</span>
+            <h1>Registrar pessoa com acesso único</h1>
             <p className="muted">
-              Insira o codigo fornecido e preencha todos os dados para enviar o
-              registro. O responsavel pelo codigo aprovara o cadastro.
+              Insira o código fornecido e preencha todos os dados para enviar o
+              registro. O responsável pelo código aprovará o cadastro.
             </p>
           </div>
         </div>
@@ -516,7 +516,7 @@ export default function AccessCodeRegister() {
         <div className="form-card">
           <div className="form-grid">
             <label className="full">
-              Codigo de acesso
+              Código de acesso
               <input
                 type="text"
                 value={code}
@@ -538,10 +538,10 @@ export default function AccessCodeRegister() {
               disabled={codeLoading || codeValidated}
             >
               {codeValidated
-                ? "Codigo validado"
+                ? "Código validado"
                 : codeLoading
                 ? "Validando..."
-                : "Validar codigo"}
+                : "Validar código"}
             </button>
             {codeValidated && (
               <button
@@ -552,7 +552,7 @@ export default function AccessCodeRegister() {
                   setCode("");
                 }}
               >
-                Trocar codigo
+                Trocar código
               </button>
             )}
           </div>
@@ -561,7 +561,7 @@ export default function AccessCodeRegister() {
 
         {!codeValidated ? (
           <div className="empty-state">
-            Informe o codigo para liberar o formulario completo.
+            Informe o código para liberar o formulário completo.
           </div>
         ) : (
           <div className="form-card">
@@ -632,7 +632,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label>
-                Endereco
+                Endereço
                 <input
                   type="text"
                   value={formState.address}
@@ -652,7 +652,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label>
-                Ponto de referencia
+                Ponto de referência
                 <input
                   type="text"
                   value={formState.referencePoint}
@@ -712,7 +712,7 @@ export default function AccessCodeRegister() {
                 </select>
               </label>
               <label>
-                Moradores no domicilio
+                Moradores no domicílio
                 <input
                   type="number"
                   min="0"
@@ -723,7 +723,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label>
-                Quantas criancas
+                Quantas crianças
                 <input
                   type="number"
                   min="0"
@@ -745,7 +745,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label>
-                Pessoas com deficiencia
+                Pessoas com deficiência
                 <input
                   type="number"
                   min="0"
@@ -772,7 +772,7 @@ export default function AccessCodeRegister() {
                 </select>
               </label>
               <label className="full">
-                Observacoes publicas
+                Observações públicas
                 <textarea
                   rows={2}
                   value={formState.publicNote}
@@ -782,7 +782,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label className="full">
-                Observacoes do agente
+                Observações do agente
                 <textarea
                   rows={2}
                   value={formState.notes}
@@ -794,11 +794,11 @@ export default function AccessCodeRegister() {
             </div>
 
             <div className="form-note">
-              <strong>Localizacao</strong>
+              <strong>Localização</strong>
             </div>
             <div className="form-row">
               <label>
-                Tipo de area
+                Tipo de área
                 <select
                   className="select"
                   value={formState.areaType}
@@ -813,7 +813,7 @@ export default function AccessCodeRegister() {
                 </select>
               </label>
               <label>
-                Precisao da localizacao
+                Precisão da localização
                 <select
                   className="select"
                   value={formState.precision}
@@ -868,19 +868,19 @@ export default function AccessCodeRegister() {
                     handleFieldChange("category", event.target.value)
                   }
                 >
-                  <option>Residencia</option>
-                  <option>Equipamento publico</option>
-                  <option>Organizacao comunitaria</option>
+                  <option>Residência</option>
+                  <option>Equipamento público</option>
+                  <option>Organização comunitária</option>
                   <option>Outro</option>
                 </select>
               </label>
             </div>
             <div className="form-note">
-              <strong>Infraestrutura basica</strong>
+              <strong>Infraestrutura básica</strong>
             </div>
             <div className="form-row">
               <label>
-                Energia eletrica
+                Energia elétrica
                 <select
                   className="select"
                   value={formState.energyAccess}
@@ -895,7 +895,7 @@ export default function AccessCodeRegister() {
                 </select>
               </label>
               <label>
-                Abastecimento de agua
+                Abastecimento de água
                 <select
                   className="select"
                   value={formState.waterSupply}
@@ -904,7 +904,7 @@ export default function AccessCodeRegister() {
                   }
                 >
                   <option value="">Selecione</option>
-                  <option value="rede_publica">Rede publica</option>
+                  <option value="rede_publica">Rede pública</option>
                   <option value="poco">Poco</option>
                   <option value="rio">Rio</option>
                   <option value="carro_pipa">Carro-pipa</option>
@@ -913,7 +913,7 @@ export default function AccessCodeRegister() {
             </div>
             <div className="form-row">
               <label>
-                Tratamento da agua
+                Tratamento da água
                 <select
                   className="select"
                   value={formState.waterTreatment}
@@ -923,7 +923,7 @@ export default function AccessCodeRegister() {
                 >
                   <option value="">Selecione</option>
                   <option value="sim">Sim</option>
-                  <option value="nao">Nao</option>
+                  <option value="nao">Não</option>
                 </select>
               </label>
               <label>
@@ -955,11 +955,11 @@ export default function AccessCodeRegister() {
                   <option value="">Selecione</option>
                   <option value="regular">Regular</option>
                   <option value="irregular">Irregular</option>
-                  <option value="nao_existe">Nao existe</option>
+                  <option value="nao_existe">Não existe</option>
                 </select>
               </label>
               <label>
-                Acesso a internet
+                Acesso à internet
                 <select
                   className="select"
                   value={
@@ -978,11 +978,11 @@ export default function AccessCodeRegister() {
                 >
                   <option value="">Selecione</option>
                   <option value="sim">Sim</option>
-                  <option value="nao">Nao</option>
+                  <option value="nao">Não</option>
                 </select>
               </label>
               <label>
-                Transporte publico
+                Transporte público
                 <select
                   className="select"
                   value={
@@ -1001,7 +1001,7 @@ export default function AccessCodeRegister() {
                 >
                   <option value="">Selecione</option>
                   <option value="sim">Sim</option>
-                  <option value="nao">Nao</option>
+                  <option value="nao">Não</option>
                 </select>
               </label>
             </div>
@@ -1014,7 +1014,7 @@ export default function AccessCodeRegister() {
             </div>
             <div className="form-row">
               <label>
-                Saude
+                Saúde
                 <input
                   type="number"
                   min={1}
@@ -1023,11 +1023,11 @@ export default function AccessCodeRegister() {
                   readOnly
                 />
                 <span className="muted">
-                  Criterios: {indicators.health.note}
+                  Critérios: {indicators.health.note}
                 </span>
               </label>
               <label>
-                Educacao
+                Educação
                 <input
                   type="number"
                   min={1}
@@ -1036,7 +1036,7 @@ export default function AccessCodeRegister() {
                   readOnly
                 />
                 <span className="muted">
-                  Criterios: {indicators.education.note}
+                  Critérios: {indicators.education.note}
                 </span>
               </label>
             </div>
@@ -1050,7 +1050,7 @@ export default function AccessCodeRegister() {
                   value={indicators.income.score}
                   readOnly
                 />
-                <span className="muted">Criterios: {indicators.income.note}</span>
+                <span className="muted">Critérios: {indicators.income.note}</span>
               </label>
               <label>
                 Moradia
@@ -1062,11 +1062,11 @@ export default function AccessCodeRegister() {
                   readOnly
                 />
                 <span className="muted">
-                  Criterios: {indicators.housing.note}
+                  Critérios: {indicators.housing.note}
                 </span>
               </label>
               <label>
-                Seguranca
+                Segurança
                 <input
                   type="number"
                   min={1}
@@ -1075,13 +1075,13 @@ export default function AccessCodeRegister() {
                   readOnly
                 />
                 <span className="muted">
-                  Criterios: {indicators.security.note}
+                  Critérios: {indicators.security.note}
                 </span>
               </label>
             </div>
 
             <div className="form-note">
-              <strong>Saude</strong>
+              <strong>Saúde</strong>
             </div>
             <div className="checkbox-list">
               <label>
@@ -1092,7 +1092,7 @@ export default function AccessCodeRegister() {
                     handleFieldChange("healthHasClinic", event.target.checked)
                   }
                 />
-                Ha posto ou unidade basica perto?
+                Há posto ou unidade básica perto?
               </label>
               <label>
                 <input
@@ -1102,7 +1102,7 @@ export default function AccessCodeRegister() {
                     handleFieldChange("healthHasEmergency", event.target.checked)
                   }
                 />
-                Ha atendimento de emergencia?
+                Há atendimento de emergência?
               </label>
               <label>
                 <input
@@ -1115,7 +1115,7 @@ export default function AccessCodeRegister() {
                     )
                   }
                 />
-                Acesso a agente comunitario?
+                Acesso a agente comunitário?
               </label>
               <label>
                 <input
@@ -1141,12 +1141,12 @@ export default function AccessCodeRegister() {
                     )
                   }
                 />
-                Possui ambulancia?
+                Possui ambulância?
               </label>
             </div>
             <div className="form-row">
               <label>
-                Unidade de saude mais proxima (km)
+                Unidade de saúde mais próxima (km)
                 <input
                   type="number"
                   placeholder="0"
@@ -1160,7 +1160,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label>
-                Tempo medio de deslocamento
+                Tempo médio de deslocamento
                 <input
                   type="text"
                   placeholder="Ex: 30 min"
@@ -1183,10 +1183,10 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Observacoes de saude
+              Observações de saúde
               <textarea
                 rows={2}
-                placeholder="Qualidade do atendimento, distancia, etc."
+                placeholder="Qualidade do atendimento, distância, etc."
                 value={formState.healthNotes}
                 onChange={(event) =>
                   handleFieldChange("healthNotes", event.target.value)
@@ -1195,13 +1195,13 @@ export default function AccessCodeRegister() {
             </label>
 
             <div className="form-note">
-              <strong>Educacao</strong>
+              <strong>Educação</strong>
             </div>
             <label>
-              Nivel de escolaridade
+              Nível de escolaridade
               <input
                 type="text"
-                placeholder="Ensino fundamental, medio, superior..."
+                placeholder="Ensino fundamental, médio, superior..."
                 value={formState.educationLevel}
                 onChange={(event) =>
                   handleFieldChange("educationLevel", event.target.value)
@@ -1217,7 +1217,7 @@ export default function AccessCodeRegister() {
                     handleFieldChange("educationHasSchool", event.target.checked)
                   }
                 />
-                Ha escola proxima?
+                Há escola próxima?
               </label>
               <label>
                 <input
@@ -1230,7 +1230,7 @@ export default function AccessCodeRegister() {
                     )
                   }
                 />
-                Ha transporte escolar?
+                Há transporte escolar?
               </label>
               <label>
                 <input
@@ -1256,11 +1256,11 @@ export default function AccessCodeRegister() {
                     )
                   }
                 />
-                Acesso a internet para estudo?
+                Acesso à internet para estudo?
               </label>
             </div>
             <label>
-              Observacoes de educacao
+              Observações de educação
               <textarea
                 rows={2}
                 placeholder="Qualidade da escola, turnos, etc."
@@ -1289,7 +1289,7 @@ export default function AccessCodeRegister() {
                 Fonte de renda
                 <input
                   type="text"
-                  placeholder="Emprego formal, informal, beneficios..."
+                  placeholder="Emprego formal, informal, benefícios..."
                   value={formState.incomeSource}
                   onChange={(event) =>
                     handleFieldChange("incomeSource", event.target.value)
@@ -1310,7 +1310,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label>
-                Tipo de ocupacao
+                Tipo de ocupação
                 <select
                   className="select"
                   value={formState.incomeOccupationType}
@@ -1324,7 +1324,7 @@ export default function AccessCodeRegister() {
                   <option value="">Selecione</option>
                   <option value="formal">Formal</option>
                   <option value="informal">Informal</option>
-                  <option value="autonomo">Autonomo</option>
+                  <option value="autonomo">Autônomo</option>
                   <option value="rural">Rural</option>
                 </select>
               </label>
@@ -1348,7 +1348,7 @@ export default function AccessCodeRegister() {
               Qual programa social
               <input
                 type="text"
-                placeholder="Bolsa familia, BPC, etc."
+                placeholder="Bolsa família, BPC, etc."
                 value={formState.incomeSocialProgram}
                 onChange={(event) =>
                   handleFieldChange("incomeSocialProgram", event.target.value)
@@ -1387,7 +1387,7 @@ export default function AccessCodeRegister() {
                     )
                   }
                 />
-                Possui moveis essenciais
+                Possui móveis essenciais
               </label>
               <label>
                 <input
@@ -1397,7 +1397,7 @@ export default function AccessCodeRegister() {
                     handleFieldChange("assetsHasLand", event.target.checked)
                   }
                 />
-                Possui terreno proprio
+                Possui terreno próprio
               </label>
             </div>
 
@@ -1417,7 +1417,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label>
-                Area da casa (m2)
+                Área da casa (m²)
                 <input
                   type="number"
                   placeholder="0"
@@ -1428,7 +1428,7 @@ export default function AccessCodeRegister() {
                 />
               </label>
               <label>
-                Area do terreno (m2)
+                Área do terreno (m²)
                 <input
                   type="number"
                   placeholder="0"
@@ -1443,7 +1443,7 @@ export default function AccessCodeRegister() {
               Tipo de moradia
               <input
                 type="text"
-                placeholder="Aluguel ou casa propria"
+                placeholder="Aluguel ou casa própria"
                 value={formState.housingType}
                 onChange={(event) =>
                   handleFieldChange("housingType", event.target.value)
@@ -1467,7 +1467,7 @@ export default function AccessCodeRegister() {
                 </select>
               </label>
               <label>
-                Condicao da moradia
+                Condição da moradia
                 <select
                   className="select"
                   value={formState.housingCondition}
@@ -1478,7 +1478,7 @@ export default function AccessCodeRegister() {
                   <option value="">Selecione</option>
                   <option value="boa">Boa</option>
                   <option value="regular">Regular</option>
-                  <option value="precaria">Precaria</option>
+                  <option value="precaria">Precária</option>
                 </select>
               </label>
             </div>
@@ -1507,7 +1507,7 @@ export default function AccessCodeRegister() {
                     )
                   }
                 />
-                Possui agua tratada?
+                Possui água tratada?
               </label>
             </div>
             <label>
@@ -1523,7 +1523,7 @@ export default function AccessCodeRegister() {
             </label>
 
             <div className="form-note">
-              <strong>Seguranca</strong>
+              <strong>Segurança</strong>
             </div>
             <div className="checkbox-list">
               <label>
@@ -1537,7 +1537,7 @@ export default function AccessCodeRegister() {
                     )
                   }
                 />
-                Ha delegacia proxima?
+                Há delegacia próxima?
               </label>
               <label>
                 <input
@@ -1547,7 +1547,7 @@ export default function AccessCodeRegister() {
                     handleFieldChange("securityHasPatrol", event.target.checked)
                   }
                 />
-                Ha patrulhamento regular?
+                Há patrulhamento regular?
               </label>
               <label>
                 <input
@@ -1557,14 +1557,14 @@ export default function AccessCodeRegister() {
                     handleFieldChange("securityHasGuard", event.target.checked)
                   }
                 />
-                Ha guarda municipal?
+                Há guarda municipal?
               </label>
             </div>
             <label>
-              Ocorrencias frequentes
+              Ocorrências frequentes
               <input
                 type="text"
-                placeholder="Furto, violencia, conflitos..."
+                placeholder="Furto, violência, conflitos..."
                 value={formState.securityOccurrences}
                 onChange={(event) =>
                   handleFieldChange("securityOccurrences", event.target.value)
@@ -1572,10 +1572,10 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Observacoes de seguranca
+              Observações de segurança
               <textarea
                 rows={2}
-                placeholder="Percepcao de risco, ocorrencias, etc."
+                placeholder="Percepção de risco, ocorrências, etc."
                 value={formState.securityNotes}
                 onChange={(event) =>
                   handleFieldChange("securityNotes", event.target.value)
@@ -1584,13 +1584,13 @@ export default function AccessCodeRegister() {
             </label>
 
             <div className="form-note">
-              <strong>Identidade e territorio</strong>
+              <strong>Identidade e território</strong>
             </div>
             <label>
-              Identificacao racial
+              Identificação racial
               <input
                 type="text"
-                placeholder="Autodeclaracao"
+                placeholder="Autodeclaração"
                 value={formState.raceIdentity}
                 onChange={(event) =>
                   handleFieldChange("raceIdentity", event.target.value)
@@ -1598,10 +1598,10 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Narrativa do territorio
+              Narrativa do território
               <textarea
                 rows={3}
-                placeholder="Resumo da historia, identidade e dinamicas locais"
+                placeholder="Resumo da história, identidade e dinâmicas locais"
                 value={formState.territoryNarrative}
                 onChange={(event) =>
                   handleFieldChange("territoryNarrative", event.target.value)
@@ -1609,10 +1609,10 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Memorias e referencias
+              Memórias e referências
               <textarea
                 rows={3}
-                placeholder="Memoria coletiva, marcos simbolicos"
+                placeholder="Memória coletiva, marcos simbólicos"
                 value={formState.territoryMemories}
                 onChange={(event) =>
                   handleFieldChange("territoryMemories", event.target.value)
@@ -1620,7 +1620,7 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Conflitos e tensoes
+              Conflitos e tensões
               <textarea
                 rows={3}
                 placeholder="Conflitos territoriais, disputas, etc."
@@ -1631,10 +1631,10 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Manifestacoes culturais
+              Manifestações culturais
               <textarea
                 rows={3}
-                placeholder="Festas, praticas culturais, coletivos"
+                placeholder="Festas, práticas culturais, coletivos"
                 value={formState.territoryCulture}
                 onChange={(event) =>
                   handleFieldChange("territoryCulture", event.target.value)
@@ -1642,13 +1642,13 @@ export default function AccessCodeRegister() {
               />
             </label>
             <div className="form-note">
-              <strong>Participacao social</strong>
+              <strong>Participação social</strong>
             </div>
             <label>
               Participa de
               <input
                 type="text"
-                placeholder="Associacao, conselho, projetos sociais..."
+                placeholder="Associação, conselho, projetos sociais..."
                 value={formState.participationTypes}
                 onChange={(event) =>
                   handleFieldChange("participationTypes", event.target.value)
@@ -1656,10 +1656,10 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Ja participou de
+              Já participou de
               <input
                 type="text"
-                placeholder="Audiencias, conferencias, capacitacoes..."
+                placeholder="Audiências, conferências, capacitações..."
                 value={formState.participationEvents}
                 onChange={(event) =>
                   handleFieldChange("participationEvents", event.target.value)
@@ -1667,7 +1667,7 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Grau de engajamento comunitario
+              Grau de engajamento comunitário
               <select
                 className="select"
                 value={formState.participationEngagement}
@@ -1680,19 +1680,19 @@ export default function AccessCodeRegister() {
               >
                 <option value="">Selecione</option>
                 <option value="alto">Alto</option>
-                <option value="medio">Medio</option>
+                <option value="medio">Médio</option>
                 <option value="baixo">Baixo</option>
               </select>
             </label>
 
             <div className="form-note">
-              <strong>Demandas prioritarias</strong>
+              <strong>Demandas prioritárias</strong>
             </div>
             <label>
               Demandas
               <input
                 type="text"
-                placeholder="Infraestrutura, saude, educacao, emprego..."
+                placeholder="Infraestrutura, saúde, educação, emprego..."
                 value={formState.demandPriorities}
                 onChange={(event) =>
                   handleFieldChange("demandPriorities", event.target.value)
@@ -1701,10 +1701,10 @@ export default function AccessCodeRegister() {
             </label>
 
             <div className="form-note">
-              <strong>Avaliacao tecnica do agente</strong>
+              <strong>Avaliação técnica do agente</strong>
             </div>
             <label>
-              Nivel de vulnerabilidade
+              Nível de vulnerabilidade
               <select
                 className="select"
                 value={formState.vulnerabilityLevel}
@@ -1714,7 +1714,7 @@ export default function AccessCodeRegister() {
               >
                 <option value="">Selecione</option>
                 <option value="baixo">Baixo</option>
-                <option value="medio">Medio</option>
+                <option value="medio">Médio</option>
                 <option value="alto">Alto</option>
               </select>
             </label>
@@ -1739,7 +1739,7 @@ export default function AccessCodeRegister() {
               />
             </label>
             <label>
-              Orgaos acionados
+              Órgãos acionados
               <textarea
                 rows={3}
                 value={formState.agenciesContacted}
@@ -1760,9 +1760,9 @@ export default function AccessCodeRegister() {
                   handleFieldChange("consentAccepted", event.target.checked)
                 }
               />
-              Autorizo a utilizacao dos dados coletados exclusivamente para fins
-              de diagnostico territorial, planejamento de politicas publicas e
-              relatorios institucionais, conforme a LGPD.
+              Autorizo a utilização dos dados coletados exclusivamente para fins
+              de diagnóstico territorial, planejamento de políticas públicas e
+              relatórios institucionais, conforme a LGPD.
             </label>
 
             <div className="form-note">

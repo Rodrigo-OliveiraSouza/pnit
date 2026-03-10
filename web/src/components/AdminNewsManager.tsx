@@ -59,7 +59,7 @@ export default function AdminNewsManager() {
       const message =
         loadError instanceof Error
           ? loadError.message
-          : "Falha ao carregar noticias publicadas.";
+          : "Falha ao carregar notícias publicadas.";
       setError(message);
       setItems([]);
     } finally {
@@ -131,19 +131,19 @@ export default function AdminNewsManager() {
       return;
     }
     if (!draft.title.trim()) {
-      setFeedback("Titulo da noticia e obrigatorio.");
+      setFeedback("Título da notícia é obrigatório.");
       return;
     }
     if (!draft.body.trim()) {
-      setFeedback("Texto principal da noticia e obrigatorio.");
+      setFeedback("Texto principal da notícia é obrigatório.");
       return;
     }
     if (!isEditing && !coverFile) {
-      setFeedback("A imagem de apresentacao e obrigatoria.");
+      setFeedback("A imagem de apresentação é obrigatória.");
       return;
     }
     if (!isEditing && !supportFile) {
-      setFeedback("A imagem de apoio e obrigatoria.");
+      setFeedback("A imagem de apoio é obrigatória.");
       return;
     }
 
@@ -161,7 +161,7 @@ export default function AdminNewsManager() {
           cover_file: coverFile,
           support_file: supportFile,
         });
-        setFeedback("Noticia atualizada com sucesso.");
+        setFeedback("Notícia atualizada com sucesso.");
       } else {
         await createNewsPost({
           ...draft,
@@ -171,7 +171,7 @@ export default function AdminNewsManager() {
           cover_file: coverFile as File,
           support_file: supportFile as File,
         });
-        setFeedback("Noticia publicada com sucesso.");
+        setFeedback("Notícia publicada com sucesso.");
       }
       resetDraft();
       await loadNews();
@@ -180,8 +180,8 @@ export default function AdminNewsManager() {
         publishError instanceof Error
           ? publishError.message
           : isEditing
-            ? "Falha ao atualizar noticia."
-            : "Falha ao publicar noticia.";
+            ? "Falha ao atualizar notícia."
+            : "Falha ao publicar notícia.";
       setError(message);
     } finally {
       setPublishing(false);
@@ -193,7 +193,7 @@ export default function AdminNewsManager() {
       return;
     }
     const confirmed = window.confirm(
-      "Deseja apagar esta noticia? Esta acao nao pode ser desfeita."
+      "Deseja apagar esta notícia? Esta ação não pode ser desfeita."
     );
     if (!confirmed) {
       return;
@@ -206,12 +206,12 @@ export default function AdminNewsManager() {
       await deleteNewsPost(editingId);
       resetDraft();
       await loadNews();
-      setFeedback("Noticia apagada com sucesso.");
+      setFeedback("Notícia apagada com sucesso.");
     } catch (deleteError) {
       const message =
         deleteError instanceof Error
           ? deleteError.message
-          : "Falha ao apagar noticia.";
+          : "Falha ao apagar notícia.";
       setError(message);
     } finally {
       setDeleting(false);
@@ -223,11 +223,11 @@ export default function AdminNewsManager() {
       <div ref={formCardRef} className="dashboard-card admin-news-card">
         <div className="form-header">
           <div>
-            <span className="eyebrow">Noticias</span>
-            <h3>{isEditing ? "Editar noticia publicada" : "Publicar nova noticia"}</h3>
+            <span className="eyebrow">Notícias</span>
+            <h3>{isEditing ? "Editar notícia publicada" : "Publicar nova notícia"}</h3>
             <p className="muted">
               {isEditing
-                ? "Atualize os campos e salve as alteracoes. As imagens so mudam se voce selecionar novos arquivos."
+                ? "Atualize os campos e salve as alterações. As imagens só mudam se você selecionar novos arquivos."
                 : "Preencha os campos abaixo para publicar no mural oficial."}
             </p>
           </div>
@@ -235,30 +235,30 @@ export default function AdminNewsManager() {
 
         <div className="admin-news-grid">
           <label>
-            Titulo da noticia
+            Título da notícia
             <input
               className="admin-news-title-input"
               type="text"
-              placeholder="Digite o titulo principal"
+              placeholder="Digite o título principal"
               value={draft.title}
               onChange={handleDraftChange("title")}
             />
           </label>
           <label>
-            Subtitulo
+            Subtítulo
             <input
               type="text"
-              placeholder="Digite um subtitulo"
+              placeholder="Digite um subtítulo"
               value={draft.subtitle}
               onChange={handleDraftChange("subtitle")}
             />
           </label>
           <label>
-            Territorio (opcional)
+            Território (opcional)
             <input
               type="text"
               list="news-territory-options"
-              placeholder="Ex: Reconcavo Baiano"
+              placeholder="Ex: Recôncavo Baiano"
               value={draft.territory}
               onChange={handleDraftChange("territory")}
             />
@@ -274,7 +274,7 @@ export default function AdminNewsManager() {
           Texto principal
           <textarea
             rows={6}
-            placeholder="Conteudo principal da noticia"
+            placeholder="Conteúdo principal da notícia"
             value={draft.body}
             onChange={handleDraftChange("body")}
           />
@@ -282,10 +282,10 @@ export default function AdminNewsManager() {
 
         <div className="admin-news-grid">
           <label>
-            Subtitulo de apoio
+            Subtítulo de apoio
             <input
               type="text"
-              placeholder="Subtitulo para bloco complementar"
+              placeholder="Subtítulo para bloco complementar"
               value={draft.support_subtitle}
               onChange={handleDraftChange("support_subtitle")}
             />
@@ -294,7 +294,7 @@ export default function AdminNewsManager() {
             Fonte da imagem de apoio
             <input
               type="text"
-              placeholder="Ex: Ministerio da Igualdade Racial"
+              placeholder="Ex: Ministério da Igualdade Racial"
               value={draft.support_image_source}
               onChange={handleDraftChange("support_image_source")}
             />
@@ -305,7 +305,7 @@ export default function AdminNewsManager() {
           Texto complementar
           <textarea
             rows={4}
-            placeholder="Informacoes complementares"
+            placeholder="Informações complementares"
             value={draft.support_text}
             onChange={handleDraftChange("support_text")}
           />
@@ -313,7 +313,7 @@ export default function AdminNewsManager() {
 
         <div className="admin-news-grid">
           <label>
-            Foto de apresentacao da noticia
+            Foto de apresentação da notícia
             <input
               ref={coverInputRef}
               type="file"
@@ -324,7 +324,7 @@ export default function AdminNewsManager() {
             />
           </label>
           <label>
-            Imagem de apoio da noticia
+            Imagem de apoio da notícia
             <input
               ref={supportInputRef}
               type="file"
@@ -348,8 +348,8 @@ export default function AdminNewsManager() {
                 ? "Salvando..."
                 : "Publicando..."
               : isEditing
-                ? "Salvar alteracoes"
-                : "Publicar noticia"}
+                ? "Salvar alterações"
+                : "Publicar notícia"}
           </button>
           {isEditing && (
             <button
@@ -358,7 +358,7 @@ export default function AdminNewsManager() {
               onClick={resetDraft}
               disabled={publishing || deleting}
             >
-              Cancelar edicao
+              Cancelar edição
             </button>
           )}
           {isEditing && (
@@ -368,7 +368,7 @@ export default function AdminNewsManager() {
               onClick={() => void handleDelete()}
               disabled={publishing || deleting}
             >
-              {deleting ? "Apagando..." : "Apagar noticia"}
+              {deleting ? "Apagando..." : "Apagar notícia"}
             </button>
           )}
         </div>
@@ -380,13 +380,13 @@ export default function AdminNewsManager() {
         <div className="form-header">
           <div>
             <span className="eyebrow">Cronologia</span>
-            <h3>Noticias publicadas</h3>
+            <h3>Notícias publicadas</h3>
           </div>
         </div>
         {loading ? (
-          <p className="muted">Carregando noticias...</p>
+          <p className="muted">Carregando notícias...</p>
         ) : items.length === 0 ? (
-          <div className="empty-card">Nenhuma noticia publicada.</div>
+          <div className="empty-card">Nenhuma notícia publicada.</div>
         ) : (
           <div className="admin-news-list">
             {items.map((item) => (
@@ -395,7 +395,7 @@ export default function AdminNewsManager() {
                 <div className="admin-news-item-content">
                   <div className="admin-news-item-meta">
                     <h4>{item.title}</h4>
-                    {item.territory && <p className="muted">Territorio: {item.territory}</p>}
+                    {item.territory && <p className="muted">Território: {item.territory}</p>}
                     <p className="muted">
                       Publicado em {formatPublishedAt(item.created_at)}
                     </p>
@@ -410,7 +410,7 @@ export default function AdminNewsManager() {
                     type="button"
                     onClick={() => handleEdit(item)}
                   >
-                    Editar noticia
+                    Editar notícia
                   </button>
                 </div>
               </article>

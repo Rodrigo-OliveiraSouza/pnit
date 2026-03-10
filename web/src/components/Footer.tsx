@@ -79,7 +79,7 @@ export default function Footer() {
             </a>
             <p className="footer-panel-copy">
               Escolha o canal institucional mais adequado para suporte,
-              ouvidoria e orientacao.
+              ouvidoria e orientação.
             </p>
             {supportLinks.length > 0 && (
               <div className="footer-contact-list">

@@ -29,11 +29,11 @@ export default function PasswordReset() {
       await requestPasswordReset(normalizedEmail);
       setStep("confirm");
       setNotice(
-        "Se o email estiver cadastrado, enviamos um codigo para voce."
+        "Se o e-mail estiver cadastrado, enviaremos um código para você."
       );
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Falha ao solicitar o codigo.";
+        err instanceof Error ? err.message : "Falha ao solicitar o código.";
       setError(message);
     } finally {
       setLoading(false);
@@ -45,7 +45,7 @@ export default function PasswordReset() {
     setError(null);
     setNotice(null);
     if (password !== passwordConfirm) {
-      setError("As senhas nao conferem.");
+      setError("As senhas não conferem.");
       return;
     }
     setLoading(true);
@@ -86,7 +86,7 @@ export default function PasswordReset() {
       </div>
       <div className="auth-card">
         <h2>Recuperar senha</h2>
-        <p>Informe seu email para receber o codigo de verificacao.</p>
+        <p>Informe seu e-mail para receber o código de verificação.</p>
         <div className="tabs">
           <button
             type="button"
@@ -117,7 +117,7 @@ export default function PasswordReset() {
               />
             </label>
             <button className="btn btn-primary" type="submit" disabled={loading}>
-              {loading ? "Enviando..." : "Enviar codigo"}
+              {loading ? "Enviando..." : "Enviar código"}
             </button>
           </form>
         )}
@@ -134,7 +134,7 @@ export default function PasswordReset() {
               />
             </label>
             <label>
-              Codigo recebido
+              Código recebido
               <input
                 type="text"
                 inputMode="numeric"
@@ -175,7 +175,7 @@ export default function PasswordReset() {
                 onClick={handleBackToRequest}
                 disabled={loading}
               >
-                Reenviar codigo
+                Reenviar código
               </button>
             </div>
           </form>
@@ -183,7 +183,7 @@ export default function PasswordReset() {
         {step === "done" && (
           <div className="form">
             <div className="alert alert-success">
-              Senha atualizada. Voce ja pode entrar no painel.
+              Senha atualizada. Você já pode entrar no painel.
             </div>
             <Link className="btn btn-primary" to="/login">
               Voltar ao login

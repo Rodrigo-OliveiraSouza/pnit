@@ -79,7 +79,7 @@ const initialFormState = {
   elderlyCount: "",
   pcdCount: "",
   status: "active" as "active" | "inactive",
-  category: "Residencia",
+  category: "Residência",
   precision: "approx" as "approx" | "exact",
   areaType: "",
   referencePoint: "",
@@ -233,7 +233,7 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
   }
   if (form.educationLevel.trim()) {
     educationScore += 1;
-    educationParts.push(`nivel: ${form.educationLevel.trim()}`);
+    educationParts.push(`nível: ${form.educationLevel.trim()}`);
   }
 
   let incomeScore = 2;
@@ -261,7 +261,7 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
   }
   if (form.assetsHasFurniture) {
     incomeScore += 1;
-    incomeParts.push("moveis");
+    incomeParts.push("móveis");
   }
   if (form.assetsHasLand) {
     incomeScore += 1;
@@ -330,7 +330,7 @@ function computeIndicators(form: typeof initialFormState): IndicatorSet {
 
 function formatBoolean(value: boolean | null | undefined) {
   if (value === true) return "Sim";
-  if (value === false) return "Nao";
+  if (value === false) return "Não";
   return "-";
 }
 
@@ -703,7 +703,7 @@ export default function EmployeeDashboard() {
       communityDraft.familiesCount.trim() &&
       !Number.isFinite(familiesCountValue)
     ) {
-      setCommunityFeedback("Informe a quantidade de familias.");
+      setCommunityFeedback("Informe a quantidade de famílias.");
       return;
     }
     setCommunitySaving(true);
@@ -1134,7 +1134,7 @@ export default function EmployeeDashboard() {
     <div class="section">
       <h2>5) Saúde</h2>
       <div class="field">Unidade de saúde mais próxima (km): <span class="line"></span></div>
-      <div class="field">Tempo médio de deslocamento: <span class="line"></span></div>
+      <div class="field">Tempo m²dio de deslocamento: <span class="line"></span></div>
       <div class="field">Possui atendimento regular? <span class="line"></span></div>
       <div class="field">Existe posto de saúde? <span class="line"></span></div>
       <div class="field">Existe agente comunitário? <span class="line"></span></div>
@@ -1164,7 +1164,7 @@ export default function EmployeeDashboard() {
       <div class="field">Tipo de moradia: <span class="line"></span></div>
       <div class="field">Material predominante: <span class="line"></span></div>
       <div class="field">Possui banheiro interno? <span class="line"></span></div>
-      <div class="field">Possui água tratada? <span class="line"></span></div>
+      <div class="field">Possui Água tratada? <span class="line"></span></div>
       <div class="field">Condição da moradia: <span class="line"></span></div>
       <div class="field">Riscos ambientais: <span class="line"></span></div>
     </div>
@@ -1624,10 +1624,10 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Ponto de referencia
+                  Ponto de referência
                   <input
                     type="text"
-                    placeholder="Referencia local"
+                    placeholder="Referência local"
                     value={formState.referencePoint}
                     onChange={(event) =>
                       handleFieldChange("referencePoint", event.target.value)
@@ -1637,7 +1637,7 @@ export default function EmployeeDashboard() {
               </div>
               <div className="form-row">
                 <label>
-                  Moradores no domicilio
+                  Moradores no domicílio
                   <input
                     type="number"
                     placeholder="0"
@@ -1758,7 +1758,7 @@ export default function EmployeeDashboard() {
                       </strong>
                     </div>
                     <div>
-                      <span>Familias</span>
+                      <span>Famílias</span>
                       <strong>
                         {selectedCommunity?.families_count ?? "Não informado"}
                       </strong>
@@ -1841,7 +1841,7 @@ export default function EmployeeDashboard() {
                       />
                     </label>
                     <label>
-                      Familias (aprox.)
+                      Famílias (aprox.)
                       <input
                         type="number"
                         value={communityDraft.familiesCount}
@@ -2074,7 +2074,7 @@ export default function EmployeeDashboard() {
                       handleFieldChange("category", event.target.value)
                     }
                   >
-                    <option>Residencia</option>
+                    <option>Residência</option>
                     <option>Equipamento público</option>
                     <option>Organização comunitária</option>
                     <option>Outro</option>
@@ -2396,7 +2396,7 @@ export default function EmployeeDashboard() {
                   />
                 </label>
                 <label>
-                  Tempo médio de deslocamento
+                  Tempo m²dio de deslocamento
                   <input
                     type="text"
                     placeholder="Ex: 30 min"
@@ -2437,7 +2437,7 @@ export default function EmployeeDashboard() {
                 Nível de escolaridade
                 <input
                   type="text"
-                  placeholder="Ensino fundamental, médio, superior..."
+                  placeholder="Ensino fundamental, m²dio, superior..."
                   value={formState.educationLevel}
                   onChange={(event) =>
                     handleFieldChange("educationLevel", event.target.value)
@@ -2561,7 +2561,7 @@ export default function EmployeeDashboard() {
                     <option value="">Selecione</option>
                     <option value="formal">Formal</option>
                     <option value="informal">Informal</option>
-                    <option value="autonomo">Autonomo</option>
+                    <option value="autonomo">Autônomo</option>
                     <option value="rural">Rural</option>
                   </select>
                 </label>
@@ -2585,7 +2585,7 @@ export default function EmployeeDashboard() {
                 Qual programa social
                 <input
                   type="text"
-                  placeholder="Bolsa familia, BPC, etc."
+                  placeholder="Bolsa família, BPC, etc."
                   value={formState.incomeSocialProgram}
                   onChange={(event) =>
                     handleFieldChange("incomeSocialProgram", event.target.value)
@@ -2624,7 +2624,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Possui moveis essenciais
+                  Possui móveis essenciais
                 </label>
                 <label>
                   <input
@@ -2744,7 +2744,7 @@ export default function EmployeeDashboard() {
                       )
                     }
                   />
-                  Possui água tratada?
+                  Possui Água tratada?
                 </label>
               </div>
               <label>
@@ -2804,10 +2804,10 @@ export default function EmployeeDashboard() {
                 </label>
               </div>
               <label>
-                Ocorrencias frequentes
+                Ocorrências frequentes
                 <input
                   type="text"
-                  placeholder="Furto, violencia, conflitos..."
+                  placeholder="Furto, violência, conflitos..."
                   value={formState.securityOccurrences}
                   onChange={(event) =>
                     handleFieldChange("securityOccurrences", event.target.value)
@@ -3266,7 +3266,7 @@ export default function EmployeeDashboard() {
                             </div>
 
                             <div className="form-note">
-                              <strong>Composicao familiar</strong>
+                              <strong>Composição familiar</strong>
                             </div>
                             <div className="details-grid">
                               <div>
@@ -3304,15 +3304,15 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.area_type)}</p>
                               </div>
                               <div>
-                                <strong>Ponto de referencia</strong>
+                                <strong>Ponto de referência</strong>
                                 <p>{formatValue(item.reference_point)}</p>
                               </div>
                               <div>
-                                <strong>Nota publica</strong>
+                                <strong>Nota pública</strong>
                                 <p>{formatValue(item.public_note)}</p>
                               </div>
                               <div>
-                                <strong>Localizacao</strong>
+                                <strong>Localização</strong>
                                 <p>{formatValue(item.location_text)}</p>
                               </div>
                               <div>
@@ -3340,11 +3340,11 @@ export default function EmployeeDashboard() {
                             </div>
                             <div className="details-grid">
                               <div>
-                                <strong>Saude</strong>
+                                <strong>Saúde</strong>
                                 <p>{formatValue(item.health_score)}</p>
                               </div>
                               <div>
-                                <strong>Educacao</strong>
+                                <strong>Educação</strong>
                                 <p>{formatValue(item.education_score)}</p>
                               </div>
                               <div>
@@ -3356,7 +3356,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.housing_score)}</p>
                               </div>
                               <div>
-                                <strong>Seguranca</strong>
+                                <strong>Segurança</strong>
                                 <p>{formatValue(item.security_score)}</p>
                               </div>
                             </div>
@@ -3370,7 +3370,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.energy_access)}</p>
                               </div>
                               <div>
-                                <strong>Agua</strong>
+                                <strong>água</strong>
                                 <p>{formatValue(item.water_supply)}</p>
                               </div>
                               <div>
@@ -3390,25 +3390,25 @@ export default function EmployeeDashboard() {
                                 <p>{formatBoolean(item.internet_access)}</p>
                               </div>
                               <div>
-                                <strong>Transporte publico</strong>
+                                <strong>Transporte público</strong>
                                 <p>{formatBoolean(item.transport_access)}</p>
                               </div>
                             </div>
 
                             <div className="form-note">
-                              <strong>Saude</strong>
+                              <strong>Saúde</strong>
                             </div>
                             <div className="details-grid">
                               <div>
-                                <strong>Posto proximo</strong>
+                                <strong>Posto próximo</strong>
                                 <p>{formatBoolean(item.health_has_clinic)}</p>
                               </div>
                               <div>
-                                <strong>Emergencia</strong>
+                                <strong>Emergência</strong>
                                 <p>{formatBoolean(item.health_has_emergency)}</p>
                               </div>
                               <div>
-                                <strong>Agente comunitario</strong>
+                                <strong>Agente comunitário</strong>
                                 <p>
                                   {formatBoolean(item.health_has_community_agent)}
                                 </p>
@@ -3420,11 +3420,11 @@ export default function EmployeeDashboard() {
                                 </p>
                               </div>
                               <div>
-                                <strong>Ambulancia</strong>
+                                <strong>Ambulância</strong>
                                 <p>{formatBoolean(item.health_has_ambulance)}</p>
                               </div>
                               <div>
-                                <strong>Distancia (km)</strong>
+                                <strong>Distância (km)</strong>
                                 <p>{formatValue(item.health_unit_distance_km)}</p>
                               </div>
                               <div>
@@ -3436,13 +3436,13 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.health_difficulties)}</p>
                               </div>
                               <div>
-                                <strong>Observacoes</strong>
+                                <strong>Observações</strong>
                                 <p>{formatValue(item.health_notes)}</p>
                               </div>
                             </div>
 
                             <div className="form-note">
-                              <strong>Educacao</strong>
+                              <strong>Educação</strong>
                             </div>
                             <div className="details-grid">
                               <div>
@@ -3450,7 +3450,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.education_level)}</p>
                               </div>
                               <div>
-                                <strong>Escola proxima</strong>
+                                <strong>Escola próxima</strong>
                                 <p>{formatBoolean(item.education_has_school)}</p>
                               </div>
                               <div>
@@ -3468,7 +3468,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatBoolean(item.education_has_internet)}</p>
                               </div>
                               <div>
-                                <strong>Observacoes</strong>
+                                <strong>Observações</strong>
                                 <p>{formatValue(item.education_notes)}</p>
                               </div>
                             </div>
@@ -3490,7 +3490,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.income_contributors)}</p>
                               </div>
                               <div>
-                                <strong>Ocupacao</strong>
+                                <strong>Ocupação</strong>
                                 <p>{formatValue(item.income_occupation_type)}</p>
                               </div>
                               <div>
@@ -3550,13 +3550,13 @@ export default function EmployeeDashboard() {
                                 <p>{formatBoolean(item.housing_has_bathroom)}</p>
                               </div>
                               <div>
-                                <strong>Agua tratada</strong>
+                                <strong>água tratada</strong>
                                 <p>
                                   {formatBoolean(item.housing_has_water_treated)}
                                 </p>
                               </div>
                               <div>
-                                <strong>Condicao</strong>
+                                <strong>Condição</strong>
                                 <p>{formatValue(item.housing_condition)}</p>
                               </div>
                               <div>
@@ -3566,7 +3566,7 @@ export default function EmployeeDashboard() {
                             </div>
 
                             <div className="form-note">
-                              <strong>Seguranca</strong>
+                              <strong>Segurança</strong>
                             </div>
                             <div className="details-grid">
                               <div>
@@ -3586,21 +3586,21 @@ export default function EmployeeDashboard() {
                                 <p>{formatBoolean(item.security_has_guard)}</p>
                               </div>
                               <div>
-                                <strong>Ocorrencias</strong>
+                                <strong>Ocorrências</strong>
                                 <p>{formatValue(item.security_occurrences)}</p>
                               </div>
                               <div>
-                                <strong>Observacoes</strong>
+                                <strong>Observações</strong>
                                 <p>{formatValue(item.security_notes)}</p>
                               </div>
                             </div>
 
                             <div className="form-note">
-                              <strong>Identidade e territorio</strong>
+                              <strong>Identidade e território</strong>
                             </div>
                             <div className="details-grid">
                               <div>
-                                <strong>Identificacao racial</strong>
+                                <strong>Identificação racial</strong>
                                 <p>{formatValue(item.race_identity)}</p>
                               </div>
                               <div>
@@ -3608,7 +3608,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatValue(item.territory_narrative)}</p>
                               </div>
                               <div>
-                                <strong>Memorias</strong>
+                                <strong>Memórias</strong>
                                 <p>{formatValue(item.territory_memories)}</p>
                               </div>
                               <div>
@@ -3622,7 +3622,7 @@ export default function EmployeeDashboard() {
                             </div>
 
                             <div className="form-note">
-                              <strong>Participacao</strong>
+                              <strong>Participação</strong>
                             </div>
                             <div className="details-grid">
                               <div>
@@ -3652,7 +3652,7 @@ export default function EmployeeDashboard() {
                             </div>
 
                             <div className="form-note">
-                              <strong>Avaliacao tecnica</strong>
+                              <strong>Avaliação técnica</strong>
                             </div>
                             <div className="details-grid">
                               <div>
@@ -3676,7 +3676,7 @@ export default function EmployeeDashboard() {
                                 <p>{formatBoolean(item.consent_accepted)}</p>
                               </div>
                               <div>
-                                <strong>Observacoes</strong>
+                                <strong>Observações</strong>
                                 <p>{formatValue(item.notes)}</p>
                               </div>
                             </div>
@@ -3763,7 +3763,7 @@ export default function EmployeeDashboard() {
             <div className="table-card">
               <div className="form-header">
                 <div>
-                  <span className="eyebrow">Edicao</span>
+                  <span className="eyebrow">Edição</span>
                   <h3>Atualizar cadastro</h3>
                 </div>
               </div>
