@@ -624,22 +624,31 @@ select {
 
 .home-hero-carousel,
 .home-hero-carousel .news-card-media {
-  height: 100%;
+  width: 100%;
+}
+
+.home-hero-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
 }
 
 .home-hero-carousel .news-card-media {
+  height: auto;
   box-shadow: none;
   background: transparent;
 }
 
 .home-hero-carousel .news-media {
-  min-height: 100%;
+  min-height: 0;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.12);
 }
 
 .home-hero-carousel .news-media img {
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .home-section-heading {

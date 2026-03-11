@@ -543,7 +543,7 @@ img.theme-ignore,
 .news-card-media {
   width: 100%;
   max-width: min(100%, 3000px);
-  aspect-ratio: 3000 / 1000;
+  aspect-ratio: 960 / 365;
   height: auto;
   border-radius: var(--radius-lg);
   position: relative;
@@ -557,7 +557,7 @@ img.theme-ignore,
 
 .news-card-media .news-media img {
   object-position: center;
-  object-fit: cover;
+  object-fit: contain;
   background: var(--color-white);
 }
 
