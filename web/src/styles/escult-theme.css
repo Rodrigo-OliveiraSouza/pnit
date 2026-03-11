@@ -397,14 +397,19 @@ select {
 
 .nav-link:hover,
 .nav-link.active {
-  color: var(--color-white);
-  background: linear-gradient(135deg, var(--color-header-start), var(--color-header-end));
-  border-color: transparent;
+  color: var(--color-clay);
+  background: rgba(var(--color-sun-rgb), 0.18);
+  border-color: rgba(var(--color-sun-rgb), 0.34);
 }
 
-.site-header .nav-link:hover,
-.site-header .nav-link.active {
-  color: var(--color-white);
+.site-header .site-nav .nav-link:hover,
+.site-header .site-nav .nav-link.active,
+.site-header .site-nav .nav-link:focus-visible {
+  color: var(--color-clay);
+  background: var(--color-sun);
+  border-color: rgba(var(--color-sun-rgb), 0.72);
+  box-shadow: 0 12px 22px rgba(255, 138, 0, 0.18);
+  outline: none;
 }
 
 .header-auth-actions {
@@ -421,6 +426,16 @@ select {
   --btn-bg: rgba(255, 255, 255, 0.98);
   --btn-text: var(--color-heading);
   --btn-border: rgba(0, 0, 0, 0.18);
+}
+
+.site-header .btn-outline:hover:not(:disabled),
+.site-header .btn-outline:focus-visible,
+.site-header .btn-ghost:hover:not(:disabled),
+.site-header .btn-ghost:focus-visible {
+  --btn-bg: var(--color-sun);
+  --btn-text: var(--color-clay);
+  --btn-border: rgba(var(--color-sun-rgb), 0.72);
+  outline: none;
 }
 
 .header-status-pill {
