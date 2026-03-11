@@ -41,27 +41,6 @@ const quickAccessCards = [
   },
 ];
 
-const workflowCards = [
-  {
-    step: "01",
-    title: "Consulta pública",
-    description:
-      "O visitante entra por um hero institucional, entende o propósito e escolhe o recorte inicial.",
-  },
-  {
-    step: "02",
-    title: "Leitura territorial",
-    description:
-      "O mapa revela recortes públicos com superfícies leves, divisões orgânicas e foco na navegação.",
-  },
-  {
-    step: "03",
-    title: "Ação guiada",
-    description:
-      "Notícias, relatórios e denúncias ficam acessíveis em cartões institucionais e contrastantes.",
-  },
-];
-
 export default function Home() {
   const [heroState, setHeroState] = useState("");
   const [heroCity, setHeroCity] = useState("");
@@ -225,27 +204,6 @@ export default function Home() {
               </Link>
             )
           )}
-        </div>
-      </section>
-
-      <section className="home-workflow-band">
-        <div className="home-workflow-copy">
-          <span className="eyebrow">Formato inspirado na referência</span>
-          <h2>Uma página de entrada mais editorial, com divisões fluidas e foco em orientação</h2>
-          <p>
-            O cabeçalho institucional, os cartões em grade e a faixa em azul
-            profundo estruturam o percurso entre consulta, leitura territorial e
-            serviços sensíveis.
-          </p>
-        </div>
-        <div className="home-workflow-grid">
-          {workflowCards.map((item) => (
-            <article key={item.step} className="home-workflow-card">
-              <span className="home-workflow-step">{item.step}</span>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </article>
-          ))}
         </div>
       </section>
 
