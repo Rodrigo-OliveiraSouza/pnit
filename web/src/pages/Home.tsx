@@ -14,33 +14,6 @@ type MapPreset = {
 
 const BRAZIL_CITIES = citiesData as BrazilCity[];
 
-const quickAccessCards = [
-  {
-    eyebrow: "Mapa público",
-    title: "Estados, cidades e comunidades em leitura aberta",
-    description:
-      "Acesse o recorte territorial com filtros claros, linguagem editorial e navegação visual.",
-    href: "#relatorios",
-    isAnchor: true,
-  },
-  {
-    eyebrow: "Publicações",
-    title: "Notícias, registros visuais e atualizações institucionais",
-    description:
-      "Organize o acompanhamento da plataforma em um bloco com leitura semelhante ao portal de referência.",
-    href: "/noticias",
-    isAnchor: false,
-  },
-  {
-    eyebrow: "Canal seguro",
-    title: "Encaminhamento de denúncias e demandas com acesso rápido",
-    description:
-      "Mantenha destaque para o serviço mais sensível com contraste forte e botões claros.",
-    href: "/denuncias",
-    isAnchor: false,
-  },
-];
-
 export default function Home() {
   const [heroState, setHeroState] = useState("");
   const [heroCity, setHeroCity] = useState("");
@@ -169,31 +142,6 @@ export default function Home() {
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="home-quick-access">
-        <div className="home-card-grid">
-          {quickAccessCards.map((item) =>
-            item.isAnchor ? (
-              <button
-                key={item.title}
-                type="button"
-                className="home-info-card"
-                onClick={handleExploreMap}
-              >
-                <span>{item.eyebrow}</span>
-                <strong>{item.title}</strong>
-                <p>{item.description}</p>
-              </button>
-            ) : (
-              <Link key={item.title} to={item.href} className="home-info-card">
-                <span>{item.eyebrow}</span>
-                <strong>{item.title}</strong>
-                <p>{item.description}</p>
-              </Link>
-            )
-          )}
         </div>
       </section>
 
