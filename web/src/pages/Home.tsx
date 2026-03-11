@@ -179,10 +179,6 @@ export default function Home() {
       </section>
 
       <section className="home-quick-access">
-        <div className="home-section-heading">
-          <span className="eyebrow">Acessos principais</span>
-          <h2>Entradas rápidas organizadas como trilhas de serviço</h2>
-        </div>
         <div className="home-card-grid">
           {quickAccessCards.map((item) =>
             item.isAnchor ? (
