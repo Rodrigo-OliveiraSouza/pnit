@@ -1161,8 +1161,8 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: clamp(86px, 14vw, 108px);
-  height: clamp(52px, 9vw, 68px);
+  width: clamp(112px, 18vw, 140px);
+  height: clamp(68px, 12vw, 88px);
   padding: 0.35rem;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.92);

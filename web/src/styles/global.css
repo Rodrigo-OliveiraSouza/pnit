@@ -3449,8 +3449,8 @@ th {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: clamp(96px, 16vw, 112px);
-  block-size: clamp(56px, 10vw, 72px);
+  inline-size: clamp(125px, 21vw, 146px);
+  block-size: clamp(73px, 13vw, 94px);
   flex: 0 0 auto;
 }
 
