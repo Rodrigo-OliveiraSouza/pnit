@@ -53,55 +53,11 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-      - name: Validate AWS deploy configuration
-        shell: bash
-        env:
-          ACTIONS_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          ACTIONS_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          ACTIONS_AWS_S3_BUCKET: ${{ vars.AWS_S3_BUCKET }}
-        run: |
-          missing=()
-
-          if [ -z "$ACTIONS_AWS_ACCESS_KEY_ID" ]; then
-            missing+=("secrets.AWS_ACCESS_KEY_ID")
-          fi
-
-          if [ -z "$ACTIONS_AWS_SECRET_ACCESS_KEY" ]; then
-            missing+=("secrets.AWS_SECRET_ACCESS_KEY")
-          fi
-
-          if [ -z "$ACTIONS_AWS_S3_BUCKET" ]; then
-            missing+=("vars.AWS_S3_BUCKET")
-          fi
-
-          if [ "${#missing[@]}" -gt 0 ]; then
-            printf 'Missing GitHub Actions configuration: %s\n' "${missing[*]}" >&2
-            exit 1
-          fi
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
-
-      - name: Upload static assets to S3
-        run: |
-          aws s3 sync dist "s3://${{ vars.AWS_S3_BUCKET }}" \
-            --delete \
-            --exclude "index.html" \
-            --cache-control "public,max-age=31536000,immutable"
-
-      - name: Upload index.html with no-cache
-        run: |
-          aws s3 cp dist/index.html "s3://${{ vars.AWS_S3_BUCKET }}/index.html" \
-            --cache-control "no-cache,no-store,must-revalidate" \
-            --content-type "text/html; charset=utf-8"
-
-      - name: Invalidate CloudFront cache
-        if: ${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID != '' }}
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id "${{ vars.AWS_CLOUDFRONT_DISTRIBUTION_ID }}" \
-            --paths "/*"
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          wranglerVersion: "4.59.2"
+          command: pages deploy dist --project-name=pnit --branch=master
