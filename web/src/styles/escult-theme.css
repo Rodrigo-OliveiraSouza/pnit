@@ -1162,7 +1162,7 @@ select {
 
 .footer-brand-copy {
   margin: 0;
-  color: rgba(var(--color-ink-rgb), 0.72);
+  color: #000000;
   line-height: 1.7;
 }
 
@@ -1216,7 +1216,7 @@ select {
 
 .footer-column h4 {
   margin: 0;
-  color: rgba(var(--color-ink-rgb), 0.56);
+  color: #000000;
   font-size: 0.78rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -1230,10 +1230,11 @@ select {
   gap: 0.7rem;
 }
 
-.footer-link-list a {
+.footer-panel .footer-link-list a {
   position: relative;
   display: inline-flex;
   width: fit-content;
+  color: #000000;
   transition:
     color 180ms ease,
     transform 180ms ease;
@@ -1253,18 +1254,22 @@ select {
   transition: transform 180ms ease;
 }
 
+.footer-panel .footer-copy-item {
+  color: #000000;
+}
+
 .footer-copy-item {
   color: rgba(var(--color-ink-rgb), 0.86);
   line-height: 1.55;
 }
 
 .footer-link-list a:hover {
-  color: var(--color-clay);
+  color: #000000;
   transform: translateX(6px);
 }
 
 .footer-link-list a:focus-visible {
-  color: var(--color-clay);
+  color: #000000;
   transform: translateX(6px);
   outline: none;
 }
@@ -1320,14 +1325,14 @@ select {
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid rgba(33, 21, 59, 0.1);
-  color: rgba(var(--color-ink-rgb), 0.64);
+  color: #000000;
   font-size: 0.92rem;
 }
 
 .footer-license-note {
   margin-top: 0.9rem;
   text-align: center;
-  color: rgba(var(--color-ink-rgb), 0.68);
+  color: #000000;
   font-size: 0.9rem;
 }
 
