@@ -29,9 +29,6 @@ export default function Header() {
   const isLoggedIn = Boolean(authToken);
   const [isHidden, setIsHidden] = useState(false);
   const lastScrollY = useRef(0);
-  const brandSubtitle =
-    copy.header.brandSub.trim() ||
-    "Mapa público, relatórios exportáveis e leitura institucional dos territórios.";
 
   useEffect(() => {
     const handler = () => setAuthTokenState(getAuthToken());
@@ -69,31 +66,28 @@ export default function Header() {
   return (
     <header className={`site-header${isHidden ? " is-hidden" : ""}`}>
       <div className="header-ribbon">
-        <div className="header-ribbon-copy">
-          <span className="header-ribbon-label">Plataforma pública</span>
-          <p>
-            Inspirada em portais institucionais de formação e serviço, com
-            navegação editorial, contraste alto e destaques em marrom e laranja.
-          </p>
-        </div>
-      </div>
-
-      <div className="header-main">
-        <div className="header-brand-group">
-          <Link to="/" className="header-logo-link" aria-label="Ir para a página inicial">
+        <div className="header-brand-group header-brand-group--ribbon">
+          <Link
+            to="/"
+            className="header-logo-link header-logo-link--ribbon"
+            aria-label="Ir para a página inicial"
+          >
             <img
               src={`${baseUrl}logos/agentes-territoriais.png`}
               alt="Agentes Territoriais"
               className="logo logo-agentes theme-ignore"
             />
           </Link>
-          <div className="brand">
-            <span className="brand-kicker">PNIT</span>
-            <strong className="brand-mark">Painel territorial com leitura pública</strong>
-            <span className="brand-sub">{brandSubtitle}</span>
+          <div className="brand brand--ribbon">
+            <span className="brand-kicker brand-kicker--ribbon">PNIT</span>
+            <strong className="brand-mark brand-mark--ribbon">
+              Painel territorial com leitura pública
+            </strong>
           </div>
         </div>
+      </div>
 
+      <div className="header-main">
         <div className="header-nav-wrap">
           <nav className="site-nav" aria-label="Navegação principal">
             <NavLink

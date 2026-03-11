@@ -217,9 +217,9 @@ select {
 .header-ribbon {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 1rem;
-  padding: 0.9rem 1.25rem;
+  padding: 1rem 1.25rem;
   border-radius: 28px 28px 0 0;
   background: linear-gradient(135deg, var(--color-header-start), var(--color-header-end));
   color: var(--color-white);
@@ -275,10 +275,7 @@ select {
 }
 
 .header-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
+  display: block;
   padding: 1.25rem 1.35rem 1.45rem;
   border: 1px solid rgba(33, 21, 59, 0.08);
   border-top: 0;
@@ -295,6 +292,10 @@ select {
   min-width: 0;
 }
 
+.header-brand-group--ribbon {
+  width: 100%;
+}
+
 .header-logo-link {
   display: inline-flex;
   align-items: center;
@@ -308,8 +309,25 @@ select {
   max-height: 84px;
 }
 
+.header-logo-link--ribbon {
+  width: clamp(112px, 14vw, 138px);
+  padding: 0.45rem 0.6rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.header-logo-link--ribbon .logo-agentes {
+  max-height: 88px;
+}
+
 .brand {
   gap: 0.3rem;
+}
+
+.brand--ribbon {
+  display: grid;
+  gap: 0.45rem;
 }
 
 .brand-kicker {
@@ -325,10 +343,22 @@ select {
   text-transform: uppercase;
 }
 
+.brand-kicker--ribbon {
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--color-white);
+}
+
 .brand-mark {
   color: var(--color-heading);
   font-size: clamp(1.15rem, 2.2vw, 1.7rem);
   line-height: 1.05;
+}
+
+.brand-mark--ribbon {
+  color: var(--color-white);
+  font-size: clamp(1.4rem, 2.7vw, 2.2rem);
+  line-height: 1.04;
+  max-width: 20ch;
 }
 
 .brand-sub {
@@ -340,6 +370,7 @@ select {
   display: grid;
   gap: 0.9rem;
   justify-items: end;
+  width: 100%;
 }
 
 .site-nav {
