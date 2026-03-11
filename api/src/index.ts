@@ -975,11 +975,16 @@ function decodeCursor(cursor?: string | null) {
   }
 }
 
+const LATEST_PUBLIC_SNAPSHOT_SQL =
+  "(SELECT MAX(snapshot_date) FROM public_map_cache)";
+
 function buildPublicCacheFilters(
   bounds?: Bounds | null,
   filters?: ReportFilters | null
 ) {
-  const clauses: string[] = ["snapshot_date = CURRENT_DATE"];
+  const clauses: string[] = [
+    `snapshot_date = ${LATEST_PUBLIC_SNAPSHOT_SQL}`,
+  ];
   const params: (string | number)[] = [];
   let index = 0;
   if (bounds) {
@@ -1073,20 +1078,37 @@ async function refreshPublicCache(
   options: { force?: boolean } = {}
 ): Promise<PublicCacheRefreshResult> {
   const sql = getSql(env);
-  const lastRefreshRows = await sql(
-    "SELECT MAX(updated_at) AS last_refresh FROM public_map_cache"
+  const snapshotRows = await sql(
+    `
+    SELECT
+      CURRENT_DATE::text AS current_snapshot,
+      MAX(snapshot_date)::text AS latest_snapshot,
+      MAX(updated_at) AS last_refresh
+    FROM public_map_cache
+    `
   );
-  const lastRefreshValue = lastRefreshRows[0]?.last_refresh as
+  const currentSnapshot = snapshotRows[0]?.current_snapshot as
+    | string
+    | null
+    | undefined;
+  const latestSnapshot = snapshotRows[0]?.latest_snapshot as
+    | string
+    | null
+    | undefined;
+  const lastRefreshValue = snapshotRows[0]?.last_refresh as
     | string
     | Date
     | null
     | undefined;
-  if (!options.force && lastRefreshValue) {
+  if (
+    !options.force &&
+    currentSnapshot &&
+    latestSnapshot &&
+    latestSnapshot === currentSnapshot &&
+    lastRefreshValue
+  ) {
     const lastRefreshDate = new Date(lastRefreshValue);
-    const elapsedMs = Date.now() - lastRefreshDate.getTime();
-    if (elapsedMs < 24 * 60 * 60 * 1000) {
-      return { skipped: true, last_refresh: lastRefreshDate.toISOString() };
-    }
+    return { skipped: true, last_refresh: lastRefreshDate.toISOString() };
   }
 
   await sql("BEGIN");
@@ -2316,7 +2338,7 @@ app.get("/map/points", async (c) => {
   const community = c.req.query("community");
 
   const filters: string[] = [
-    "snapshot_date = CURRENT_DATE",
+    `snapshot_date = ${LATEST_PUBLIC_SNAPSHOT_SQL}`,
     "ST_Intersects(geog::geometry, ST_MakeEnvelope($1, $2, $3, $4, 4326))",
   ];
   const params: (string | number)[] = [
@@ -2392,7 +2414,11 @@ app.get("/map/points", async (c) => {
   const hasMore = rows.length > limit;
   const items = hasMore ? rows.slice(0, limit) : rows;
   const lastSync = await sql(
-    "SELECT MAX(updated_at) AS last_sync_at FROM public_map_cache WHERE snapshot_date = CURRENT_DATE"
+    `
+    SELECT MAX(updated_at) AS last_sync_at
+    FROM public_map_cache
+    WHERE snapshot_date = ${LATEST_PUBLIC_SNAPSHOT_SQL}
+    `
   );
 
   const baseUrl = getPublicBaseUrl(c, c.env);
@@ -2414,7 +2440,10 @@ app.get("/map/communities", async (c) => {
   const sql = getSql(c.env);
   const city = c.req.query("city");
   const state = c.req.query("state");
-  const filters = ["snapshot_date = CURRENT_DATE", "community_name IS NOT NULL"];
+  const filters = [
+    `snapshot_date = ${LATEST_PUBLIC_SNAPSHOT_SQL}`,
+    "community_name IS NOT NULL",
+  ];
   const params: string[] = [];
   if (city) {
     params.push(city);

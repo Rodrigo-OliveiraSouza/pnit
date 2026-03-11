@@ -89,11 +89,11 @@ export default function Home() {
       <section className="home-hero">
         <div className="home-hero-copy">
           <span className="eyebrow">Plataforma territorial</span>
-          <h1>Design institucional com base clara, azul profundo e acentos terrosos</h1>
+          <h1>Leitura institucional com base branca, preto profundo e destaque em marrom</h1>
           <p className="home-hero-text">
-            A home agora assume uma linguagem mais próxima do portal de
-            referência: hero editorial, blocos de consulta, contrastes fortes e
-            uma navegação organizada por serviços.
+            A home organiza o acesso público com linguagem direta, contraste
+            alto e chamadas visuais em marrom e laranja para priorizar navegação
+            e serviço.
           </p>
 
           <div className="home-search-card">
@@ -144,12 +144,6 @@ export default function Home() {
           </div>
 
           <div className="home-hero-actions">
-            <button className="btn btn-outline" type="button" onClick={handleExploreMap}>
-              Ver mapa público
-            </button>
-            <Link to="/noticias" className="btn btn-ghost">
-              Acompanhar notícias
-            </Link>
             <Link to="/denuncias" className="btn btn-ghost">
               Canal de denúncias
             </Link>

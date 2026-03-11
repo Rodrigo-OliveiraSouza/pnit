@@ -29,7 +29,6 @@ export default function Header() {
   const isLoggedIn = Boolean(authToken);
   const [isHidden, setIsHidden] = useState(false);
   const lastScrollY = useRef(0);
-  const homeAnchor = `${baseUrl}#relatorios`;
   const brandSubtitle =
     copy.header.brandSub.trim() ||
     "Mapa público, relatórios exportáveis e leitura institucional dos territórios.";
@@ -74,12 +73,8 @@ export default function Header() {
           <span className="header-ribbon-label">Plataforma pública</span>
           <p>
             Inspirada em portais institucionais de formação e serviço, com
-            navegação editorial, contraste alto e tons terrosos.
+            navegação editorial, contraste alto e destaques em marrom e laranja.
           </p>
-        </div>
-        <div className="header-ribbon-links">
-          <a href={homeAnchor}>Explorar mapa</a>
-          <Link to="/noticias">Publicações</Link>
         </div>
       </div>
 

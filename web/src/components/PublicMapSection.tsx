@@ -143,6 +143,8 @@ export default function PublicMapSection({
     useState<PointFilters>(defaultFilters);
   const [publicFilters, setPublicFilters] =
     useState<PointFilters>(defaultFilters);
+  const [appliedPublicFilters, setAppliedPublicFilters] =
+    useState<PointFilters>(defaultFilters);
   const [publicCommunities, setPublicCommunities] = useState<
     Array<{
       community_name: string;
@@ -486,6 +488,9 @@ export default function PublicMapSection({
     publicFilters.city && publicFilters.state
       ? `${publicFilters.city}__${publicFilters.state}`
       : "";
+  const hasPublicFilters = Boolean(
+    publicFilters.state || publicFilters.city || publicFilters.community
+  );
 
   const handlePublicCityChange = (value: string) => {
     if (!value) {
@@ -519,6 +524,25 @@ export default function PublicMapSection({
     setPublicFilters((current) => ({ ...current, community: value }));
   };
 
+  const handleApplyPublicFilters = useCallback(() => {
+    setAppliedPublicFilters(publicFilters);
+    const bounds = mapRef.current?.getBounds();
+    if (!bounds) {
+      return;
+    }
+    void loadPointsForBounds(bounds, publicFilters, true);
+  }, [loadPointsForBounds, publicFilters]);
+
+  const handleClearPublicFilters = useCallback(() => {
+    setPublicFilters(defaultFilters);
+    setAppliedPublicFilters(defaultFilters);
+    const bounds = mapRef.current?.getBounds();
+    if (!bounds) {
+      return;
+    }
+    void loadPointsForBounds(bounds, defaultFilters, true);
+  }, [loadPointsForBounds]);
+
   const filteredCities = useMemo(() => {
     if (!publicFilters.state) {
       return BRAZIL_CITIES;
@@ -534,15 +558,15 @@ export default function PublicMapSection({
     if (!bounds) {
       return;
     }
-    void loadPointsForBounds(bounds, publicFilters);
-  }, [isPublicMode, loadPointsForBounds, publicFilters]);
+    void loadPointsForBounds(bounds, appliedPublicFilters);
+  }, [appliedPublicFilters, isPublicMode, loadPointsForBounds]);
 
   useEffect(() => {
     if (!isPublicMode || !publicFilterOverride) {
       return;
     }
 
-    setPublicFilters({
+    const nextFilters: PointFilters = {
       status: "all",
       precision: "all",
       updatedWithinDays: null,
@@ -550,12 +574,14 @@ export default function PublicMapSection({
       state: publicFilterOverride.state ?? "",
       region: "",
       community: publicFilterOverride.community ?? "",
-    });
+    };
+    setPublicFilters(nextFilters);
+    setAppliedPublicFilters(nextFilters);
   }, [isPublicMode, publicFilterOverride]);
 
   useEffect(() => {
-    activeFiltersRef.current = isPublicMode ? publicFilters : appliedFilters;
-  }, [appliedFilters, isPublicMode, publicFilters]);
+    activeFiltersRef.current = isPublicMode ? appliedPublicFilters : appliedFilters;
+  }, [appliedFilters, appliedPublicFilters, isPublicMode]);
 
   const handleApplyFilters = useCallback(() => {
     setAppliedFilters(filterDraft);
@@ -633,9 +659,9 @@ export default function PublicMapSection({
       drawingControl: false,
       drawingMode: googleMaps.maps.drawing.OverlayType.RECTANGLE,
       rectangleOptions: {
-        fillColor: "#d7a344",
+        fillColor: "#FF8A00",
         fillOpacity: 0.18,
-        strokeColor: "#b35a2d",
+        strokeColor: "#4C1E04",
         strokeOpacity: 0.9,
         strokeWeight: 2,
         clickable: false,
@@ -719,7 +745,7 @@ export default function PublicMapSection({
         {
           label: "Pontos",
           data: items.map((item) => item.count),
-          backgroundColor: ["#4a2d1b", "#b35a2d", "#d7a344"],
+          backgroundColor: ["#000000", "#4C1E04", "#FF8A00"],
         },
       ],
     };
@@ -733,7 +759,7 @@ export default function PublicMapSection({
         {
           label: "Pontos",
           data: items.map((item) => item.count),
-          backgroundColor: "#4a2d1b",
+          backgroundColor: "#4C1E04",
         },
       ],
     };
@@ -749,7 +775,7 @@ export default function PublicMapSection({
     return Number.isFinite(parsed) ? parsed : 0;
   };
   const buildScoreChart = useCallback(
-    (label: string, data?: number[], color = "#4a2d1b") => ({
+    (label: string, data?: number[], color = "#4C1E04") => ({
       labels: scoreLabels,
       datasets: [
         {
@@ -767,7 +793,7 @@ export default function PublicMapSection({
       buildScoreChart(
         "Saúde",
         reportIndicatorScores?.health,
-        "#3f7f5a"
+        "#000000"
       ),
     [buildScoreChart, reportIndicatorScores]
   );
@@ -776,7 +802,7 @@ export default function PublicMapSection({
       buildScoreChart(
         "Educação",
         reportIndicatorScores?.education,
-        "#395fa3"
+        "#4C1E04"
       ),
     [buildScoreChart, reportIndicatorScores]
   );
@@ -785,7 +811,7 @@ export default function PublicMapSection({
       buildScoreChart(
         "Segurança",
         reportIndicatorScores?.security,
-        "#a33a3a"
+        "#FF8A00"
       ),
     [buildScoreChart, reportIndicatorScores]
   );
@@ -807,11 +833,11 @@ export default function PublicMapSection({
           label: "Média",
           data: values,
           backgroundColor: [
-            "#3f7f5a",
-            "#395fa3",
-            "#c9783a",
-            "#8b5a2b",
-            "#a33a3a",
+            "#000000",
+            "#4C1E04",
+            "#FF8A00",
+            "rgba(76, 30, 4, 0.75)",
+            "rgba(255, 138, 0, 0.7)",
           ],
         },
       ],
@@ -899,15 +925,25 @@ export default function PublicMapSection({
               {publicCommunitiesError && (
                 <div className="alert">{publicCommunitiesError}</div>
               )}
-              {publicFilters.community && (
+              <div className="public-filter-actions">
                 <button
-                  className="btn btn-ghost"
+                  className="btn btn-primary"
                   type="button"
-                  onClick={() => handlePublicCommunityChange("")}
+                  onClick={handleApplyPublicFilters}
+                  disabled={pointsLoading}
                 >
-                  Limpar comunidade
+                  Buscar no mapa
                 </button>
-              )}
+                {hasPublicFilters && (
+                  <button
+                    className="btn btn-ghost"
+                    type="button"
+                    onClick={handleClearPublicFilters}
+                  >
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
             </div>
           </aside>
         ) : (
@@ -990,29 +1026,44 @@ export default function PublicMapSection({
             libraries={isPublicMode ? [] : ["drawing"]}
             onMapReady={handleMapReady}
           />
-          <div className="map-info-grid">
-            <div className="info-card">
-              <span className="eyebrow">Informações</span>
-              <h3>Recorte atual</h3>
-              {pointsLoading ? (
-                <p className="muted">Carregando pontos da área atual.</p>
-              ) : pointsError ? (
+          {isPublicMode && (
+            <div className="map-status-line">
+              {pointsError ? (
                 <div className="alert">{pointsError}</div>
               ) : (
                 <p className="muted">
-                  {mapPoints.length === 0
-                    ? "Nenhum ponto publicado para a área atual."
-                    : `${mapPoints.length} pontos disponíveis na área.`}
+                  {pointsLoading
+                    ? "Carregando pontos do recorte selecionado."
+                    : mapPoints.length === 0
+                      ? "Nenhum ponto encontrado para esse recorte."
+                      : `${mapPoints.length} pontos encontrados.${lastSyncAt ? ` Última atualização: ${lastSyncAt}.` : ""}`}
                 </p>
               )}
-              {lastSyncAt && (
-                <p className="muted">Última atualização: {lastSyncAt}</p>
-              )}
-              {!lastSyncAt && (
-                <p className="muted">Dados públicos sincronizados diariamente.</p>
-              )}
             </div>
-            {!isPublicMode && (
+          )}
+          {!isPublicMode && (
+            <div className="map-info-grid">
+              <div className="info-card">
+                <span className="eyebrow">Informações</span>
+                <h3>Recorte atual</h3>
+                {pointsLoading ? (
+                  <p className="muted">Carregando pontos da área atual.</p>
+                ) : pointsError ? (
+                  <div className="alert">{pointsError}</div>
+                ) : (
+                  <p className="muted">
+                    {mapPoints.length === 0
+                      ? "Nenhum ponto publicado para a área atual."
+                      : `${mapPoints.length} pontos disponíveis na área.`}
+                  </p>
+                )}
+                {lastSyncAt && (
+                  <p className="muted">Última atualização: {lastSyncAt}</p>
+                )}
+                {!lastSyncAt && (
+                  <p className="muted">Dados públicos sincronizados diariamente.</p>
+                )}
+              </div>
               <>
                 <div className="info-card">
                   <span className="eyebrow">Relatório</span>
@@ -1107,8 +1158,8 @@ export default function PublicMapSection({
                   </>
                 )}
               </>
-            )}
-          </div>
+            </div>
+          )}
           {!isPublicMode && (
             <div className="info-card" style={{ marginTop: "1.5rem" }}>
               <span className="eyebrow">Tabela</span>

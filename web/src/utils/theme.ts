@@ -1,20 +1,20 @@
 import type { ThemeColors, ThemeImageStyles, ThemeTypography } from "../types/theme";
 
 export const DEFAULT_THEME_COLORS: ThemeColors = {
-  primary: "#b35a2d",
-  secondary: "#8a4722",
-  accent: "#d7a344",
-  background: "#f5ecdf",
-  text: "#2d1f18",
-  text_muted: "#6a584d",
-  heading: "#21153b",
-  border: "#dccab3",
-  header_start: "#13008e",
-  header_end: "#31206c",
-  button_primary_bg: "#b35a2d",
+  primary: "#4C1E04",
+  secondary: "#4C1E04",
+  accent: "#FF8A00",
+  background: "#FFFFFF",
+  text: "#000000",
+  text_muted: "#4C1E04",
+  heading: "#000000",
+  border: "#F2F2F2",
+  header_start: "#000000",
+  header_end: "#4C1E04",
+  button_primary_bg: "#4C1E04",
   button_primary_text: "#ffffff",
   button_secondary_bg: "#ffffff",
-  button_secondary_text: "#2d1f18",
+  button_secondary_text: "#000000",
 };
 
 export const DEFAULT_THEME_IMAGE_STYLES: ThemeImageStyles = {

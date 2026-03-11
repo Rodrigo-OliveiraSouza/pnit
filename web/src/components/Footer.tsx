@@ -56,6 +56,14 @@ export default function Footer() {
       external: false,
     };
   });
+  const supportColumnLinks = [
+    {
+      label: helpEmail,
+      href: `mailto:${helpEmail}`,
+      external: false,
+    },
+    ...supportLinks,
+  ];
 
   const handleScrollTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -142,47 +150,33 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="footer-right-rail">
-            <div className="footer-column footer-social-column">
-              <h4>Redes e parceiros</h4>
-              <ul className="footer-link-list">
-                {socialLinks.map((item) => (
-                  <li key={item.href}>
-                    <a href={item.href} target="_blank" rel="noreferrer">
-                      {item.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="footer-column">
+            <h4>Redes e parceiros</h4>
+            <ul className="footer-link-list">
+              {socialLinks.map((item) => (
+                <li key={item.href}>
+                  <a href={item.href} target="_blank" rel="noreferrer">
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            <div className="footer-support-card">
-              <span className="footer-panel-label">Atendimento direto</span>
-              <a className="footer-email" href={`mailto:${helpEmail}`}>
-                {helpEmail}
-              </a>
-              <p className="footer-panel-copy">
-                Escolha o canal institucional mais adequado para suporte,
-                ouvidoria e orientação.
-              </p>
-              {supportLinks.length > 0 && (
-                <div className="footer-contact-list">
-                  {supportLinks.map((item) => (
-                    <a
-                      key={item.label}
-                      className="footer-contact-chip"
-                      href={item.href}
-                      {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                    >
-                      {item.label}
-                    </a>
-                  ))}
-                </div>
-              )}
-              <a className="btn btn-primary footer-support-button" href={`mailto:${helpEmail}`}>
-                Falar com suporte
-              </a>
-            </div>
+          <div className="footer-column">
+            <h4>Atendimento direto</h4>
+            <ul className="footer-link-list">
+              {supportColumnLinks.map((item) => (
+                <li key={item.label}>
+                  <a
+                    href={item.href}
+                    {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                  >
+                    {item.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
 
