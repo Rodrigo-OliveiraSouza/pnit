@@ -63,45 +63,6 @@ export default function Footer() {
 
   return (
     <footer className="site-footer">
-      <div className="footer-hero">
-        <div className="footer-hero-copy">
-          <span className="footer-badge">Canais de atendimento</span>
-          <h2>Suporte institucional para acesso, operação e leitura do mapa</h2>
-          <p>
-            {footer.description}
-          </p>
-        </div>
-        <div className="footer-hero-panel">
-          <div className="footer-panel-stack">
-            <span className="footer-panel-label">Atendimento direto</span>
-            <a className="footer-email" href={`mailto:${helpEmail}`}>
-              {helpEmail}
-            </a>
-            <p className="footer-panel-copy">
-              Escolha o canal institucional mais adequado para suporte,
-              ouvidoria e orientação.
-            </p>
-            {supportLinks.length > 0 && (
-              <div className="footer-contact-list">
-                {supportLinks.map((item) => (
-                  <a
-                    key={item.label}
-                    className="footer-contact-chip"
-                    href={item.href}
-                    {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </div>
-            )}
-            <a className="btn btn-primary footer-hero-button" href={`mailto:${helpEmail}`}>
-              Falar com suporte
-            </a>
-          </div>
-        </div>
-      </div>
-
       <div className="footer-panel">
         <div className="footer-grid">
           <div className="footer-brand">
@@ -181,17 +142,47 @@ export default function Footer() {
             </ul>
           </div>
 
-          <div className="footer-column">
-            <h4>Redes e parceiros</h4>
-            <ul className="footer-link-list">
-              {socialLinks.map((item) => (
-                <li key={item.href}>
-                  <a href={item.href} target="_blank" rel="noreferrer">
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
+          <div className="footer-right-rail">
+            <div className="footer-column footer-social-column">
+              <h4>Redes e parceiros</h4>
+              <ul className="footer-link-list">
+                {socialLinks.map((item) => (
+                  <li key={item.href}>
+                    <a href={item.href} target="_blank" rel="noreferrer">
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="footer-support-card">
+              <span className="footer-panel-label">Atendimento direto</span>
+              <a className="footer-email" href={`mailto:${helpEmail}`}>
+                {helpEmail}
+              </a>
+              <p className="footer-panel-copy">
+                Escolha o canal institucional mais adequado para suporte,
+                ouvidoria e orientação.
+              </p>
+              {supportLinks.length > 0 && (
+                <div className="footer-contact-list">
+                  {supportLinks.map((item) => (
+                    <a
+                      key={item.label}
+                      className="footer-contact-chip"
+                      href={item.href}
+                      {...(item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+              <a className="btn btn-primary footer-support-button" href={`mailto:${helpEmail}`}>
+                Falar com suporte
+              </a>
+            </div>
           </div>
         </div>
 

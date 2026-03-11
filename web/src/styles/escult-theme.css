@@ -975,8 +975,7 @@ select {
   background: transparent;
   border-radius: 0;
   overflow: visible;
-  display: grid;
-  gap: 1rem;
+  display: block;
 }
 
 .footer-hero {
@@ -1125,7 +1124,7 @@ select {
 }
 
 .footer-panel {
-  padding: 1.5rem 5.5vw;
+  padding: 1.65rem 5.5vw;
   border: 1px solid var(--panel-border);
   border-radius: 34px;
   background: rgba(255, 250, 244, 0.95);
@@ -1134,7 +1133,10 @@ select {
 
 .footer-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(140px, 1fr));
+  grid-template-columns:
+    minmax(220px, 1.15fr)
+    repeat(3, minmax(140px, 0.78fr))
+    minmax(340px, 1.3fr);
   gap: 1.4rem;
   padding: 0;
 }
@@ -1174,6 +1176,17 @@ select {
   align-content: start;
 }
 
+.footer-right-rail {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.62fr) minmax(0, 1.38fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.footer-social-column {
+  min-width: 0;
+}
+
 .footer-column h4 {
   margin: 0;
   color: rgba(var(--color-ink-rgb), 0.56);
@@ -1198,6 +1211,41 @@ select {
 
 .footer-link-list a:hover {
   color: var(--color-heading);
+}
+
+.footer-support-card {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.1rem 1.15rem;
+  border-radius: 24px;
+  border: 1px solid rgba(19, 0, 142, 0.09);
+  background:
+    radial-gradient(circle at top right, rgba(215, 163, 68, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 250, 244, 0.98));
+  box-shadow: 0 16px 28px rgba(19, 0, 142, 0.08);
+}
+
+.footer-support-card .footer-panel-label {
+  width: fit-content;
+}
+
+.footer-support-card .footer-email {
+  font-size: clamp(1.05rem, 1.55vw, 1.4rem);
+  word-break: break-word;
+}
+
+.footer-support-card .footer-panel-copy {
+  max-width: 34ch;
+}
+
+.footer-support-card .footer-contact-list {
+  justify-content: flex-start;
+  max-width: none;
+}
+
+.footer-support-button {
+  width: fit-content;
+  min-width: 190px;
 }
 
 .footer-bottom {
@@ -1266,6 +1314,11 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .footer-right-rail {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(180px, 0.55fr) minmax(0, 1fr);
+  }
+
   .home-workflow-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1318,6 +1371,11 @@ select {
   .home-workflow-grid,
   .map-info-grid,
   .footer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-right-rail {
+    grid-column: auto;
     grid-template-columns: 1fr;
   }
 
