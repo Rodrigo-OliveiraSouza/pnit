@@ -1181,7 +1181,20 @@ select {
   height: clamp(68px, 12vw, 88px);
   padding: 0.35rem;
   border-radius: 18px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(255, 255, 255, 0.92);
+  transition:
+    transform 180ms ease,
+    box-shadow 220ms ease,
+    border-color 220ms ease,
+    background-color 220ms ease;
+}
+
+.footer-logos a:hover {
+  transform: translateY(-4px) scale(1.03);
+  border-color: rgba(255, 138, 0, 0.26);
+  background: rgba(255, 248, 242, 0.98);
+  box-shadow: 0 16px 24px rgba(0, 0, 0, 0.12);
 }
 
 .footer-column {
@@ -1217,14 +1230,51 @@ select {
   gap: 0.7rem;
 }
 
-.footer-link-list a,
+.footer-link-list a {
+  position: relative;
+  display: inline-flex;
+  width: fit-content;
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.footer-link-list a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -0.18rem;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-sun);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms ease;
+}
+
 .footer-copy-item {
   color: rgba(var(--color-ink-rgb), 0.86);
   line-height: 1.55;
 }
 
 .footer-link-list a:hover {
-  color: var(--color-heading);
+  color: var(--color-clay);
+  transform: translateX(6px);
+}
+
+.footer-link-list a:focus-visible {
+  color: var(--color-clay);
+  transform: translateX(6px);
+  outline: none;
+}
+
+.footer-link-list a:hover::after {
+  transform: scaleX(1);
+}
+
+.footer-link-list a:focus-visible::after {
+  transform: scaleX(1);
 }
 
 .footer-support-card {
@@ -1415,7 +1465,10 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .btn,
   .home-info-card,
-  .nav-link {
+  .nav-link,
+  .footer-logos a,
+  .footer-link-list a,
+  .footer-scroll-top {
     transition: none;
   }
 }
