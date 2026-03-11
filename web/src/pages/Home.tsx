@@ -68,6 +68,11 @@ export default function Home() {
             alto e chamadas visuais em marrom e laranja para priorizar navegação
             e serviço.
           </p>
+          <p className="home-hero-instruction">
+            Para começar, selecione um estado, escolha uma cidade e clique em
+            <strong> Abrir mapa</strong>. Se preferir, deixe os filtros vazios
+            para consultar o território de forma ampla.
+          </p>
 
           <div className="home-search-card">
             <div className="home-search-header">
