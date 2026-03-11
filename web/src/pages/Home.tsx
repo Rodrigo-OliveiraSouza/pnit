@@ -133,14 +133,6 @@ export default function Home() {
               showDots={false}
               imageOnly
             />
-            <div className="home-hero-overlay-card">
-              <span className="eyebrow">Leitura pública</span>
-              <strong>Superfícies claras, cabeçalho forte e blocos de serviço</strong>
-              <p>
-                O novo layout aproxima o portal de uma experiência editorial e
-                institucional, mantendo o mapa como peça central.
-              </p>
-            </div>
           </div>
         </div>
       </section>
