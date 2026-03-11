@@ -311,10 +311,10 @@ select {
 
 .header-logo-link--ribbon {
   width: clamp(112px, 14vw, 138px);
-  padding: 0.45rem 0.6rem;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .header-logo-link--ribbon .logo-agentes {
