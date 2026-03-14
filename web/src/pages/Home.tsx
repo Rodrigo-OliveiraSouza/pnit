@@ -61,17 +61,19 @@ export default function Home() {
     <div className="page home-page">
       <section className="home-hero">
         <div className="home-hero-copy">
-          <span className="eyebrow">Plataforma territorial</span>
-          <h1>Leitura institucional com base branca, preto profundo e destaque em marrom</h1>
+          <span className="eyebrow">Consulta pública territorial</span>
+          <h1>Consulta pública do território com mapa, notícias e denúncias</h1>
           <p className="home-hero-text">
-            A home organiza o acesso público com linguagem direta, contraste
-            alto e chamadas visuais em marrom e laranja para priorizar navegação
-            e serviço.
+            A plataforma reúne pontos cadastrados, filtros por estado, cidade
+            e comunidade, notícias institucionais e canais públicos de
+            denúncia para apoiar leitura territorial, transparência e
+            acompanhamento das ações.
           </p>
           <p className="home-hero-instruction">
             Para começar, selecione um estado, escolha uma cidade e clique em
-            <strong> Abrir mapa</strong>. Se preferir, deixe os filtros vazios
-            para consultar o território de forma ampla.
+            <strong> Abrir mapa</strong>. Você também pode acompanhar
+            atualizações e acessar os canais públicos sempre que precisar
+            registrar uma denúncia ou consultar informações do território.
           </p>
 
           <div className="home-search-card">
@@ -131,7 +133,7 @@ export default function Home() {
         <div className="home-hero-media">
           <div className="home-hero-frame">
             <div className="home-hero-badge">
-              Curadoria visual e navegação institucional
+              Mapa público e atualizações institucionais
             </div>
             <NewsCarousel
               className="news-carousel-hero news-carousel-media home-hero-carousel"
