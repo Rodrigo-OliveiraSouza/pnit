@@ -293,7 +293,7 @@ select {
 }
 
 .header-brand-group--ribbon {
-  width: 100%;
+  width: fit-content;
 }
 
 .header-logo-link {

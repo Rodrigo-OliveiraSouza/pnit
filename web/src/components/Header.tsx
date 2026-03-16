@@ -78,12 +78,6 @@ export default function Header() {
               className="logo logo-agentes theme-ignore"
             />
           </Link>
-          <div className="brand brand--ribbon">
-            <span className="brand-kicker brand-kicker--ribbon">PNIT</span>
-            <strong className="brand-mark brand-mark--ribbon">
-              Painel territorial com leitura pública
-            </strong>
-          </div>
         </div>
       </div>
 
