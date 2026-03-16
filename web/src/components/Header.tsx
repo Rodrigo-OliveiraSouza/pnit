@@ -156,9 +156,6 @@ export default function Header() {
           </nav>
 
           <div className="header-auth-actions">
-            <span className="header-status-pill">
-              Atualização institucional
-            </span>
             {isLoggedIn ? (
               <>
                 <Link to={panelLink} className="btn btn-outline">

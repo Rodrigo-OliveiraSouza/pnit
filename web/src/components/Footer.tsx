@@ -38,7 +38,6 @@ export default function Footer() {
     },
   ];
   const supportLines = footer.contactItems.filter(Boolean);
-  const transparencyItems = footer.transparencyItems.filter(Boolean);
   const versionText = footer.version.trim();
   const licenseText = "© 2026 PNIT. Ambiente público com leitura territorial e suporte institucional.";
 
@@ -121,17 +120,6 @@ export default function Footer() {
               {pageLinks.map((item) => (
                 <li key={item.href}>
                   <a href={item.href}>{item.label}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="footer-column">
-            <h4>{footer.transparencyTitle || "Transparência"}</h4>
-            <ul className="footer-link-list">
-              {transparencyItems.map((item) => (
-                <li key={item} className="footer-copy-item">
-                  {item}
                 </li>
               ))}
             </ul>

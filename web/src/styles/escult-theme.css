@@ -1203,7 +1203,7 @@ select {
   display: grid;
   grid-template-columns:
     minmax(220px, 1.15fr)
-    repeat(5, minmax(130px, 0.74fr));
+    repeat(4, minmax(130px, 0.74fr));
   gap: 1.4rem;
   padding: 0;
 }
