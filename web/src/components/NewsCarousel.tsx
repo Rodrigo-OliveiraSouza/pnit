@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { fetchNewsImages, fetchReportsImages } from "../services/api";
+import { fetchNewsImages, fetchReportsImages, listNewsPosts } from "../services/api";
 
 const fallbackItems = Array.from({ length: 4 }, (_, index) => ({
   id: `placeholder-${index + 1}`,
@@ -14,7 +14,7 @@ type NewsCarouselProps = {
   showArrows?: boolean;
   imageOnly?: boolean;
   splitView?: boolean;
-  collection?: "news" | "reports";
+  collection?: "news" | "reports" | "news-posts";
   items?: Array<{
     id: string;
     src: string;
@@ -42,16 +42,25 @@ export default function NewsCarousel({
     let active = true;
     const load = async () => {
       try {
-        const response =
+        const mapped =
           collection === "reports"
-            ? await fetchReportsImages()
-            : await fetchNewsImages();
+            ? (await fetchReportsImages()).items.map((item, index) => ({
+                id: item.id,
+                src: item.url,
+                title: item.name ?? `Imagem ${index + 1}`,
+              }))
+            : collection === "news-posts"
+              ? (await listNewsPosts()).items.map((item, index) => ({
+                  id: item.id,
+                  src: item.cover_url,
+                  title: item.title ?? `Imagem ${index + 1}`,
+                }))
+              : (await fetchNewsImages()).items.map((item, index) => ({
+                  id: item.id,
+                  src: item.url,
+                  title: item.name ?? `Imagem ${index + 1}`,
+                }));
         if (!active) return;
-        const mapped = response.items.map((item, index) => ({
-          id: item.id,
-          src: item.url,
-          title: item.name ?? `Imagem ${index + 1}`,
-        }));
         setRemoteItems(mapped);
       } catch {
         if (active) {

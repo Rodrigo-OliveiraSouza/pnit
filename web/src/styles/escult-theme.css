@@ -469,6 +469,21 @@ select {
   overflow: hidden;
 }
 
+.home-hero--carousel-only {
+  display: block;
+  padding: clamp(0.95rem, 1.8vw, 1.35rem);
+}
+
+.home-hero--carousel-only::before {
+  top: -90px;
+  left: -50px;
+}
+
+.home-hero--carousel-only::after {
+  right: -60px;
+  bottom: -90px;
+}
+
 .home-hero::before,
 .home-hero::after {
   content: "";
@@ -592,6 +607,13 @@ select {
   align-items: stretch;
 }
 
+.home-hero--carousel-only .home-hero-media {
+  display: block;
+  width: 100%;
+  max-width: min(100%, 1280px);
+  margin: 0 auto;
+}
+
 .home-hero-frame {
   position: relative;
   display: grid;
@@ -602,6 +624,11 @@ select {
   background: linear-gradient(180deg, var(--color-header-start) 0%, var(--color-clay) 100%);
   box-shadow: 0 26px 46px rgba(0, 0, 0, 0.18);
   overflow: hidden;
+}
+
+.home-hero--carousel-only .home-hero-frame {
+  padding: 0.85rem;
+  border-radius: 32px;
 }
 
 .home-hero-frame::after {
@@ -657,6 +684,14 @@ select {
 .home-hero-carousel .news-media img {
   object-fit: contain;
   object-position: center;
+}
+
+.home-hero--carousel-only .home-hero-carousel .news-media {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.home-hero--carousel-only .home-hero-carousel .news-media img {
+  object-fit: cover;
 }
 
 .home-section-heading {
