@@ -367,18 +367,26 @@ select {
 }
 
 .header-nav-wrap {
-  display: grid;
-  gap: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: nowrap;
   justify-items: stretch;
   width: 100%;
 }
 
 .site-nav {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
   gap: 0.7rem 0.8rem;
-  justify-content: center;
-  width: 100%;
+  justify-content: flex-start;
+  width: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
 }
 
 .nav-link {
@@ -416,9 +424,11 @@ select {
   display: flex;
   align-items: center;
   gap: 0.8rem 0.9rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  width: 100%;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  width: auto;
+  margin-left: auto;
 }
 
 .site-header .btn-outline,
@@ -1454,11 +1464,26 @@ select {
     display: grid;
   }
 
+  .header-nav-wrap {
+    display: grid;
+    gap: 0.9rem;
+  }
+
   .header-nav-wrap,
   .site-nav,
   .header-auth-actions {
     justify-items: start;
     justify-content: flex-start;
+  }
+
+  .site-nav,
+  .header-auth-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .header-auth-actions {
+    margin-left: 0;
   }
 
   .header-ribbon {
