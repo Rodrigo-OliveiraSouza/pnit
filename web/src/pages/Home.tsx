@@ -12,6 +12,8 @@ export default function Home() {
               showDots={false}
               imageOnly
               collection="news-posts"
+              mediaLinkTo="/noticias"
+              mediaLinkLabel="Abrir página de notícias"
             />
           </div>
         </div>

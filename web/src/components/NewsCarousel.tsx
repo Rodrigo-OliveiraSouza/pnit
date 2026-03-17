@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Link } from "react-router-dom";
 import { fetchNewsImages, fetchReportsImages, listNewsPosts } from "../services/api";
 
 const fallbackItems = Array.from({ length: 4 }, (_, index) => ({
@@ -15,6 +16,8 @@ type NewsCarouselProps = {
   imageOnly?: boolean;
   splitView?: boolean;
   collection?: "news" | "reports" | "news-posts";
+  mediaLinkTo?: string;
+  mediaLinkLabel?: string;
   items?: Array<{
     id: string;
     src: string;
@@ -30,6 +33,8 @@ export default function NewsCarousel({
   imageOnly = false,
   splitView = false,
   collection = "news",
+  mediaLinkTo,
+  mediaLinkLabel,
   items: itemsProp,
 }: NewsCarouselProps) {
   const [remoteItems, setRemoteItems] = useState<typeof fallbackItems>([]);
@@ -124,6 +129,39 @@ export default function NewsCarousel({
   const mediaStyle = active.src
     ? ({ ["--news-media-bg" as "--news-media-bg"]: `url(${active.src})` } as CSSProperties)
     : undefined;
+  const mediaNode = (
+    <div
+      className={`news-media theme-media${active.src ? "" : " is-placeholder"}${
+        useSplitView ? " news-media-split" : ""
+      }`}
+      style={mediaStyle}
+      role={useSplitView ? "img" : undefined}
+      aria-label={useSplitView ? active.title : undefined}
+    >
+      {active.src ? (
+        useSplitView ? (
+          <>
+            <div
+              className="news-media-slice left"
+              style={{ backgroundImage: `url(${active.src})` }}
+            />
+            <div
+              className="news-media-slice right"
+              style={{ backgroundImage: `url(${active.src})` }}
+            />
+          </>
+        ) : (
+          <img
+            src={active.src}
+            alt={active.title}
+            className="theme-media-img"
+          />
+        )
+      ) : (
+        <div className="news-media-placeholder" aria-hidden="true" />
+      )}
+    </div>
+  );
 
   return (
     <div className={`news-carousel${className ? ` ${className}` : ""}`}>
@@ -131,37 +169,17 @@ export default function NewsCarousel({
         key={active.id}
         className={`news-card${imageOnly ? " news-card-media" : ""}`}
       >
-        <div
-          className={`news-media theme-media${active.src ? "" : " is-placeholder"}${
-            useSplitView ? " news-media-split" : ""
-          }`}
-          style={mediaStyle}
-          role={useSplitView ? "img" : undefined}
-          aria-label={useSplitView ? active.title : undefined}
-        >
-          {active.src ? (
-            useSplitView ? (
-              <>
-                <div
-                  className="news-media-slice left"
-                  style={{ backgroundImage: `url(${active.src})` }}
-                />
-                <div
-                  className="news-media-slice right"
-                  style={{ backgroundImage: `url(${active.src})` }}
-                />
-              </>
-            ) : (
-              <img
-                src={active.src}
-                alt={active.title}
-                className="theme-media-img"
-              />
-            )
-          ) : (
-            <div className="news-media-placeholder" aria-hidden="true" />
-          )}
-        </div>
+        {mediaLinkTo ? (
+          <Link
+            to={mediaLinkTo}
+            className="news-media-link"
+            aria-label={mediaLinkLabel ?? `Abrir notícias: ${active.title}`}
+          >
+            {mediaNode}
+          </Link>
+        ) : (
+          mediaNode
+        )}
         {!imageOnly && (
           <div className="news-body">
             <h2>{active.title}</h2>

@@ -561,6 +561,16 @@ img.theme-ignore,
   background: var(--color-white);
 }
 
+.news-media-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.news-media-link .news-media {
+  cursor: pointer;
+}
+
 .news-media {
   height: 220px;
   background: linear-gradient(150deg, var(--color-ivory), var(--color-sun));
