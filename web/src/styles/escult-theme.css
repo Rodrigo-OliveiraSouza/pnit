@@ -403,21 +403,30 @@ select {
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.nav-link:hover,
-.nav-link.active {
+.nav-link:hover {
   color: var(--color-clay);
   background: rgba(var(--color-sun-rgb), 0.18);
   border-color: rgba(var(--color-sun-rgb), 0.34);
 }
 
 .site-header .site-nav .nav-link:hover,
-.site-header .site-nav .nav-link.active,
 .site-header .site-nav .nav-link:focus-visible {
   color: var(--color-clay);
-  background: var(--color-sun);
-  border-color: rgba(var(--color-sun-rgb), 0.72);
-  box-shadow: 0 12px 22px rgba(255, 138, 0, 0.18);
+  background: rgba(var(--color-sun-rgb), 0.12);
+  border-color: rgba(var(--color-sun-rgb), 0.48);
+  box-shadow: 0 10px 18px rgba(255, 138, 0, 0.14);
   outline: none;
+}
+
+.nav-link.active,
+.site-header .site-nav .nav-link.active {
+  color: var(--color-heading);
+  background: rgba(255, 255, 255, 0.98);
+  border-color: #ffe84a;
+  box-shadow:
+    0 0 0 1px rgba(255, 232, 74, 0.78),
+    0 0 18px rgba(255, 232, 74, 0.42),
+    0 10px 22px rgba(255, 232, 74, 0.16);
 }
 
 .header-auth-actions {
