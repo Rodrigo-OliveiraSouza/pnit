@@ -384,6 +384,8 @@ select {
   gap: 0.7rem 0.8rem;
   justify-content: flex-start;
   width: auto;
+  padding: 0.38rem 0.2rem 0.55rem;
+  margin: -0.38rem -0.2rem -0.55rem;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -431,7 +433,6 @@ select {
     0 0 0 5px rgba(var(--color-clay-rgb), 0.12),
     0 0 24px rgba(var(--color-clay-rgb), 0.34),
     0 12px 24px rgba(var(--color-clay-rgb), 0.18);
-  transform: translateY(-1px);
 }
 
 .header-auth-actions {
