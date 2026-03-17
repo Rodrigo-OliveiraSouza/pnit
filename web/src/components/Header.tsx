@@ -152,11 +152,11 @@ export default function Header() {
           <div className="header-auth-actions">
             {isLoggedIn ? (
               <>
-                <Link to={panelLink} className="btn btn-outline">
+                <Link to={panelLink} className="btn btn-primary header-auth-button">
                   {copy.header.panelLabel}
                 </Link>
                 <button
-                  className="btn btn-primary"
+                  className="btn btn-primary header-auth-button"
                   type="button"
                   onClick={handleLogout}
                 >
@@ -164,7 +164,7 @@ export default function Header() {
                 </button>
               </>
             ) : (
-              <Link to="/login" className="btn btn-primary">
+              <Link to="/login" className="btn btn-primary header-auth-button">
                 {copy.header.loginButton}
               </Link>
             )}

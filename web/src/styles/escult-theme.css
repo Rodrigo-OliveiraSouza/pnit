@@ -446,6 +446,10 @@ select {
   margin-left: auto;
 }
 
+.header-auth-button {
+  min-width: 112px;
+}
+
 .site-header .btn-outline,
 .site-header .btn-ghost {
   --btn-bg: rgba(255, 255, 255, 0.98);
