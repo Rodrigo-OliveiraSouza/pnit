@@ -312,7 +312,7 @@ export default function Reports() {
   }, [expandedResidentId, filteredResidents]);
 
   const hasActiveFilters = Boolean(filterState || filterCity);
-  const indicatorSummary = useMemo(() => {
+  const effectiveIndicatorAverages = useMemo(() => {
     const fallbackAverages = {
       health: getResidentAverage(allResidents, "health_score"),
       education: getResidentAverage(allResidents, "education_score"),
@@ -324,44 +324,45 @@ export default function Reports() {
 
     if (!hasActiveFilters) {
       return {
-        health: formatScore(
-          userSummary?.averages?.health_score ?? fallbackAverages.health
-        ),
-        education: formatScore(
-          userSummary?.averages?.education_score ?? fallbackAverages.education
-        ),
-        income: formatScore(
-          userSummary?.averages?.income_score ?? fallbackAverages.income
-        ),
-        incomeMonthly: formatCurrency(
-          userSummary?.averages?.income_monthly ?? fallbackAverages.incomeMonthly
-        ),
-        housing: formatScore(
-          userSummary?.averages?.housing_score ?? fallbackAverages.housing
-        ),
-        security: formatScore(
-          userSummary?.averages?.security_score ?? fallbackAverages.security
-        ),
+        health:
+          toNumber(userSummary?.averages?.health_score) ?? fallbackAverages.health,
+        education:
+          toNumber(userSummary?.averages?.education_score) ??
+          fallbackAverages.education,
+        income:
+          toNumber(userSummary?.averages?.income_score) ?? fallbackAverages.income,
+        incomeMonthly:
+          toNumber(userSummary?.averages?.income_monthly) ??
+          fallbackAverages.incomeMonthly,
+        housing:
+          toNumber(userSummary?.averages?.housing_score) ?? fallbackAverages.housing,
+        security:
+          toNumber(userSummary?.averages?.security_score) ??
+          fallbackAverages.security,
       };
     }
 
     return {
-      health: formatScore(getResidentAverage(filteredResidents, "health_score")),
-      education: formatScore(
-        getResidentAverage(filteredResidents, "education_score")
-      ),
-      income: formatScore(getResidentAverage(filteredResidents, "income_score")),
-      incomeMonthly: formatCurrency(
-        getResidentAverage(filteredResidents, "income_monthly")
-      ),
-      housing: formatScore(
-        getResidentAverage(filteredResidents, "housing_score")
-      ),
-      security: formatScore(
-        getResidentAverage(filteredResidents, "security_score")
-      ),
+      health: getResidentAverage(filteredResidents, "health_score"),
+      education: getResidentAverage(filteredResidents, "education_score"),
+      income: getResidentAverage(filteredResidents, "income_score"),
+      incomeMonthly: getResidentAverage(filteredResidents, "income_monthly"),
+      housing: getResidentAverage(filteredResidents, "housing_score"),
+      security: getResidentAverage(filteredResidents, "security_score"),
     };
   }, [allResidents, filteredResidents, hasActiveFilters, userSummary]);
+
+  const indicatorSummary = useMemo(
+    () => ({
+      health: formatScore(effectiveIndicatorAverages.health),
+      education: formatScore(effectiveIndicatorAverages.education),
+      income: formatScore(effectiveIndicatorAverages.income),
+      incomeMonthly: formatCurrency(effectiveIndicatorAverages.incomeMonthly),
+      housing: formatScore(effectiveIndicatorAverages.housing),
+      security: formatScore(effectiveIndicatorAverages.security),
+    }),
+    [effectiveIndicatorAverages]
+  );
 
   const monthlySeries = useMemo(
     () => buildMonthlySeries(filteredResidents),
@@ -409,6 +410,183 @@ export default function Reports() {
     latestDate,
     userSummary,
   ]);
+
+  const statusBreakdown = useMemo(() => {
+    const totals = {
+      active: 0,
+      inactive: 0,
+      pending: 0,
+      other: 0,
+    };
+
+    filteredResidents.forEach((resident) => {
+      const normalizedStatus = normalizeText(resident.status);
+      if (normalizedStatus === "active" || normalizedStatus === "ativo") {
+        totals.active += 1;
+        return;
+      }
+      if (normalizedStatus === "inactive" || normalizedStatus === "inativo") {
+        totals.inactive += 1;
+        return;
+      }
+      if (normalizedStatus === "pending" || normalizedStatus === "pendente") {
+        totals.pending += 1;
+        return;
+      }
+      totals.other += 1;
+    });
+
+    return [
+      {
+        key: "active",
+        label: "Ativos",
+        total: totals.active,
+        helper: "Cadastros aptos para leitura e acompanhamento.",
+      },
+      {
+        key: "pending",
+        label: "Pendentes",
+        total: totals.pending,
+        helper: "Registros que ainda exigem validação ou continuidade.",
+      },
+      {
+        key: "inactive",
+        label: "Inativos",
+        total: totals.inactive,
+        helper: "Cadastros que precisam de revisão ou reativação.",
+      },
+      {
+        key: "other",
+        label: "Outros",
+        total: totals.other,
+        helper: "Situações sem classificação principal.",
+      },
+    ].map((item) => ({
+      ...item,
+      percent:
+        filteredResidents.length > 0
+          ? Math.round((item.total / filteredResidents.length) * 100)
+          : 0,
+    }));
+  }, [filteredResidents]);
+
+  const indicatorExtremes = useMemo(() => {
+    const rankedIndicators = [
+      { label: "Saúde", value: effectiveIndicatorAverages.health },
+      { label: "Educação", value: effectiveIndicatorAverages.education },
+      { label: "Renda", value: effectiveIndicatorAverages.income },
+      { label: "Moradia", value: effectiveIndicatorAverages.housing },
+      { label: "Segurança", value: effectiveIndicatorAverages.security },
+    ]
+      .filter(
+        (item): item is { label: string; value: number } => item.value !== null
+      )
+      .sort((left, right) => left.value - right.value);
+
+    return {
+      lowest: rankedIndicators[0] ?? null,
+      highest: rankedIndicators[rankedIndicators.length - 1] ?? null,
+    };
+  }, [effectiveIndicatorAverages]);
+
+  const dominantStatus = useMemo(
+    () =>
+      [...statusBreakdown].sort(
+        (left, right) =>
+          right.total - left.total || left.label.localeCompare(right.label)
+      )[0] ?? null,
+    [statusBreakdown]
+  );
+
+  const reportExecutiveSummary = useMemo(() => {
+    if (filteredResidents.length === 0) {
+      return "Ainda não há base suficiente no recorte atual para montar uma leitura executiva.";
+    }
+
+    const scopeLabel =
+      reportMeta.filterLabel === "Todos os registros"
+        ? "geral"
+        : `de ${reportMeta.filterLabel}`;
+    const sentences = [
+      `O recorte ${scopeLabel} reúne ${reportMeta.filteredResidents} cadastros com atualização mais recente em ${reportMeta.lastUpdate}.`,
+    ];
+
+    if (dominantStatus && dominantStatus.total > 0) {
+      sentences.push(
+        `${dominantStatus.label} representam ${dominantStatus.percent}% da base analisada neste momento.`
+      );
+    }
+
+    if (indicatorExtremes.highest) {
+      sentences.push(
+        `O melhor desempenho médio aparece em ${indicatorExtremes.highest.label} (${formatScore(
+          indicatorExtremes.highest.value
+        )}).`
+      );
+    }
+
+    if (
+      indicatorExtremes.lowest &&
+      indicatorExtremes.lowest.label !== indicatorExtremes.highest?.label
+    ) {
+      sentences.push(
+        `${indicatorExtremes.lowest.label} concentra a principal atenção imediata, com média ${formatScore(
+          indicatorExtremes.lowest.value
+        )}.`
+      );
+    }
+
+    return sentences.join(" ");
+  }, [
+    dominantStatus,
+    filteredResidents.length,
+    indicatorExtremes,
+    reportMeta.filterLabel,
+    reportMeta.filteredResidents,
+    reportMeta.lastUpdate,
+  ]);
+
+  const reportExecutiveCards = useMemo(
+    () => [
+      {
+        label: "Status dominante",
+        value: dominantStatus?.label ?? "Sem leitura",
+        note:
+          dominantStatus && dominantStatus.total > 0
+            ? `${dominantStatus.percent}% do recorte atual`
+            : "Sem base suficiente para leitura",
+      },
+      {
+        label: "Melhor eixo",
+        value: indicatorExtremes.highest?.label ?? "Sem leitura",
+        note: indicatorExtremes.highest
+          ? `Média ${formatScore(indicatorExtremes.highest.value)}`
+          : "Indicadores insuficientes",
+      },
+      {
+        label: "Ponto de atenção",
+        value: indicatorExtremes.lowest?.label ?? "Sem leitura",
+        note: indicatorExtremes.lowest
+          ? `Média ${formatScore(indicatorExtremes.lowest.value)}`
+          : "Indicadores insuficientes",
+      },
+      {
+        label: "Cobertura territorial",
+        value: filterState ? reportMeta.filterLabel : `${availableStates.length} estados`,
+        note: filterState
+          ? `${availableCityCount} cidades disponíveis no escopo`
+          : `${availableCityCount} cidades já mapeadas`,
+      },
+    ],
+    [
+      availableCityCount,
+      availableStates.length,
+      dominantStatus,
+      filterState,
+      indicatorExtremes,
+      reportMeta.filterLabel,
+    ]
+  );
 
   const emptyState = useMemo(() => {
     if (summaryLoading) {
@@ -749,10 +927,10 @@ export default function Reports() {
       <section className="public-hero reports-hero">
         <div className="reports-hero-card">
           <span className="eyebrow">Relatórios</span>
-          <h1>Selecione áreas e gere relatórios territoriais</h1>
+          <h1>Relatórios executivos por território</h1>
           <p className="lead">
-            Use o mapa interativo para recortar áreas e exportar dados públicos em
-            diferentes formatos.
+            Monte recortes por estado e cidade, acompanhe indicadores sociais e
+            exporte leituras consolidadas do mapa público.
           </p>
         </div>
       </section>
@@ -934,259 +1112,252 @@ export default function Reports() {
           )}
           {exportFeedback && <div className="alert">{exportFeedback}</div>}
           {summaryError && <div className="alert">{summaryError}</div>}
-        {userSummary && (
-          <>
-            <div className="reports-analytics-grid">
-              <article className="info-card reports-indicator-card">
-                <div className="reports-card-heading">
-                  <div>
-                    <span className="eyebrow">Indicadores</span>
-                    <h3>Médias do recorte selecionado</h3>
-                  </div>
-                  <p className="muted">
-                    Leitura consolidada dos principais eixos sociais.
-                  </p>
-                </div>
-                <div className="reports-indicator-grid">
-                  {indicatorCards.map((item) => (
-                    <div
-                      key={item.label}
-                      className={`reports-indicator-tile reports-indicator-${item.tone}`}
-                    >
-                      <span className="reports-indicator-swatch" />
-                      <span className="reports-indicator-label">{item.label}</span>
-                      <strong className="reports-indicator-value">
-                        {item.value}
-                      </strong>
+          {userSummary && (
+            <>
+              <div className="reports-executive-grid">
+                <article className="info-card reports-executive-card reports-executive-summary">
+                  <div className="reports-card-heading">
+                    <div>
+                      <span className="eyebrow">Leitura executiva</span>
+                      <h3>Resumo estratégico do recorte</h3>
                     </div>
-                  ))}
-                </div>
-              </article>
-              <article className="info-card reports-monthly-card">
-                <div className="reports-card-heading">
-                  <div>
-                    <span className="eyebrow">Ritmo mensal</span>
-                    <h3>Evolução dos cadastros</h3>
+                    <p className="muted">
+                      Síntese automática para orientar prioridade, cobertura e
+                      acompanhamento do território.
+                    </p>
                   </div>
-                  <p className="muted">
-                    Distribuição visual dos registros mais recentes.
+                  <p className="reports-executive-summary-text">
+                    {reportExecutiveSummary}
                   </p>
-                </div>
-                {monthlySeries.length > 0 ? (
-                  <div className="reports-month-list">
-                    {monthlySeries.map((item) => (
-                      <div key={item.month} className="reports-month-row">
-                        <span className="reports-month-label">
-                          {formatMonthLabel(item.month)}
-                        </span>
-                        <div className="reports-month-track">
+                  <div className="reports-executive-highlights">
+                    {reportExecutiveCards.map((card) => (
+                      <div key={card.label} className="reports-executive-tile">
+                        <span>{card.label}</span>
+                        <strong>{card.value}</strong>
+                        <p>{card.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="info-card reports-executive-card reports-status-card">
+                  <div className="reports-card-heading">
+                    <div>
+                      <span className="eyebrow">Distribuição</span>
+                      <h3>Status dos cadastros</h3>
+                    </div>
+                    <p className="muted">
+                      Veja rapidamente onde a base está consolidada e onde ainda
+                      exige ação.
+                    </p>
+                  </div>
+                  <div className="reports-status-list">
+                    {statusBreakdown.map((item) => (
+                      <div key={item.key} className="reports-status-item">
+                        <div className="reports-status-top">
+                          <strong>{item.label}</strong>
+                          <span>
+                            {item.total} registro{item.total === 1 ? "" : "s"} ·{" "}
+                            {item.percent}%
+                          </span>
+                        </div>
+                        <div className="reports-status-track">
                           <span
-                            className="reports-month-fill"
-                            style={{
-                              width: `${Math.max(
-                                12,
-                                (item.total / monthlyPeak) * 100
-                              )}%`,
-                            }}
+                            className={`reports-status-fill reports-status-${item.key}`}
+                            style={{ width: `${item.percent}%` }}
                           />
                         </div>
-                        <strong className="reports-month-total">
-                          {item.total}
+                        <p>{item.helper}</p>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              </div>
+
+              <div className="reports-analytics-grid">
+                <article className="info-card reports-indicator-card">
+                  <div className="reports-card-heading">
+                    <div>
+                      <span className="eyebrow">Indicadores</span>
+                      <h3>Médias do recorte selecionado</h3>
+                    </div>
+                    <p className="muted">
+                      Leitura consolidada dos principais eixos sociais.
+                    </p>
+                  </div>
+                  <div className="reports-indicator-grid">
+                    {indicatorCards.map((item) => (
+                      <div
+                        key={item.label}
+                        className={`reports-indicator-tile reports-indicator-${item.tone}`}
+                      >
+                        <span className="reports-indicator-swatch" />
+                        <span className="reports-indicator-label">{item.label}</span>
+                        <strong className="reports-indicator-value">
+                          {item.value}
                         </strong>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <p className="muted">
-                    Nenhum registro mensal encontrado no recorte atual.
-                  </p>
-                )}
-              </article>
-            </div>
-            <div className="table-card reports-table-card">
-              <div className="reports-table-header">
-                <div>
-                  <span className="eyebrow">Registros detalhados</span>
-                  <h3>Pessoas cadastradas no recorte atual</h3>
-                </div>
-                <p className="reports-table-subtitle">
-                  {reportMeta.filteredResidents} registros prontos para consulta.
-                </p>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Comunidade</th>
-                    <th>Cidade</th>
-                    <th>Estado</th>
-                    <th>Bairro</th>
-                    <th>Moradores</th>
-                    <th>Status</th>
-                    <th>Criado em</th>
-                    <th>Detalhes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredResidents.length > 0 ? (
-                    filteredResidents.map((resident) => {
-                      const isExpanded = expandedResidentId === resident.id;
-
-                      return (
-                        <Fragment key={resident.id}>
-                          <tr>
-                        <td className="reports-id">{resident.id}</td>
-                        <td className="reports-name-cell">
-                          <strong className="reports-name-main">
-                            {resident.full_name}
+                </article>
+                <article className="info-card reports-monthly-card">
+                  <div className="reports-card-heading">
+                    <div>
+                      <span className="eyebrow">Ritmo mensal</span>
+                      <h3>Evolução dos cadastros</h3>
+                    </div>
+                    <p className="muted">
+                      Distribuição visual dos registros mais recentes.
+                    </p>
+                  </div>
+                  {monthlySeries.length > 0 ? (
+                    <div className="reports-month-list">
+                      {monthlySeries.map((item) => (
+                        <div key={item.month} className="reports-month-row">
+                          <span className="reports-month-label">
+                            {formatMonthLabel(item.month)}
+                          </span>
+                          <div className="reports-month-track">
+                            <span
+                              className="reports-month-fill"
+                              style={{
+                                width: `${Math.max(
+                                  12,
+                                  (item.total / monthlyPeak) * 100
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                          <strong className="reports-month-total">
+                            {item.total}
                           </strong>
-                          <span className="reports-name-meta">
-                            {resident.email ?? resident.phone ?? "Sem contato informado"}
-                          </span>
-                        </td>
-                        <td>{resident.community_name ?? "-"}</td>
-                        <td>{resident.city ?? "-"}</td>
-                        <td>{resident.state ?? "-"}</td>
-                        <td>{resident.neighborhood ?? "-"}</td>
-                        <td>{resident.household_size ?? "-"}</td>
-                        <td>
-                          <span
-                            className={`status ${normalizeText(resident.status)}`}
-                          >
-                            {formatStatusLabel(resident.status)}
-                          </span>
-                        </td>
-                        <td>
-                          {new Date(resident.created_at).toLocaleDateString("pt-BR")}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className={`reports-detail-toggle${isExpanded ? " is-open" : ""}`}
-                            onClick={() =>
-                              setExpandedResidentId((current) =>
-                                current === resident.id ? null : resident.id
-                              )
-                            }
-                            aria-expanded={isExpanded}
-                          >
-                            {isExpanded ? "Ocultar" : "Ver detalhes"}
-                          </button>
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr className="reports-detail-row">
-                          <td colSpan={10} className="reports-detail-cell">
-                            <div className="details-grid">
-                              <div>
-                                <strong>Identificação</strong>
-                                <p>CPF/RG: {resident.doc_id ?? "-"}</p>
-                                <p>Nascimento: {resident.birth_date ?? "-"}</p>
-                                <p>Sexo: {resident.sex ?? "-"}</p>
-                                <p>Telefone: {resident.phone ?? "-"}</p>
-                                <p>Email: {resident.email ?? "-"}</p>
-                                <p>Endereço: {resident.address ?? "-"}</p>
-                                <p>Crianças: {resident.children_count ?? "-"}</p>
-                                <p>Idosos: {resident.elderly_count ?? "-"}</p>
-                                <p>PCD: {resident.pcd_count ?? "-"}</p>
-                              </div>
-                              <div>
-                                <strong>Localização</strong>
-                                <p>Cidade: {resident.city ?? "-"}</p>
-                                <p>Estado: {resident.state ?? "-"}</p>
-                                <p>Bairro: {resident.neighborhood ?? "-"}</p>
-                                <p>Área: {resident.point_area_type ?? "-"}</p>
-                                <p>Referência: {resident.point_reference_point ?? "-"}</p>
-                                <p>Precisão: {resident.point_precision ?? "-"}</p>
-                              </div>
-                              <div>
-                                <strong>Infraestrutura</strong>
-                                <p>Energia: {resident.energy_access ?? "-"}</p>
-                                <p>Água: {resident.water_supply ?? "-"}</p>
-                                <p>Tratamento: {resident.water_treatment ?? "-"}</p>
-                                <p>Esgoto: {resident.sewage_type ?? "-"}</p>
-                                <p>Lixo: {resident.garbage_collection ?? "-"}</p>
-                                <p>Internet: {formatBool(resident.internet_access)}</p>
-                                <p>Transporte: {formatBool(resident.transport_access)}</p>
-                              </div>
-                              <div>
-                                <strong>Saúde e educação</strong>
-                                <p>Posto: {formatBool(resident.health_has_clinic)}</p>
-                                <p>Emergência: {formatBool(resident.health_has_emergency)}</p>
-                                <p>Agente: {formatBool(resident.health_has_community_agent)}</p>
-                                <p>Unidade (km): {resident.health_unit_distance_km ?? "-"}</p>
-                                <p>Tempo: {resident.health_travel_time ?? "-"}</p>
-                                <p>Regular: {formatBool(resident.health_has_regular_service)}</p>
-                                <p>Ambulância: {formatBool(resident.health_has_ambulance)}</p>
-                                <p>Dificuldades: {resident.health_difficulties ?? "-"}</p>
-                                <p>Escolaridade: {resident.education_level ?? "-"}</p>
-                                <p>Escola: {formatBool(resident.education_has_school)}</p>
-                                <p>Transporte: {formatBool(resident.education_has_transport)}</p>
-                                <p>Material: {formatBool(resident.education_material_support)}</p>
-                                <p>Internet estudo: {formatBool(resident.education_has_internet)}</p>
-                              </div>
-                              <div>
-                                <strong>Renda e moradia</strong>
-                                <p>Renda: {resident.income_monthly ?? "-"}</p>
-                                <p>Contribuintes: {resident.income_contributors ?? "-"}</p>
-                                <p>Ocupação: {resident.income_occupation_type ?? "-"}</p>
-                                <p>Programa social: {formatBool(resident.income_has_social_program)}</p>
-                                <p>Qual: {resident.income_social_program ?? "-"}</p>
-                                <p>Moradia: {resident.housing_type ?? "-"}</p>
-                                <p>Quartos: {resident.housing_rooms ?? "-"}</p>
-                                <p>Área (m2): {resident.housing_area_m2 ?? "-"}</p>
-                                <p>Terreno (m2): {resident.housing_land_m2 ?? "-"}</p>
-                                <p>Material: {resident.housing_material ?? "-"}</p>
-                                <p>Banheiro: {formatBool(resident.housing_has_bathroom)}</p>
-                                <p>Água tratada: {formatBool(resident.housing_has_water_treated)}</p>
-                                <p>Condição: {resident.housing_condition ?? "-"}</p>
-                                <p>Riscos: {resident.housing_risks ?? "-"}</p>
-                              </div>
-                              <div>
-                                <strong>Segurança e participação</strong>
-                                <p>Delegacia: {formatBool(resident.security_has_police_station)}</p>
-                                <p>Patrulhamento: {formatBool(resident.security_has_patrol)}</p>
-                                <p>Guarda: {formatBool(resident.security_has_guard)}</p>
-                                <p>Ocorrências: {resident.security_occurrences ?? "-"}</p>
-                                <p>Participação: {resident.participation_types ?? "-"}</p>
-                                <p>Eventos: {resident.participation_events ?? "-"}</p>
-                                <p>Engajamento: {resident.participation_engagement ?? "-"}</p>
-                              </div>
-                              <div>
-                                <strong>Demandas e avaliação</strong>
-                                <p>Demandas: {resident.demand_priorities ?? "-"}</p>
-                                <p>Registros visuais: {resident.photo_types ?? "-"}</p>
-                                <p>Vulnerabilidade: {resident.vulnerability_level ?? "-"}</p>
-                                <p>Problemas: {resident.technical_issues ?? "-"}</p>
-                                <p>Encaminhamentos: {resident.referrals ?? "-"}</p>
-                                <p>Órgãos: {resident.agencies_contacted ?? "-"}</p>
-                              </div>
-                            </div>
-                        </td>
-                      </tr>
-                      )}
-                        </Fragment>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={10}>
-                        <div className="table-empty reports-empty-state">
-                          <strong>{emptyState?.title ?? "Nenhum cadastro registrado."}</strong>
-                          <span>
-                            {emptyState?.description ??
-                              "Cadastre pessoas no painel para começar a visualizar os dados."}
-                          </span>
                         </div>
-                      </td>
-                    </tr>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="muted">
+                      Nenhum registro mensal encontrado no recorte atual.
+                    </p>
                   )}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+                </article>
+              </div>
+
+              <div className="table-card reports-table-card">
+                <div className="reports-table-header">
+                  <div>
+                    <span className="eyebrow">Registros detalhados</span>
+                    <h3>Pessoas cadastradas no recorte atual</h3>
+                  </div>
+                  <p className="reports-table-subtitle">
+                    {reportMeta.filteredResidents} registros prontos para
+                    consulta.
+                  </p>
+                </div>
+                <div className="reports-table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Comunidade</th>
+                        <th>Cidade</th>
+                        <th>Estado</th>
+                        <th>Bairro</th>
+                        <th>Moradores</th>
+                        <th>Status</th>
+                        <th>Criado em</th>
+                        <th>Detalhes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredResidents.length > 0 ? (
+                        filteredResidents.map((resident) => {
+                          const isExpanded = expandedResidentId === resident.id;
+
+                          return (
+                            <Fragment key={resident.id}>
+                              <tr>
+                                <td className="reports-id">{resident.id}</td>
+                                <td className="reports-name-cell">
+                                  <strong className="reports-name-main">
+                                    {resident.full_name}
+                                  </strong>
+                                  <span className="reports-name-meta">
+                                    {resident.email ??
+                                      resident.phone ??
+                                      "Sem contato informado"}
+                                  </span>
+                                </td>
+                                <td>{resident.community_name ?? "-"}</td>
+                                <td>{resident.city ?? "-"}</td>
+                                <td>{resident.state ?? "-"}</td>
+                                <td>{resident.neighborhood ?? "-"}</td>
+                                <td>{resident.household_size ?? "-"}</td>
+                                <td>
+                                  <span
+                                    className={`status ${normalizeText(
+                                      resident.status
+                                    )}`}
+                                  >
+                                    {formatStatusLabel(resident.status)}
+                                  </span>
+                                </td>
+                                <td>
+                                  {new Date(resident.created_at).toLocaleDateString(
+                                    "pt-BR"
+                                  )}
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className={`reports-detail-toggle${
+                                      isExpanded ? " is-open" : ""
+                                    }`}
+                                    onClick={() =>
+                                      setExpandedResidentId((current) =>
+                                        current === resident.id
+                                          ? null
+                                          : resident.id
+                                      )
+                                    }
+                                    aria-expanded={isExpanded}
+                                  >
+                                    {isExpanded ? "Ocultar" : "Ver detalhes"}
+                                  </button>
+                                </td>
+                              </tr>
+                              {isExpanded && (
+                                <tr className="reports-detail-row">
+                                  <td colSpan={10} className="reports-detail-cell">
+                                    {renderResidentDetails(resident)}
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={10}>
+                            <div className="table-empty reports-empty-state">
+                              <strong>
+                                {emptyState?.title ??
+                                  "Nenhum cadastro registrado."}
+                              </strong>
+                              <span>
+                                {emptyState?.description ??
+                                  "Cadastre pessoas no painel para começar a visualizar os dados."}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </section>
     </div>

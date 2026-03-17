@@ -448,6 +448,103 @@ select {
 
 .header-auth-button {
   min-width: 112px;
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.header-auth-button.is-current {
+  color: var(--color-white);
+  background: linear-gradient(180deg, #6a2805 0%, var(--color-clay) 100%);
+  border-color: rgba(var(--color-sun-rgb), 0.92);
+  border-width: 2px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 0 2px rgba(var(--color-sun-rgb), 0.34),
+    0 0 0 8px rgba(var(--color-sun-rgb), 0.16),
+    0 20px 38px rgba(var(--color-clay-rgb), 0.34);
+  animation: header-panel-pulse 1.55s ease-in-out infinite;
+}
+
+.header-auth-button.is-current::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    118deg,
+    transparent 22%,
+    rgba(255, 255, 255, 0.34) 44%,
+    transparent 68%
+  );
+  opacity: 0.88;
+  pointer-events: none;
+  transform: translateX(-150%) skewX(-18deg);
+  animation: header-panel-sheen 2.4s ease-in-out infinite;
+}
+
+.header-auth-button.is-current::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  z-index: -1;
+  border-radius: inherit;
+  border: 2px solid rgba(var(--color-sun-rgb), 0.62);
+  opacity: 0.9;
+  animation: header-panel-ring 1.55s ease-out infinite;
+}
+
+.header-auth-button.is-current:hover:not(:disabled),
+.header-auth-button.is-current:focus-visible {
+  transform: translateY(-2px) scale(1.02);
+}
+
+@keyframes header-panel-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 0 0 2px rgba(var(--color-sun-rgb), 0.28),
+      0 0 0 7px rgba(var(--color-sun-rgb), 0.11),
+      0 18px 34px rgba(var(--color-clay-rgb), 0.3);
+  }
+
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      0 0 0 3px rgba(var(--color-sun-rgb), 0.56),
+      0 0 0 11px rgba(var(--color-sun-rgb), 0.24),
+      0 24px 42px rgba(var(--color-clay-rgb), 0.4);
+  }
+}
+
+@keyframes header-panel-ring {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.92;
+  }
+
+  70% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1.12);
+    opacity: 0;
+  }
+}
+
+@keyframes header-panel-sheen {
+  0%,
+  16% {
+    transform: translateX(-150%) skewX(-18deg);
+  }
+
+  42%,
+  100% {
+    transform: translateX(165%) skewX(-18deg);
+  }
 }
 
 .site-header .btn-outline,
