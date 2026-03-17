@@ -15,6 +15,7 @@ type NewsCarouselProps = {
   showArrows?: boolean;
   imageOnly?: boolean;
   splitView?: boolean;
+  matchImageAspect?: boolean;
   collection?: "news" | "reports" | "news-posts";
   mediaLinkTo?: string;
   mediaLinkLabel?: string;
@@ -32,6 +33,7 @@ export default function NewsCarousel({
   showArrows = true,
   imageOnly = false,
   splitView = false,
+  matchImageAspect = false,
   collection = "news",
   mediaLinkTo,
   mediaLinkLabel,
@@ -39,6 +41,7 @@ export default function NewsCarousel({
 }: NewsCarouselProps) {
   const [remoteItems, setRemoteItems] = useState<typeof fallbackItems>([]);
   const [remoteLoaded, setRemoteLoaded] = useState(false);
+  const [imageRatios, setImageRatios] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (itemsProp) {
@@ -100,6 +103,40 @@ export default function NewsCarousel({
   const [activeIndex, setActiveIndex] = useState(0);
   const active = items[activeIndex] ?? items[0];
   const useSplitView = imageOnly && splitView;
+  const activeAspectRatio = active.src ? imageRatios[active.src] : undefined;
+
+  useEffect(() => {
+    if (!matchImageAspect) {
+      return undefined;
+    }
+
+    let activeLoader = true;
+    items.forEach((item) => {
+      if (!item.src || imageRatios[item.src]) {
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        if (!activeLoader || !img.naturalWidth || !img.naturalHeight) {
+          return;
+        }
+        setImageRatios((current) => {
+          if (current[item.src]) {
+            return current;
+          }
+          return {
+            ...current,
+            [item.src]: `${img.naturalWidth} / ${img.naturalHeight}`,
+          };
+        });
+      };
+      img.src = item.src;
+    });
+
+    return () => {
+      activeLoader = false;
+    };
+  }, [imageRatios, items, matchImageAspect]);
 
   useEffect(() => {
     if (activeIndex >= items.length) {
@@ -129,6 +166,10 @@ export default function NewsCarousel({
   const mediaStyle = active.src
     ? ({ ["--news-media-bg" as "--news-media-bg"]: `url(${active.src})` } as CSSProperties)
     : undefined;
+  const articleStyle =
+    imageOnly && matchImageAspect && activeAspectRatio
+      ? ({ aspectRatio: activeAspectRatio } as CSSProperties)
+      : undefined;
   const mediaNode = (
     <div
       className={`news-media theme-media${active.src ? "" : " is-placeholder"}${
@@ -155,6 +196,24 @@ export default function NewsCarousel({
             src={active.src}
             alt={active.title}
             className="theme-media-img"
+            onLoad={(event) => {
+              if (!matchImageAspect) {
+                return;
+              }
+              const { naturalWidth, naturalHeight, currentSrc } = event.currentTarget;
+              if (!naturalWidth || !naturalHeight || !currentSrc) {
+                return;
+              }
+              setImageRatios((current) => {
+                if (current[currentSrc]) {
+                  return current;
+                }
+                return {
+                  ...current,
+                  [currentSrc]: `${naturalWidth} / ${naturalHeight}`,
+                };
+              });
+            }}
           />
         )
       ) : (
@@ -168,6 +227,7 @@ export default function NewsCarousel({
       <article
         key={active.id}
         className={`news-card${imageOnly ? " news-card-media" : ""}`}
+        style={articleStyle}
       >
         {mediaLinkTo ? (
           <Link
