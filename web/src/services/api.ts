@@ -7,8 +7,12 @@ import type {
   ThemeTypography,
 } from "../types/theme";
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "/api";
+const REMOTE_API_BASE_URL = "https://api.pnit.infinity.dev.br";
+const ENV_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+const isLocalHostname =
+  typeof window !== "undefined" &&
+  ["localhost", "127.0.0.1"].includes(window.location.hostname);
+const API_BASE_URL = ENV_API_BASE_URL || (isLocalHostname ? "/api" : REMOTE_API_BASE_URL);
 const AUTH_TOKEN_KEY = "pnit_auth_token";
 const AUTH_ROLE_KEY = "pnit_auth_role";
 const AUTH_USER_ID_KEY = "pnit_auth_user_id";
@@ -99,6 +103,19 @@ type ApiErrorBody = {
   };
   message?: string;
 };
+
+function normalizeItemsResponse<T>(value: unknown): { items: T[] } {
+  if (Array.isArray(value)) {
+    return { items: value as T[] };
+  }
+  if (typeof value === "object" && value !== null) {
+    const items = (value as { items?: unknown }).items;
+    if (Array.isArray(items)) {
+      return { items: items as T[] };
+    }
+  }
+  return { items: [] };
+}
 
 async function apiFetch<T>(
   path: string,
@@ -691,11 +708,13 @@ export async function createCommunity(payload: CommunityInfo) {
 }
 
 export async function fetchNewsImages(): Promise<{ items: NewsImage[] }> {
-  return apiFetch<{ items: NewsImage[] }>("/media/news");
+  const response = await apiFetch<unknown>("/media/news");
+  return normalizeItemsResponse<NewsImage>(response);
 }
 
 export async function listNewsPosts(): Promise<{ items: NewsPost[] }> {
-  return apiFetch<{ items: NewsPost[] }>("/news");
+  const response = await apiFetch<unknown>("/news");
+  return normalizeItemsResponse<NewsPost>(response);
 }
 
 export async function listTeamMembers(): Promise<{ items: TeamMember[] }> {
@@ -960,7 +979,8 @@ export async function deleteNewsImage(id: string): Promise<{ ok: boolean }> {
 }
 
 export async function fetchReportsImages(): Promise<{ items: NewsImage[] }> {
-  return apiFetch<{ items: NewsImage[] }>("/media/reports");
+  const response = await apiFetch<unknown>("/media/reports");
+  return normalizeItemsResponse<NewsImage>(response);
 }
 
 export async function uploadReportsImage(
