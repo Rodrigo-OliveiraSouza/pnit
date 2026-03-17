@@ -422,11 +422,11 @@ select {
 .site-header .site-nav .nav-link.active {
   color: var(--color-heading);
   background: rgba(255, 255, 255, 0.98);
-  border-color: #ffe84a;
+  border-color: var(--color-clay);
   box-shadow:
-    0 0 0 1px rgba(255, 232, 74, 0.78),
-    0 0 18px rgba(255, 232, 74, 0.42),
-    0 10px 22px rgba(255, 232, 74, 0.16);
+    0 0 0 1px rgba(var(--color-clay-rgb), 0.82),
+    0 0 18px rgba(var(--color-clay-rgb), 0.3),
+    0 10px 22px rgba(var(--color-clay-rgb), 0.14);
 }
 
 .header-auth-actions {
