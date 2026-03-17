@@ -716,11 +716,15 @@ select {
 }
 
 .home-hero--carousel-only .home-hero-carousel .news-media {
-  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .home-hero--carousel-only .home-hero-carousel .news-media img {
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .home-section-heading {
