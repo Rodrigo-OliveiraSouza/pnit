@@ -23,6 +23,16 @@ import {
 } from "../services/api";
 
 const defaultCenter = { lat: -14.235, lng: -51.925 };
+const BAHIA_CENTER = { lat: -12.5797, lng: -41.7007 };
+const DEFAULT_PUBLIC_FILTERS: PointFilters = {
+  status: "all",
+  precision: "all",
+  updatedWithinDays: null,
+  city: "",
+  state: "BA",
+  region: "",
+  community: "",
+};
 // Wide bounds used when a state/city/community filter is active so results
 // are not unintentionally limited by the current viewport.
 const BRAZIL_BBOX = "-74.1,-34.0,-34.7,5.4";
@@ -142,9 +152,9 @@ export default function PublicMapSection({
   const [appliedFilters, setAppliedFilters] =
     useState<PointFilters>(defaultFilters);
   const [publicFilters, setPublicFilters] =
-    useState<PointFilters>(defaultFilters);
+    useState<PointFilters>(DEFAULT_PUBLIC_FILTERS);
   const [appliedPublicFilters, setAppliedPublicFilters] =
-    useState<PointFilters>(defaultFilters);
+    useState<PointFilters>(DEFAULT_PUBLIC_FILTERS);
   const [publicCommunities, setPublicCommunities] = useState<
     Array<{
       community_name: string;
@@ -1021,8 +1031,8 @@ export default function PublicMapSection({
           </div>
           <MapShell
             points={mapPoints}
-            center={defaultCenter}
-            zoom={4}
+            center={isPublicMode ? BAHIA_CENTER : defaultCenter}
+            zoom={isPublicMode ? 6 : 4}
             libraries={isPublicMode ? [] : ["drawing"]}
             onMapReady={handleMapReady}
           />
