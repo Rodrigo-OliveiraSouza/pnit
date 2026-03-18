@@ -217,10 +217,11 @@ select {
 .header-ribbon {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 1rem;
+  justify-content: space-between;
+  gap: 1.15rem 1.4rem;
+  flex-wrap: wrap;
   padding: 1rem 1.25rem;
-  border-radius: 28px 28px 0 0;
+  border-radius: 28px;
   background: linear-gradient(135deg, var(--color-header-start), var(--color-header-end));
   color: var(--color-white);
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.14);
@@ -275,14 +276,7 @@ select {
 }
 
 .header-main {
-  display: block;
-  padding: 1.25rem 1.35rem 1.45rem;
-  border: 1px solid rgba(33, 21, 59, 0.08);
-  border-top: 0;
-  border-radius: 0 0 30px 30px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-soft);
+  display: none;
 }
 
 .header-brand-group {
@@ -373,7 +367,9 @@ select {
   gap: 1rem;
   flex-wrap: nowrap;
   justify-items: stretch;
-  width: 100%;
+  flex: 1 1 760px;
+  min-width: 0;
+  width: auto;
 }
 
 .site-nav {
@@ -384,8 +380,8 @@ select {
   gap: 0.7rem 0.8rem;
   justify-content: flex-start;
   width: auto;
-  padding: 0.38rem 0.2rem 0.55rem;
-  margin: -0.38rem -0.2rem -0.55rem;
+  padding: 0;
+  margin: 0;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: thin;
@@ -400,9 +396,9 @@ select {
 }
 
 .site-header .nav-link {
-  color: var(--color-heading);
-  background: rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .nav-link:hover {
@@ -413,26 +409,28 @@ select {
 
 .site-header .site-nav .nav-link:hover,
 .site-header .site-nav .nav-link:focus-visible {
-  color: var(--color-clay);
-  background: rgba(var(--color-sun-rgb), 0.12);
-  border-color: rgba(var(--color-sun-rgb), 0.48);
-  box-shadow: 0 10px 18px rgba(255, 138, 0, 0.14);
+  color: var(--color-white);
+  background: rgba(var(--color-sun-rgb), 0.22);
+  border-color: rgba(var(--color-sun-rgb), 0.58);
+  box-shadow: 0 12px 22px rgba(255, 138, 0, 0.18);
   outline: none;
 }
 
 .nav-link.active,
 .site-header .site-nav .nav-link.active {
-  color: var(--color-clay);
+  color: var(--color-white);
   font-weight: 700;
-  background: linear-gradient(180deg, rgba(255, 250, 246, 0.98), rgba(255, 255, 255, 1));
-  border-color: var(--color-clay);
-  border-width: 2px;
+  background: linear-gradient(
+    180deg,
+    rgba(var(--color-sun-rgb), 0.95),
+    rgba(214, 92, 11, 0.98)
+  );
+  border-color: rgba(var(--color-sun-rgb), 0.94);
+  border-width: 1px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.92),
-    0 0 0 1px rgba(var(--color-clay-rgb), 0.88),
-    0 0 0 5px rgba(var(--color-clay-rgb), 0.12),
-    0 0 24px rgba(var(--color-clay-rgb), 0.34),
-    0 12px 24px rgba(var(--color-clay-rgb), 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 0 0 1px rgba(var(--color-sun-rgb), 0.42),
+    0 10px 22px rgba(255, 138, 0, 0.24);
 }
 
 .header-auth-actions {
@@ -443,10 +441,13 @@ select {
   flex-wrap: nowrap;
   justify-content: flex-end;
   width: auto;
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .header-auth-button {
+  --btn-bg: #c85a0a;
+  --btn-text: var(--color-white);
+  --btn-border: rgba(255, 255, 255, 0.16);
   min-width: 112px;
   position: relative;
   isolation: isolate;
@@ -455,14 +456,14 @@ select {
 
 .header-auth-button.is-current {
   color: var(--color-white);
-  background: linear-gradient(180deg, #6a2805 0%, var(--color-clay) 100%);
+  background: linear-gradient(180deg, #dd6b12 0%, #c4530b 100%);
   border-color: rgba(var(--color-sun-rgb), 0.92);
   border-width: 2px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.16),
     0 0 0 2px rgba(var(--color-sun-rgb), 0.34),
     0 0 0 8px rgba(var(--color-sun-rgb), 0.16),
-    0 20px 38px rgba(var(--color-clay-rgb), 0.34);
+    0 20px 38px rgba(213, 93, 15, 0.34);
   animation: header-panel-pulse 1.55s ease-in-out infinite;
 }
 

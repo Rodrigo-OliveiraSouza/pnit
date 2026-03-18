@@ -82,9 +82,6 @@ export default function Header() {
             />
           </Link>
         </div>
-      </div>
-
-      <div className="header-main">
         <div className="header-nav-wrap">
           <nav className="site-nav" aria-label="Navegação principal">
             <NavLink
