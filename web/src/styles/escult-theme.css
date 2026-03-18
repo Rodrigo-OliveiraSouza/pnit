@@ -1554,7 +1554,9 @@ select {
 }
 
 .footer-license-note {
-  margin-top: 0.9rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(33, 21, 59, 0.1);
   text-align: center;
   color: #000000;
   font-size: 0.9rem;

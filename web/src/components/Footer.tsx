@@ -6,10 +6,10 @@ export default function Footer() {
   const { footer } = copy;
   const helpEmail = "agentesterritoriais2@gmail.com";
   const pageLinks = [
-    { label: "Página inicial", href: baseUrl },
-    { label: "Cadastro com código", href: `${baseUrl}acesso` },
-    { label: "Notícias", href: `${baseUrl}noticias` },
-    { label: "Denúncias", href: `${baseUrl}denuncias` },
+    { label: "Pagina inicial", href: baseUrl },
+    { label: "Cadastro com codigo", href: `${baseUrl}acesso` },
+    { label: "Noticias", href: `${baseUrl}noticias` },
+    { label: "Denuncias", href: `${baseUrl}denuncias` },
     { label: "Entrar no painel", href: `${baseUrl}login` },
   ];
   const institutionalLinks = [
@@ -18,7 +18,7 @@ export default function Footer() {
       href: "https://www.gov.br/pt-br",
     },
     {
-      label: "Ministério da Igualdade Racial",
+      label: "Ministerio da Igualdade Racial",
       href: "https://www.gov.br/igualdaderacial/pt-br",
     },
     {
@@ -38,8 +38,8 @@ export default function Footer() {
     },
   ];
   const supportLines = footer.contactItems.filter(Boolean);
-  const versionText = footer.version.trim();
-  const licenseText = "© 2026 PNIT. Ambiente público com leitura territorial e suporte institucional.";
+  const licenseText =
+    "© 2026 PNIT. Ambiente publico com leitura territorial e suporte institucional.";
 
   const supportLinks = supportLines.map((item, index) => {
     if (index === 1) {
@@ -49,12 +49,14 @@ export default function Footer() {
         external: true,
       };
     }
+
     return {
       label: item,
       href: `mailto:${helpEmail}?subject=${encodeURIComponent(item)}`,
       external: false,
     };
   });
+
   const supportColumnLinks = [
     {
       label: helpEmail,
@@ -63,10 +65,6 @@ export default function Footer() {
     },
     ...supportLinks,
   ];
-
-  const handleScrollTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
 
   return (
     <footer className="site-footer">
@@ -88,14 +86,14 @@ export default function Footer() {
               >
                 <img
                   src={`${baseUrl}logos/mir2.jpeg`}
-                  alt="Ministério da Igualdade Racial"
+                  alt="Ministerio da Igualdade Racial"
                   className="logo logo-mir theme-ignore"
                 />
               </a>
               <a href="https://ufrb.edu.br/" target="_blank" rel="noreferrer">
                 <img
                   src={`${baseUrl}logos/ufrb.jpg`}
-                  alt="Universidade Federal do Recôncavo da Bahia"
+                  alt="Universidade Federal do Reconcavo da Bahia"
                   className="logo logo-ufrb theme-ignore"
                 />
               </a>
@@ -106,7 +104,7 @@ export default function Footer() {
               >
                 <img
                   src={`${baseUrl}logos/diversifica.png`}
-                  alt="Diversifica Inclusão e Diversidade"
+                  alt="Diversifica Inclusao e Diversidade"
                   className="logo logo-diversifica theme-ignore"
                 />
               </a>
@@ -115,7 +113,7 @@ export default function Footer() {
           </div>
 
           <div className="footer-column">
-            <h4>Páginas</h4>
+            <h4>Paginas</h4>
             <ul className="footer-link-list">
               {pageLinks.map((item) => (
                 <li key={item.href}>
@@ -168,17 +166,6 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="footer-bottom">
-          <span>{versionText || "Versão institucional em operação."}</span>
-          <button
-            type="button"
-            className="footer-scroll-top"
-            onClick={handleScrollTop}
-            aria-label="Voltar ao topo"
-          >
-            ^
-          </button>
-        </div>
         <div className="footer-license-note">{licenseText}</div>
       </div>
     </footer>
