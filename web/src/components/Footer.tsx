@@ -64,6 +64,11 @@ export default function Footer() {
       external: false,
     },
     ...supportLinks,
+    {
+      label: "Denuncias",
+      href: `${baseUrl}denuncias`,
+      external: false,
+    },
   ];
 
   return (

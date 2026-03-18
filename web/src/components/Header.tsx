@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   getAuthRole,
   getAuthToken,
@@ -11,6 +11,7 @@ import { useSiteCopy } from "../providers/SiteCopyProvider";
 
 export default function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const baseUrl = import.meta.env.BASE_URL || "/";
   const [authToken, setAuthTokenState] = useState(getAuthToken());
   const role = getAuthRole();
@@ -27,6 +28,8 @@ export default function Header() {
         : "/painel?tab=register";
   const { copy } = useSiteCopy();
   const isLoggedIn = Boolean(authToken);
+  const isPanelRoute =
+    location.pathname.startsWith("/painel") || location.pathname.startsWith("/admin");
   const [isHidden, setIsHidden] = useState(false);
   const lastScrollY = useRef(0);
 
@@ -139,20 +142,18 @@ export default function Header() {
                 {copy.header.navImages}
               </NavLink>
             )}
-            <NavLink
-              to="/denuncias"
-              className={({ isActive }) =>
-                `nav-link${isActive ? " active" : ""}`
-              }
-            >
-              {copy.header.navComplaints}
-            </NavLink>
           </nav>
 
           <div className="header-auth-actions">
             {isLoggedIn ? (
               <>
-                <Link to={panelLink} className="btn btn-primary header-auth-button">
+                <Link
+                  to={panelLink}
+                  className={`btn btn-primary header-auth-button${
+                    isPanelRoute ? " is-current" : ""
+                  }`}
+                  aria-current={isPanelRoute ? "page" : undefined}
+                >
                   {copy.header.panelLabel}
                 </Link>
                 <button
