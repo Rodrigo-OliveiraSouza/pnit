@@ -114,7 +114,6 @@ export default function Footer() {
                 />
               </a>
             </div>
-            <p className="footer-brand-copy">{footer.description}</p>
           </div>
 
           <div className="footer-column">
