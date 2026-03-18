@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
 import Reports from "./pages/Reports";
+import ReportPanorama from "./pages/ReportPanorama";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
@@ -21,6 +22,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/relatorios" element={<Reports />} />
+        <Route path="/relatorios/panorama" element={<ReportPanorama />} />
         <Route path="/login" element={<Login />} />
         <Route path="/recuperar-senha" element={<PasswordReset />} />
         <Route path="/cadastro" element={<Register />} />

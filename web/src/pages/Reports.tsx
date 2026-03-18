@@ -288,6 +288,17 @@ export default function Reports() {
 
   const selectedCityValue =
     filterCity && filterState ? `${filterCity}__${filterState}` : "";
+  const panoramaHref = useMemo(() => {
+    const query = new URLSearchParams();
+    if (filterState) {
+      query.set("state", filterState);
+    }
+    if (filterCity) {
+      query.set("city", filterCity);
+    }
+    const suffix = query.toString();
+    return `/relatorios/panorama${suffix ? `?${suffix}` : ""}`;
+  }, [filterCity, filterState]);
   const filteredResidents = useMemo(
     () =>
       allResidents.filter((resident) => {
@@ -1091,6 +1102,9 @@ export default function Reports() {
                 >
                   {exportLoading ? "Exportando..." : "Exportar relatório filtrado"}
                 </button>
+                <Link className="btn btn-primary" to={panoramaHref}>
+                  Abrir panorama
+                </Link>
                 <button
                   className="btn btn-ghost"
                   type="button"
