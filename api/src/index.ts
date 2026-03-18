@@ -1,6 +1,6 @@
 import { Hono, type Context } from "hono";
 import { neon } from "@neondatabase/serverless";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import JSZip from "jszip";
 
 type Env = {
@@ -92,6 +92,63 @@ type UserClaims = {
   email: string;
   exp: number;
 };
+
+type PdfColor = ReturnType<typeof rgb>;
+type PdfStatCard = {
+  label: string;
+  value: string;
+  note?: string;
+};
+type PdfBarEntry = {
+  label: string;
+  value: number;
+};
+type PdfTextOptions = {
+  x?: number;
+  y?: number;
+  size?: number;
+  maxWidth?: number;
+  lineHeight?: number;
+  color?: PdfColor;
+  font?: PDFFont;
+  gapAfter?: number;
+};
+
+const PDF_PAGE_SIZE: [number, number] = [595.28, 841.89];
+const PDF_PALETTE = {
+  brand: rgb(0.298, 0.118, 0.016),
+  brandDark: rgb(0.18, 0.07, 0.01),
+  accent: rgb(1, 0.541, 0),
+  accentSoft: rgb(0.99, 0.94, 0.88),
+  ink: rgb(0, 0, 0),
+  muted: rgb(0.36, 0.36, 0.36),
+  surface: rgb(0.985, 0.975, 0.965),
+  surfaceAlt: rgb(0.96, 0.94, 0.91),
+  line: rgb(0.89, 0.84, 0.78),
+  white: rgb(1, 1, 1),
+  success: rgb(0.21, 0.55, 0.32),
+  warning: rgb(0.88, 0.57, 0.16),
+  danger: rgb(0.66, 0.22, 0.12),
+  info: rgb(0.45, 0.29, 0.16),
+};
+
+const PDF_DATE_TIME_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "America/Sao_Paulo",
+});
+const PDF_DATE_FORMATTER = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "medium",
+  timeZone: "America/Sao_Paulo",
+});
+const PDF_NUMBER_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+const PDF_CURRENCY_FORMATTER = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -310,6 +367,420 @@ function base64Decode(input: string) {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+function formatPdfDateTime(value: string | Date | null | undefined) {
+  if (!value) return "-";
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+  return PDF_DATE_TIME_FORMATTER.format(parsed);
+}
+
+function formatPdfDate(value: string | Date | null | undefined) {
+  if (!value) return "-";
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+  return PDF_DATE_FORMATTER.format(parsed);
+}
+
+function formatPdfNumber(value: string | number | null | undefined) {
+  const numeric =
+    value === null || value === undefined ? Number.NaN : Number(value);
+  if (!Number.isFinite(numeric)) return "-";
+  return PDF_NUMBER_FORMATTER.format(numeric);
+}
+
+function formatPdfCurrency(value: string | number | null | undefined) {
+  const numeric =
+    value === null || value === undefined ? Number.NaN : Number(value);
+  if (!Number.isFinite(numeric)) return "-";
+  return PDF_CURRENCY_FORMATTER.format(numeric);
+}
+
+function wrapPdfText(
+  font: PDFFont,
+  text: string,
+  size: number,
+  maxWidth: number
+) {
+  const normalized = String(text ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return [""];
+  }
+
+  const words = normalized.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  words.forEach((word) => {
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    if (font.widthOfTextAtSize(candidate, size) > maxWidth && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+      return;
+    }
+    currentLine = candidate;
+  });
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines.length > 0 ? lines : [normalized];
+}
+
+function truncatePdfText(
+  font: PDFFont,
+  text: string,
+  size: number,
+  maxWidth: number
+) {
+  const normalized = String(text ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "-";
+  if (font.widthOfTextAtSize(normalized, size) <= maxWidth) {
+    return normalized;
+  }
+  let trimmed = normalized;
+  while (trimmed.length > 3) {
+    trimmed = trimmed.slice(0, -1).trimEnd();
+    const candidate = `${trimmed}...`;
+    if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
+      return candidate;
+    }
+  }
+  return normalized.slice(0, 12);
+}
+
+function createPdfLayout(
+  pdf: PDFDocument,
+  font: PDFFont,
+  boldFont: PDFFont,
+  pageSize: [number, number] = PDF_PAGE_SIZE
+) {
+  let page = pdf.addPage(pageSize);
+  let { width, height } = page.getSize();
+  const margin = 46;
+  let cursorY = height - margin;
+
+  const addPage = (size: [number, number] = pageSize) => {
+    page = pdf.addPage(size);
+    ({ width, height } = page.getSize());
+    cursorY = height - margin;
+    return page;
+  };
+
+  const ensureSpace = (space: number, size: [number, number] = pageSize) => {
+    if (cursorY - space < margin) {
+      addPage(size);
+    }
+  };
+
+  const drawWrappedAt = (text: string, options: PdfTextOptions = {}) => {
+    const size = options.size ?? 11;
+    const x = options.x ?? margin;
+    const y = options.y ?? cursorY;
+    const maxWidth = options.maxWidth ?? width - margin * 2;
+    const lineHeight = options.lineHeight ?? Math.round(size * 1.45);
+    const color = options.color ?? PDF_PALETTE.ink;
+    const activeFont = options.font ?? font;
+    const lines = wrapPdfText(activeFont, text, size, maxWidth);
+    let lineY = y;
+    lines.forEach((line) => {
+      page.drawText(line, {
+        x,
+        y: lineY,
+        size,
+        font: activeFont,
+        color,
+      });
+      lineY -= lineHeight;
+    });
+    return lineY;
+  };
+
+  const writeText = (text: string, options: PdfTextOptions = {}) => {
+    const size = options.size ?? 11;
+    const lineHeight = options.lineHeight ?? Math.round(size * 1.45);
+    const activeFont = options.font ?? font;
+    const maxWidth = options.maxWidth ?? width - margin * 2;
+    const lines = wrapPdfText(activeFont, text, size, maxWidth);
+    ensureSpace(lines.length * lineHeight + (options.gapAfter ?? 6));
+    cursorY = drawWrappedAt(text, {
+      ...options,
+      x: options.x ?? margin,
+      y: options.y ?? cursorY,
+    });
+    cursorY -= (options.gapAfter ?? 6);
+  };
+
+  const drawDivider = (gapBefore = 8, gapAfter = 18) => {
+    ensureSpace(gapBefore + gapAfter + 2);
+    cursorY -= gapBefore;
+    page.drawLine({
+      start: { x: margin, y: cursorY },
+      end: { x: width - margin, y: cursorY },
+      thickness: 1,
+      color: PDF_PALETTE.line,
+    });
+    cursorY -= gapAfter;
+  };
+
+  const drawHeroBanner = (eyebrow: string, title: string, subtitle: string) => {
+    const bannerHeight = 152;
+    page.drawRectangle({
+      x: 0,
+      y: height - bannerHeight,
+      width,
+      height: bannerHeight,
+      color: PDF_PALETTE.brandDark,
+    });
+    page.drawRectangle({
+      x: 0,
+      y: height - bannerHeight,
+      width,
+      height: 10,
+      color: PDF_PALETTE.accent,
+    });
+    drawWrappedAt(eyebrow.toUpperCase(), {
+      x: margin,
+      y: height - 40,
+      size: 9,
+      maxWidth: width - margin * 2,
+      color: PDF_PALETTE.accentSoft,
+      font: boldFont,
+      lineHeight: 12,
+    });
+    drawWrappedAt(title, {
+      x: margin,
+      y: height - 68,
+      size: 23,
+      maxWidth: width - margin * 2,
+      color: PDF_PALETTE.white,
+      font: boldFont,
+      lineHeight: 28,
+    });
+    drawWrappedAt(subtitle, {
+      x: margin,
+      y: height - 112,
+      size: 10,
+      maxWidth: width - margin * 2,
+      color: PDF_PALETTE.accentSoft,
+      font,
+      lineHeight: 14,
+    });
+    cursorY = height - bannerHeight - 24;
+  };
+
+  const drawSection = (eyebrow: string, title: string, body?: string) => {
+    ensureSpace(body ? 84 : 58);
+    writeText(eyebrow.toUpperCase(), {
+      size: 8.5,
+      font: boldFont,
+      color: PDF_PALETTE.warning,
+      lineHeight: 11,
+      gapAfter: 4,
+    });
+    writeText(title, {
+      size: 16,
+      font: boldFont,
+      color: PDF_PALETTE.brand,
+      lineHeight: 20,
+      gapAfter: body ? 6 : 12,
+    });
+    if (body) {
+      writeText(body, {
+        size: 10.5,
+        color: PDF_PALETTE.muted,
+        lineHeight: 15,
+        gapAfter: 12,
+      });
+    }
+  };
+
+  const drawStatCards = (cards: PdfStatCard[], columns = 2) => {
+    if (!cards.length) return;
+    const gap = 12;
+    const cardWidth =
+      (width - margin * 2 - gap * (columns - 1)) / columns;
+    const cardHeight = 86;
+    let index = 0;
+    while (index < cards.length) {
+      ensureSpace(cardHeight + 16);
+      const rowCards = cards.slice(index, index + columns);
+      const rowTop = cursorY;
+      rowCards.forEach((card, columnIndex) => {
+        const x = margin + columnIndex * (cardWidth + gap);
+        const y = rowTop - cardHeight;
+        page.drawRectangle({
+          x,
+          y,
+          width: cardWidth,
+          height: cardHeight,
+          color: PDF_PALETTE.surface,
+          borderColor: PDF_PALETTE.line,
+          borderWidth: 1,
+          borderOpacity: 1,
+        });
+        page.drawRectangle({
+          x,
+          y: rowTop - 4,
+          width: cardWidth,
+          height: 4,
+          color: PDF_PALETTE.accent,
+        });
+        page.drawText(truncatePdfText(font, card.label, 8.5, cardWidth - 22), {
+          x: x + 11,
+          y: rowTop - 18,
+          size: 8.5,
+          font,
+          color: PDF_PALETTE.muted,
+        });
+        page.drawText(truncatePdfText(boldFont, card.value, 16, cardWidth - 22), {
+          x: x + 11,
+          y: rowTop - 40,
+          size: 16,
+          font: boldFont,
+          color: PDF_PALETTE.brand,
+        });
+        if (card.note) {
+          const note = truncatePdfText(font, card.note, 8.5, cardWidth - 22);
+          page.drawText(note, {
+            x: x + 11,
+            y: rowTop - 58,
+            size: 8.5,
+            font,
+            color: PDF_PALETTE.muted,
+          });
+        }
+      });
+      cursorY -= cardHeight + 14;
+      index += columns;
+    }
+  };
+
+  const drawHorizontalBars = (
+    title: string,
+    items: PdfBarEntry[],
+    maxValue: number,
+    formatter?: (value: number) => string,
+    color: PdfColor = PDF_PALETTE.brand
+  ) => {
+    ensureSpace(40 + items.length * 28);
+    writeText(title, {
+      size: 12,
+      font: boldFont,
+      color: PDF_PALETTE.brand,
+      gapAfter: 10,
+    });
+    const trackX = margin + 150;
+    const trackWidth = width - margin * 2 - 200;
+    items.forEach((item) => {
+      ensureSpace(24);
+      const label = truncatePdfText(font, item.label, 9, 138);
+      page.drawText(label, {
+        x: margin,
+        y: cursorY,
+        size: 9,
+        font,
+        color: PDF_PALETTE.ink,
+      });
+      page.drawRectangle({
+        x: trackX,
+        y: cursorY - 2,
+        width: trackWidth,
+        height: 8,
+        color: PDF_PALETTE.surfaceAlt,
+      });
+      const safeValue = Math.max(0, Number(item.value) || 0);
+      const fillWidth =
+        maxValue > 0 ? Math.min(trackWidth, (safeValue / maxValue) * trackWidth) : 0;
+      page.drawRectangle({
+        x: trackX,
+        y: cursorY - 2,
+        width: fillWidth,
+        height: 8,
+        color,
+      });
+      page.drawText(formatter ? formatter(safeValue) : String(safeValue), {
+        x: width - margin - 44,
+        y: cursorY,
+        size: 9,
+        font: boldFont,
+        color: PDF_PALETTE.brand,
+      });
+      cursorY -= 24;
+    });
+    cursorY -= 6;
+  };
+
+  const drawBulletList = (title: string, items: string[], emptyText: string) => {
+    ensureSpace(54);
+    writeText(title, {
+      size: 12,
+      font: boldFont,
+      color: PDF_PALETTE.brand,
+      gapAfter: 8,
+    });
+    if (items.length === 0) {
+      writeText(emptyText, {
+        size: 10,
+        color: PDF_PALETTE.muted,
+        gapAfter: 10,
+      });
+      return;
+    }
+    items.forEach((item) => {
+      ensureSpace(22);
+      page.drawCircle({
+        x: margin + 4,
+        y: cursorY + 4,
+        size: 2.2,
+        color: PDF_PALETTE.accent,
+      });
+      cursorY = drawWrappedAt(item, {
+        x: margin + 14,
+        y: cursorY,
+        size: 9.5,
+        maxWidth: width - margin * 2 - 14,
+        color: PDF_PALETTE.ink,
+        font,
+        lineHeight: 13,
+      });
+      cursorY -= 5;
+    });
+    cursorY -= 6;
+  };
+
+  return {
+    addPage,
+    ensureSpace,
+    drawDivider,
+    drawHeroBanner,
+    drawSection,
+    drawStatCards,
+    drawHorizontalBars,
+    drawBulletList,
+    drawWrappedAt,
+    writeText,
+    get page() {
+      return page;
+    },
+    get width() {
+      return width;
+    },
+    get height() {
+      return height;
+    },
+    get cursorY() {
+      return cursorY;
+    },
+    set cursorY(value: number) {
+      cursorY = value;
+    },
+    get margin() {
+      return margin;
+    },
+  };
 }
 
 function parseDataUrl(dataUrl: string) {
@@ -3359,10 +3830,11 @@ app.post("/reports/export", async (c) => {
 
   try {
     const pdf = await PDFDocument.create();
-    let page = pdf.addPage();
     const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const layout = createPdfLayout(pdf, font, boldFont);
+    let page = layout.page;
     let { width, height } = page.getSize();
-    const title = "Relatorio publico";
     const cityCounts = rows.reduce<Record<string, number>>((acc, row) => {
       const key = String(row.city ?? "Sem cidade");
       acc[key] = (acc[key] ?? 0) + 1;
@@ -3496,252 +3968,119 @@ app.post("/reports/export", async (c) => {
         nao: Number(infraRow.lixo_nao ?? 0),
       },
     ];
-  const generatedAt = new Date().toISOString().slice(0, 19);
-  let cursorY = height - 70;
-  const headerLineHeight = 14;
-  const ensureSpace = (space: number) => {
-    if (cursorY - space < 60) {
-      page = pdf.addPage();
-      ({ width, height } = page.getSize());
-      cursorY = height - 70;
+    const generatedAt = formatPdfDateTime(new Date());
+    const indicatorAverages = [
+      { label: "Saúde", value: Number(indicatorSummary?.health_avg ?? 0) },
+      { label: "Educação", value: Number(indicatorSummary?.education_avg ?? 0) },
+      { label: "Renda", value: Number(indicatorSummary?.income_avg ?? 0) },
+      { label: "Moradia", value: Number(indicatorSummary?.housing_avg ?? 0) },
+      { label: "Segurança", value: Number(indicatorSummary?.security_avg ?? 0) },
+    ].filter((entry) => Number.isFinite(entry.value) && entry.value > 0);
+    const getTopEntry = (counts: Record<string, number>) =>
+      Object.entries(counts).sort(
+        (left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "pt-BR")
+      )[0] ?? null;
+    const topCity = getTopEntry(cityCounts);
+    const topState = getTopEntry(stateCounts);
+    const topStatus = getTopEntry(statusCounts);
+    const topPrecision = getTopEntry(precisionCounts);
+    const executiveSummaryParts = [
+      `O recorte selecionado reúne ${rows.length} pontos públicos e ${totalResidents} residentes agregados.`,
+    ];
+    if (topCity) {
+      executiveSummaryParts.push(
+        `${topCity[0]} concentra a maior parte dos registros visíveis neste momento.`
+      );
     }
-  };
-  const drawWrappedHeader = (text: string, size: number) => {
-    const maxWidth = width - 100;
-    const words = text.split(/\s+/);
-    let line = "";
-    words.forEach((word) => {
-      const test = line ? `${line} ${word}` : word;
-      if (font.widthOfTextAtSize(test, size) > maxWidth) {
-        page.drawText(line, { x: 50, y: cursorY, size, font, color: rgb(0.2, 0.2, 0.2) });
-        cursorY -= headerLineHeight;
-        line = word;
-      } else {
-        line = test;
+    if (topStatus) {
+      executiveSummaryParts.push(
+        `O status predominante dos pontos é ${topStatus[0]} (${topStatus[1]} ocorrências).`
+      );
+    }
+    if (topPrecision) {
+      executiveSummaryParts.push(
+        `A precisão mais comum da base é ${topPrecision[0]}.`
+      );
+    }
+    if (indicatorAverages.length > 0) {
+      const strongestIndicator =
+        [...indicatorAverages].sort((left, right) => right.value - left.value)[0] ??
+        null;
+      if (strongestIndicator) {
+        executiveSummaryParts.push(
+          `${strongestIndicator.label} lidera a leitura média dos indicadores sociais (${formatPdfNumber(
+            strongestIndicator.value
+          )}).`
+        );
       }
-    });
-    if (line) {
-      page.drawText(line, { x: 50, y: cursorY, size, font, color: rgb(0.2, 0.2, 0.2) });
-      cursorY -= headerLineHeight;
     }
-  };
 
-  page.drawText(title, {
-    x: 50,
-    y: cursorY,
-    size: 18,
-    font,
-    color: rgb(0.1, 0.1, 0.1),
-  });
-  cursorY -= 22;
-  drawWrappedHeader(`Gerado em: ${generatedAt}`, 10);
-  if (bounds) {
-    drawWrappedHeader(
-      `Area analisada (BBox): N ${bounds.north} | S ${bounds.south} | E ${bounds.east} | W ${bounds.west}`,
-      9
-    );
-  }
-  if (center) {
-    drawWrappedHeader(
-      `Centro estimado: lat ${center.lat.toFixed(5)}, lng ${center.lng.toFixed(5)}`,
-      9
-    );
-  }
-  drawWrappedHeader(
-    `Area estimada: ${areaKm2 !== null ? areaKm2.toFixed(2) : "-"} km2`,
-    9
-  );
-  const statusMessage =
-    rows.length > 0 ? "Relatorio pronto para exportar." : "Sem pontos na area.";
-  drawWrappedHeader(
-    `Status: ${statusMessage} | Pontos: ${rows.length} | Residentes (agregado): ${totalResidents}`,
-    9
-  );
-  ensureSpace(20);
-  page.drawLine({
-    start: { x: 50, y: cursorY },
-    end: { x: width - 50, y: cursorY },
-    thickness: 1,
-    color: rgb(0.9, 0.85, 0.8),
-  });
-  cursorY -= 24;
+    const scopeItems = [
+      bounds
+        ? `BBox analisado: N ${bounds.north} | S ${bounds.south} | E ${bounds.east} | W ${bounds.west}.`
+        : "",
+      center
+        ? `Centro estimado: lat ${center.lat.toFixed(5)}, lng ${center.lng.toFixed(5)}.`
+        : "",
+      `Área estimada: ${areaKm2 !== null ? areaKm2.toFixed(2) : "-"} km2.`,
+      topState ? `Estado mais recorrente: ${topState[0]} (${topState[1]} pontos).` : "",
+      topPrecision
+        ? `Precisão dominante dos pontos: ${topPrecision[0]} (${topPrecision[1]} registros).`
+        : "",
+    ].filter(Boolean);
 
-  const drawAverageBars = (
-    targetPage: typeof page,
-    titleText: string,
-    entries: Array<{ label: string; value: number }>,
-    originY: number,
-    chartHeight: number
-  ) => {
-    if (!entries.length) {
-      targetPage.drawText(`${titleText}: sem dados`, {
-        x: 50,
-        y: originY,
-        size: 9,
-        font,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-      return;
+    layout.drawHeroBanner(
+      "Relatório territorial",
+      "Consulta pública do território",
+      `Documento gerado em ${generatedAt} com leitura institucional do mapa, das concentrações territoriais e dos indicadores sociais disponíveis.`
+    );
+    layout.drawStatCards(
+      [
+        {
+          label: "Pontos no recorte",
+          value: String(rows.length),
+          note: "Registros públicos disponíveis na área analisada",
+        },
+        {
+          label: "Residentes agregados",
+          value: String(totalResidents),
+          note: "Soma de residentes vinculados aos pontos filtrados",
+        },
+        {
+          label: "Área estimada",
+          value: areaKm2 !== null ? `${areaKm2.toFixed(2)} km2` : "-",
+          note: "Estimativa calculada a partir do recorte territorial",
+        },
+        {
+          label: "Cidade de maior presença",
+          value: topCity?.[0] ?? "Sem leitura",
+          note: topCity ? `${topCity[1]} ponto(s)` : "Sem registros suficientes",
+        },
+      ],
+      2
+    );
+    layout.drawSection(
+      "Leitura executiva",
+      "Síntese do território selecionado",
+      executiveSummaryParts.join(" ")
+    );
+    if (indicatorAverages.length > 0) {
+      layout.drawHorizontalBars(
+        "Indicadores médios",
+        indicatorAverages,
+        10,
+        (value) => formatPdfNumber(value),
+        PDF_PALETTE.accent
+      );
     }
-    const chartWidth = width - 100;
-    const maxValue = 10;
-    targetPage.drawText(titleText, {
-      x: 50,
-      y: originY + chartHeight + 10,
-      size: 11,
-      font,
-      color: rgb(0.12, 0.12, 0.12),
-    });
-    entries.forEach((entry, index) => {
-      const barWidth = (chartWidth / entries.length) * 0.7;
-      const barGap = (chartWidth / entries.length) * 0.3;
-      const barHeight = (entry.value / maxValue) * chartHeight;
-      const barX = 50 + index * (barWidth + barGap);
-      targetPage.drawRectangle({
-        x: barX,
-        y: originY,
-        width: barWidth,
-        height: barHeight,
-        color: rgb(0.84, 0.55, 0.22),
-        opacity: 0.85,
-      });
-      targetPage.drawText(entry.label, {
-        x: barX,
-        y: originY - 12,
-        size: 8,
-        font,
-        color: rgb(0.25, 0.25, 0.25),
-      });
-      targetPage.drawText(`${entry.value.toFixed(1)} (media)`, {
-        x: barX,
-        y: originY + barHeight + 2,
-        size: 8,
-        font,
-        color: rgb(0.25, 0.25, 0.25),
-      });
-    });
-  };
-
-    const drawPieChart = (
-      targetPage: typeof page,
-      titleText: string,
-      entries: Array<{ label: string; value: number; color: ReturnType<typeof rgb> }>,
-      centerX: number,
-      centerY: number,
-      radius: number
-    ) => {
-      const total = entries.reduce((sum, entry) => sum + entry.value, 0);
-      if (total <= 0) {
-        targetPage.drawText(`${titleText}: sem dados`, {
-          x: centerX - 80,
-          y: centerY,
-          size: 9,
-          font,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        return;
-      }
-    targetPage.drawText(titleText, {
-      x: centerX - radius,
-      y: centerY + radius + 12,
-      size: 11,
-      font,
-      color: rgb(0.12, 0.12, 0.12),
-    });
-    let startAngle = 0;
-    const polar = (angle: number) => ({
-      x: centerX + radius * Math.cos(angle),
-      y: centerY + radius * Math.sin(angle),
-    });
-    entries.forEach((entry) => {
-      const sliceAngle = (entry.value / total) * Math.PI * 2;
-      const endAngle = startAngle + sliceAngle;
-      const start = polar(startAngle);
-      const end = polar(endAngle);
-      const largeArc = sliceAngle > Math.PI ? 1 : 0;
-      const path = `M ${centerX} ${centerY} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
-      targetPage.drawSvgPath(path, {
-        color: entry.color,
-        opacity: 0.85,
-      });
-      startAngle = endAngle;
-    });
-      let legendX = centerX - radius;
-      let legendY = centerY - radius - 14;
-      entries.forEach((entry) => {
-        targetPage.drawRectangle({
-          x: legendX,
-          y: legendY,
-          width: 10,
-          height: 10,
-          color: entry.color,
-        });
-        targetPage.drawText(`${entry.label} (${entry.value})`, {
-          x: legendX + 14,
-          y: legendY + 2,
-          size: 8,
-          font,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-        legendX += 90;
-      });
-      targetPage.drawText(`Total: ${total}`, {
-        x: centerX - 18,
-        y: centerY - 4,
-        size: 9,
-        font,
-        color: rgb(0.25, 0.25, 0.25),
-      });
-    };
-
-  const indicatorAverages = [
-    { label: "Saude", value: Number(indicatorSummary?.health_avg ?? 0) },
-    { label: "Educacao", value: Number(indicatorSummary?.education_avg ?? 0) },
-    { label: "Renda", value: Number(indicatorSummary?.income_avg ?? 0) },
-    { label: "Moradia", value: Number(indicatorSummary?.housing_avg ?? 0) },
-    { label: "Seguranca", value: Number(indicatorSummary?.security_avg ?? 0) },
-  ].filter((entry) => Number.isFinite(entry.value) && entry.value > 0);
-  const averageOverall =
-    indicatorAverages.length > 0
-      ? indicatorAverages.reduce((sum, entry) => sum + entry.value, 0) /
-        indicatorAverages.length
-      : 0;
-  const precisionEntries = Object.entries(precisionCounts).map(([label, value]) => ({
-    label,
-    value,
-    color: label === "exact" ? rgb(0.16, 0.52, 0.32) : rgb(0.84, 0.55, 0.22),
-  }));
-  const chartHeight = 70;
-  ensureSpace(chartHeight + 120);
-  if (indicatorAverages.length > 0) {
-    const avgText = `Media geral: ${averageOverall.toFixed(2)}`;
-    const avgWidth = font.widthOfTextAtSize(avgText, 9);
-    page.drawText(avgText, {
-      x: width - 50 - avgWidth,
-      y: cursorY + 6,
-      size: 9,
-      font,
-      color: rgb(0.2, 0.2, 0.2),
-    });
-  }
-  const barsOriginYAdjusted = cursorY - chartHeight - 40;
-  drawAverageBars(
-    page,
-    "Indicadores medios (1-10)",
-    indicatorAverages,
-    barsOriginYAdjusted,
-    chartHeight
-  );
-  const pieCenterY = barsOriginYAdjusted - 110;
-  ensureSpace(160);
-  drawPieChart(
-    page,
-    "Precisao dos pontos",
-    precisionEntries,
-    width / 2,
-    pieCenterY,
-    60
-  );
+    layout.drawBulletList(
+      "Recortes rápidos da área",
+      scopeItems,
+      "Não há detalhes complementares suficientes para este recorte."
+    );
+    layout.drawDivider(4, 12);
+    page = layout.page;
+    ({ width, height } = page.getSize());
 
   const drawBarBlock = (
     targetPage: typeof page,
@@ -3965,8 +4304,8 @@ app.post("/reports/export", async (c) => {
         x,
         y: cursorY,
         size: 11,
-        font,
-        color: rgb(0.12, 0.12, 0.12),
+        font: boldFont,
+        color: PDF_PALETTE.brand,
       });
       cursorY -= rowHeight;
     }
@@ -3975,7 +4314,7 @@ app.post("/reports/export", async (c) => {
       y: cursorY - rowHeight,
       width: colWidths.reduce((sum, w) => sum + w, 0),
       height: rowHeight,
-      color: rgb(0.95, 0.95, 0.95),
+      color: PDF_PALETTE.surfaceAlt,
       opacity: 1,
     });
     let cx = x;
@@ -3984,21 +4323,21 @@ app.post("/reports/export", async (c) => {
         x: cx + 6,
         y: cursorY - rowHeight + 6,
         size: 9,
-        font,
-        color: rgb(0.2, 0.2, 0.2),
+        font: boldFont,
+        color: PDF_PALETTE.brand,
       });
       cx += colWidths[index];
     });
     cursorY -= rowHeight;
-    rows.forEach((row) => {
+    rows.forEach((row, rowIndex) => {
       targetPage.drawRectangle({
         x,
         y: cursorY - rowHeight,
         width: colWidths.reduce((sum, w) => sum + w, 0),
         height: rowHeight,
-        color: rgb(1, 1, 1),
+        color: rowIndex % 2 === 0 ? rgb(1, 1, 1) : PDF_PALETTE.surface,
         opacity: 1,
-        borderColor: rgb(0.9, 0.9, 0.9),
+        borderColor: PDF_PALETTE.line,
         borderWidth: 0.5,
       });
       let cellX = x;
@@ -4019,35 +4358,35 @@ app.post("/reports/export", async (c) => {
 
   const breakdownPage = pdf.addPage();
   ({ width, height } = breakdownPage.getSize());
-  breakdownPage.drawText("Analise territorial — Infraestrutura e resumo", {
+  breakdownPage.drawText("Análise territorial — infraestrutura e síntese", {
     x: 50,
     y: height - 60,
     size: 16,
-    font,
-    color: rgb(0.1, 0.1, 0.1),
+    font: boldFont,
+    color: PDF_PALETTE.brand,
   });
   breakdownPage.drawText(
-    `Area estimada: ${areaKm2 !== null ? areaKm2.toFixed(2) : "-"} km2`,
+    `Área estimada: ${areaKm2 !== null ? areaKm2.toFixed(2) : "-"} km2`,
     {
       x: 50,
       y: height - 80,
       size: 10,
       font,
-      color: rgb(0.2, 0.2, 0.2),
+      color: PDF_PALETTE.muted,
     }
   );
-  breakdownPage.drawText(`Total de pontos na area: ${rows.length}`, {
+  breakdownPage.drawText(`Total de pontos na área: ${rows.length}`, {
     x: 50,
     y: height - 96,
     size: 10,
     font,
-    color: rgb(0.2, 0.2, 0.2),
+    color: PDF_PALETTE.muted,
   });
   breakdownPage.drawLine({
     start: { x: 50, y: height - 110 },
     end: { x: width - 50, y: height - 110 },
     thickness: 1,
-    color: rgb(0.9, 0.85, 0.8),
+    color: PDF_PALETTE.line,
   });
   drawStackedBarBlock(
     breakdownPage,
@@ -4080,12 +4419,12 @@ app.post("/reports/export", async (c) => {
   if (includePoints) {
     const pointsPage = pdf.addPage();
     const { height: pointsHeight } = pointsPage.getSize();
-    pointsPage.drawText("Pontos (amostra)", {
+    pointsPage.drawText("Pontos do recorte — amostra operacional", {
       x: 50,
       y: pointsHeight - 60,
       size: 14,
-      font,
-      color: rgb(0.1, 0.1, 0.1),
+      font: boldFont,
+      color: PDF_PALETTE.brand,
     });
     let lineY = pointsHeight - 84;
     const maxLines = 18;
@@ -4108,12 +4447,12 @@ app.post("/reports/export", async (c) => {
   if (includeIndicators && indicatorSummary && scoreBuckets) {
     const indicatorPage = pdf.addPage();
     const { width: chartWidth, height: chartHeight } = indicatorPage.getSize();
-    indicatorPage.drawText("Indicadores sociais (pontuacao 1-10)", {
+    indicatorPage.drawText("Indicadores sociais — pontuação de 1 a 10", {
       x: 50,
       y: chartHeight - 60,
       size: 16,
-      font,
-      color: rgb(0.1, 0.1, 0.1),
+      font: boldFont,
+      color: PDF_PALETTE.brand,
     });
     indicatorPage.drawText(
       `Total de pessoas avaliadas: ${indicatorSummary.total_residents ?? 0}`,
@@ -4122,7 +4461,7 @@ app.post("/reports/export", async (c) => {
         y: chartHeight - 82,
         size: 10,
         font,
-        color: rgb(0.1, 0.1, 0.1),
+        color: PDF_PALETTE.muted,
       }
     );
 
@@ -4504,6 +4843,26 @@ app.get("/reports/user-summary", async (c) => {
     `,
     residentParams
   );
+  const activeUsers = requestedUser
+    ? await sql(
+        "SELECT COUNT(*)::int AS total FROM app_users WHERE status = 'active' AND id = $1",
+        [requestedUser]
+      )
+    : isAdminUser
+      ? await sql(
+          "SELECT COUNT(*)::int AS total FROM app_users WHERE status = 'active'"
+        )
+      : isManagerTeacher
+        ? await sql(
+            `
+            SELECT COUNT(*)::int AS total
+            FROM app_users
+            WHERE status = 'active'
+              AND (approved_by = $1 OR id = $1)
+            `,
+            [claims.sub]
+          )
+        : [{ total: null }];
   if (format === "PDF") {
     const summary = summaryRows[0] as { total_residents?: number };
     const averagesRow = averages[0] as Record<string, number | null>;
@@ -4553,125 +4912,225 @@ app.get("/reports/user-summary", async (c) => {
       theme_reset: "Resetou paleta de tema",
       public_cache_refresh: "Atualizou cache publico",
     };
-    const pdf = await PDFDocument.create();
-    let page = pdf.addPage();
-    const font = await pdf.embedFont(StandardFonts.Helvetica);
-    let { width, height } = page.getSize();
-    let cursorY = height - 60;
-    const lineHeight = 16;
-
-    const drawLine = (label: string, value: string) => {
-      if (cursorY < 60) {
-        page = pdf.addPage();
-        ({ width, height } = page.getSize());
-        cursorY = height - 60;
-      }
-      page.drawText(`${label}: ${value}`, {
-        x: 50,
-        y: cursorY,
-        size: 11,
-        font,
-        color: rgb(0.12, 0.12, 0.12),
-      });
-      cursorY -= lineHeight;
+    const translateStatus = (value?: string | null) => {
+      const normalized = String(value ?? "").trim().toLowerCase();
+      if (!normalized) return "Sem status";
+      if (normalized === "active" || normalized === "ativo") return "Ativo";
+      if (normalized === "inactive" || normalized === "inativo") return "Inativo";
+      if (normalized === "pending" || normalized === "pendente") return "Pendente";
+      return String(value);
     };
-    const drawWrappedLine = (label: string, value: string) => {
-      const text = `${label}: ${value}`;
-      const maxWidth = width - 100;
-      const words = text.split(/\s+/);
-      let current = "";
-      const flush = (line: string) => {
-        if (cursorY < 60) {
-          page = pdf.addPage();
-          ({ width, height } = page.getSize());
-          cursorY = height - 60;
-        }
-        page.drawText(line, {
-          x: 50,
-          y: cursorY,
-          size: 11,
-          font,
-          color: rgb(0.12, 0.12, 0.12),
-        });
-        cursorY -= lineHeight;
-      };
-      words.forEach((word) => {
-        const test = current ? `${current} ${word}` : word;
-        if (font.widthOfTextAtSize(test, 11) > maxWidth) {
-          if (current) flush(current);
-          current = word;
-        } else {
-          current = test;
-        }
-      });
-      if (current) flush(current);
+    const monthFormatter = new Intl.DateTimeFormat("pt-BR", {
+      month: "short",
+      year: "numeric",
+      timeZone: "America/Sao_Paulo",
+    });
+    const formatMonthLabel = (value?: string | null) => {
+      if (!value) return "-";
+      const parsed = new Date(`${value}-01T00:00:00`);
+      if (Number.isNaN(parsed.getTime())) return value;
+      return monthFormatter.format(parsed);
     };
-
-    page.drawText("Relatório do usuário", {
-      x: 50,
-      y: cursorY + 24,
-      size: 16,
-      font,
-      color: rgb(0.1, 0.1, 0.1),
+    const residentRows = residents as Array<Record<string, unknown>>;
+    const statusCounts = residentRows.reduce<Record<string, number>>((acc, row) => {
+      const label = translateStatus(typeof row.status === "string" ? row.status : null);
+      acc[label] = (acc[label] ?? 0) + 1;
+      return acc;
+    }, {});
+    const communityCounts = residentRows.reduce<Record<string, number>>((acc, row) => {
+      const label = String(row.community_name ?? "").trim();
+      if (!label) return acc;
+      acc[label] = (acc[label] ?? 0) + 1;
+      return acc;
+    }, {});
+    const cityCounts = residentRows.reduce<Record<string, number>>((acc, row) => {
+      const cityLabel = String(row.city ?? "").trim();
+      const stateLabel = String(row.state ?? "").trim();
+      const label = [cityLabel, stateLabel].filter(Boolean).join(" / ");
+      if (!label) return acc;
+      acc[label] = (acc[label] ?? 0) + 1;
+      return acc;
+    }, {});
+    const getTopEntry = (counts: Record<string, number>) =>
+      Object.entries(counts).sort(
+        (left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "pt-BR")
+      )[0] ?? null;
+    const topStatus = getTopEntry(statusCounts);
+    const topCommunity = getTopEntry(communityCounts);
+    const topCity = getTopEntry(cityCounts);
+    const activeUsersTotal =
+      typeof activeUsers[0]?.total === "number" ? activeUsers[0].total : null;
+    const scoreEntries = [
+      { label: "Saúde", value: Number(averagesRow?.health_score ?? Number.NaN) },
+      { label: "Educação", value: Number(averagesRow?.education_score ?? Number.NaN) },
+      { label: "Renda", value: Number(averagesRow?.income_score ?? Number.NaN) },
+      { label: "Moradia", value: Number(averagesRow?.housing_score ?? Number.NaN) },
+      { label: "Segurança", value: Number(averagesRow?.security_score ?? Number.NaN) },
+    ].filter((item) => Number.isFinite(item.value));
+    const strongestScore =
+      [...scoreEntries].sort((left, right) => right.value - left.value)[0] ?? null;
+    const weakestScore =
+      [...scoreEntries].sort((left, right) => left.value - right.value)[0] ?? null;
+    const latestResident = residentRows.find((row) => Boolean(row.created_at)) ?? null;
+    const monthlyEntries = (monthly as Array<{ month: string; total: number }>)
+      .slice(0, 6)
+      .reverse()
+      .map((row) => ({
+        label: formatMonthLabel(row.month),
+        value: Number(row.total ?? 0),
+      }));
+    const monthlyPeak = Math.max(1, ...monthlyEntries.map((entry) => entry.value));
+    const residentSample = residentRows.slice(0, 10).map((row) => {
+      const createdAt = formatPdfDate(row.created_at as string | null | undefined);
+      const community = String(row.community_name ?? "").trim() || "Comunidade não informada";
+      const cityLabel = [String(row.city ?? "").trim(), String(row.state ?? "").trim()]
+        .filter(Boolean)
+        .join(" / ");
+      return `${String(row.full_name ?? "Pessoa sem identificação")} - ${community}${
+        cityLabel ? ` - ${cityLabel}` : ""
+      } - cadastro em ${createdAt}`;
     });
-
-    drawLine("Total de residentes", String(summary?.total_residents ?? 0));
-    drawLine("Média saúde", String(averagesRow?.health_score ?? "-"));
-    drawLine("Média educação", String(averagesRow?.education_score ?? "-"));
-    drawLine("Média renda", String(averagesRow?.income_score ?? "-"));
-    drawLine("Renda mensal média (R$)", String(averagesRow?.income_monthly ?? "-"));
-    drawLine("Média moradia", String(averagesRow?.housing_score ?? "-"));
-    drawLine("Média segurança", String(averagesRow?.security_score ?? "-"));
-
-    cursorY -= 8;
-    page.drawText("Últimos meses", {
-      x: 50,
-      y: cursorY,
-      size: 12,
-      font,
-      color: rgb(0.1, 0.1, 0.1),
-    });
-    cursorY -= lineHeight;
-    monthly.slice(0, 8).forEach((row: { month: string; total: number }) => {
-      drawLine(row.month, String(row.total));
-    });
-
-    cursorY -= 8;
-    page.drawText("Amostra de residentes", {
-      x: 50,
-      y: cursorY,
-      size: 12,
-      font,
-      color: rgb(0.1, 0.1, 0.1),
-    });
-    cursorY -= lineHeight;
-    residents
-      .slice(0, 12)
-      .forEach((row: { full_name?: string | null; community_name?: string | null }) => {
-        drawLine(row.full_name ?? "-", row.community_name ?? "-");
-      });
-
-    cursorY -= 8;
-    page.drawText("Historico de acoes do usuario", {
-      x: 50,
-      y: cursorY,
-      size: 12,
-      font,
-      color: rgb(0.1, 0.1, 0.1),
-    });
-    cursorY -= lineHeight;
-    (auditRows as Array<{
+    const auditItems = (auditRows as Array<{
       action: string;
       entity_type: string;
       entity_id: string;
       created_at: string;
-    }>).forEach((row) => {
-      const when = row.created_at ? new Date(row.created_at).toISOString() : "-";
-      const translatedAction =
-        actionTranslations[row.action] ?? `Acao: ${row.action}`;
-      const label = `${translatedAction} (${row.entity_type ?? "-"})`;
-      drawWrappedLine(label, `${row.entity_id ?? "-"} | ${when}`);
-    });
+    }>)
+      .slice(0, 14)
+      .map((row) => {
+        const translatedAction = actionTranslations[row.action] ?? `Ação: ${row.action}`;
+        return `${translatedAction} - ${row.entity_type ?? "-"} ${
+          row.entity_id ?? "-"
+        } - ${formatPdfDateTime(row.created_at)}`;
+      });
+    const summaryTextParts = [
+      `Foram identificados ${summary?.total_residents ?? 0} cadastros no escopo consultado.`,
+    ];
+    if (topStatus) {
+      summaryTextParts.push(
+        `${topStatus[0]} é o status predominante, com ${topStatus[1]} registros.`
+      );
+    }
+    if (strongestScore) {
+      summaryTextParts.push(
+        `${strongestScore.label} apresenta a melhor média atual (${formatPdfNumber(
+          strongestScore.value
+        )}).`
+      );
+    }
+    if (weakestScore && weakestScore.label !== strongestScore?.label) {
+      summaryTextParts.push(
+        `${weakestScore.label} concentra o principal ponto de atenção, com média ${formatPdfNumber(
+          weakestScore.value
+        )}.`
+      );
+    }
+    if (topCommunity) {
+      summaryTextParts.push(
+        `${topCommunity[0]} é a comunidade mais recorrente na base analisada.`
+      );
+    }
+
+    const pdf = await PDFDocument.create();
+    const font = await pdf.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+    const layout = createPdfLayout(pdf, font, boldFont);
+
+    layout.drawHeroBanner(
+      requestedUser ? "Relatório individual" : "Relatório institucional",
+      "Resumo executivo do usuário",
+      `Documento gerado em ${formatPdfDateTime(new Date())} com foco em cadastros, indicadores sociais e movimentações recentes.`
+    );
+    layout.drawStatCards(
+      [
+        {
+          label: "Cadastros no escopo",
+          value: String(summary?.total_residents ?? 0),
+          note: requestedUser ? "Base do usuário selecionado" : "Base do usuário autenticado",
+        },
+        {
+          label: "Usuários ativos",
+          value: activeUsersTotal === null ? "-" : String(activeUsersTotal),
+          note: "Perfis ativos vinculados ao escopo atual",
+        },
+        {
+          label: "Melhor indicador",
+          value: strongestScore
+            ? `${strongestScore.label} ${formatPdfNumber(strongestScore.value)}`
+            : "Sem leitura",
+          note: "Indicador com melhor média entre os eixos avaliados",
+        },
+        {
+          label: "Ponto de atenção",
+          value: weakestScore
+            ? `${weakestScore.label} ${formatPdfNumber(weakestScore.value)}`
+            : "Sem leitura",
+          note: "Eixo que exige maior acompanhamento no momento",
+        },
+      ],
+      2
+    );
+    layout.drawSection(
+      "Leitura executiva",
+      "Síntese do desempenho atual",
+      summaryTextParts.join(" ")
+    );
+    if (scoreEntries.length > 0) {
+      layout.drawHorizontalBars(
+        "Indicadores médios do recorte",
+        scoreEntries,
+        10,
+        (value) => formatPdfNumber(value)
+      );
+    }
+    layout.drawBulletList(
+      "Recortes rápidos",
+      [
+        topCity ? `Cidade mais presente: ${topCity[0]} (${topCity[1]} registros).` : "",
+        topCommunity
+          ? `Comunidade recorrente: ${topCommunity[0]} (${topCommunity[1]} registros).`
+          : "",
+        topStatus ? `Status dominante: ${topStatus[0]}.` : "",
+        latestResident
+          ? `Registro mais recente em ${formatPdfDate(
+              latestResident.created_at as string | null | undefined
+            )}.`
+          : "",
+        Number.isFinite(Number(averagesRow?.income_monthly ?? Number.NaN))
+          ? `Renda média mensal estimada: ${formatPdfCurrency(
+              averagesRow?.income_monthly
+            )}.`
+          : "",
+      ].filter(Boolean),
+      "Não há informações complementares suficientes para este recorte."
+    );
+
+    layout.addPage();
+    layout.drawHeroBanner(
+      "Acompanhamento",
+      "Evolução e cadastros recentes",
+      "Página dedicada ao ritmo de crescimento da base e à leitura operacional dos registros mais recentes."
+    );
+    if (monthlyEntries.length > 0) {
+      layout.drawHorizontalBars(
+        "Cadastros por mês",
+        monthlyEntries,
+        monthlyPeak,
+        (value) => String(Math.round(value)),
+        PDF_PALETTE.accent
+      );
+    }
+    layout.drawBulletList(
+      "Amostra de residentes",
+      residentSample,
+      "Nenhum cadastro recente disponível para exibição."
+    );
+    layout.drawDivider();
+    layout.drawBulletList(
+      "Histórico recente de ações",
+      auditItems,
+      "Não há movimentações recentes registradas para este usuário."
+    );
 
     const bytes = await pdf.save();
     const base64 = base64Encode(bytes);
@@ -4681,26 +5140,6 @@ app.get("/reports/user-summary", async (c) => {
       filename: `relatorio-usuario-${Date.now()}.pdf`,
     });
   }
-  const activeUsers = requestedUser
-    ? await sql(
-        "SELECT COUNT(*)::int AS total FROM app_users WHERE status = 'active' AND id = $1",
-        [requestedUser]
-      )
-    : isAdminUser
-      ? await sql(
-          "SELECT COUNT(*)::int AS total FROM app_users WHERE status = 'active'"
-        )
-      : isManagerTeacher
-        ? await sql(
-            `
-            SELECT COUNT(*)::int AS total
-            FROM app_users
-            WHERE status = 'active'
-              AND (approved_by = $1 OR id = $1)
-            `,
-            [claims.sub]
-          )
-        : [{ total: null }];
   return c.json({
     summary: summaryRows[0] ?? null,
     averages: averages[0] ?? null,
