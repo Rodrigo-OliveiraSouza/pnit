@@ -4137,7 +4137,7 @@ app.post("/reports/export", async (c) => {
         });
     });
   };
-  const drawStackedBarBlock = (
+  const drawPieBlock = (
     targetPage: typeof page,
     titleText: string,
     items: Array<{ label: string; sim: number; parcial: number; nao: number }>,
@@ -4154,11 +4154,20 @@ app.post("/reports/export", async (c) => {
       return;
     }
     const chartWidth = width - 100;
-    const chartHeight = 90;
-    const maxValue = Math.max(
-      ...items.map((item) => item.sim + item.parcial + item.nao),
-      1
-    );
+    const chartHeight = 102;
+    const slotWidth = chartWidth / Math.max(items.length, 1);
+    const radius = Math.min(34, Math.max(22, slotWidth * 0.23));
+    const centerY = originY + 34;
+    const polar = (centerX: number, angle: number) => ({
+      x: centerX + radius * Math.cos(angle),
+      y: centerY + radius * Math.sin(angle),
+    });
+    const legendY = originY - 38;
+    const statusColors = {
+      sim: rgb(0.2, 0.6, 0.3),
+      parcial: rgb(0.85, 0.6, 0.2),
+      nao: rgb(0.75, 0.2, 0.2),
+    };
     targetPage.drawText(titleText, {
       x: 50,
       y: originY + chartHeight + 10,
@@ -4167,122 +4176,106 @@ app.post("/reports/export", async (c) => {
       color: rgb(0.12, 0.12, 0.12),
     });
     items.forEach((item, index) => {
-      const barWidth = (chartWidth / items.length) * 0.7;
-      const barGap = (chartWidth / items.length) * 0.3;
-      const barX = 50 + index * (barWidth + barGap);
-      const totalHeight = ((item.sim + item.parcial + item.nao) / maxValue) * chartHeight;
-      const simHeight = totalHeight * (item.sim / Math.max(item.sim + item.parcial + item.nao, 1));
-      const parcialHeight =
-        totalHeight * (item.parcial / Math.max(item.sim + item.parcial + item.nao, 1));
-      const naoHeight =
-        totalHeight * (item.nao / Math.max(item.sim + item.parcial + item.nao, 1));
-      let yCursor = originY;
-      targetPage.drawRectangle({
-        x: barX,
-        y: yCursor,
-        width: barWidth,
-        height: simHeight,
-        color: rgb(0.2, 0.6, 0.3),
-        opacity: 0.85,
-      });
-      if (simHeight > 10 && item.sim > 0) {
-        targetPage.drawText(String(item.sim), {
-          x: barX + 4,
-          y: yCursor + simHeight / 2 - 4,
-          size: 7,
-          font,
-          color: rgb(1, 1, 1),
+      const centerX = 50 + slotWidth * index + slotWidth / 2;
+      const total = Math.max(item.sim + item.parcial + item.nao, 0);
+      const slices = [
+        { label: "sim", value: item.sim, color: statusColors.sim },
+        { label: "parcial", value: item.parcial, color: statusColors.parcial },
+        { label: "nao", value: item.nao, color: statusColors.nao },
+      ].filter((entry) => entry.value > 0);
+
+      if (total > 0 && slices.length === 1) {
+        targetPage.drawCircle({
+          x: centerX,
+          y: centerY,
+          size: radius,
+          color: slices[0].color,
+          opacity: 0.88,
+          borderColor: rgb(1, 1, 1),
+          borderWidth: 0.8,
+        });
+      } else if (total > 0) {
+        let startAngle = -Math.PI / 2;
+        slices.forEach((slice) => {
+          const sliceAngle = (slice.value / total) * Math.PI * 2;
+          const endAngle = startAngle + sliceAngle;
+          const start = polar(centerX, startAngle);
+          const end = polar(centerX, endAngle);
+          const largeArc = sliceAngle > Math.PI ? 1 : 0;
+          const path = `M ${centerX} ${centerY} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+          targetPage.drawSvgPath(path, {
+            color: slice.color,
+            opacity: 0.88,
+            borderColor: rgb(1, 1, 1),
+            borderWidth: 0.8,
+          });
+          startAngle = endAngle;
+        });
+      } else {
+        targetPage.drawCircle({
+          x: centerX,
+          y: centerY,
+          size: radius,
+          color: rgb(0.9, 0.9, 0.9),
+          opacity: 1,
+          borderColor: PDF_PALETTE.line,
+          borderWidth: 0.8,
         });
       }
-      yCursor += simHeight;
-      targetPage.drawRectangle({
-        x: barX,
-        y: yCursor,
-        width: barWidth,
-        height: parcialHeight,
-        color: rgb(0.85, 0.6, 0.2),
-        opacity: 0.85,
-      });
-      if (parcialHeight > 10 && item.parcial > 0) {
-        targetPage.drawText(String(item.parcial), {
-          x: barX + 4,
-          y: yCursor + parcialHeight / 2 - 4,
-          size: 7,
-          font,
-          color: rgb(1, 1, 1),
-        });
-      }
-      yCursor += parcialHeight;
-      targetPage.drawRectangle({
-        x: barX,
-        y: yCursor,
-        width: barWidth,
-        height: naoHeight,
-        color: rgb(0.75, 0.2, 0.2),
-        opacity: 0.85,
-      });
-      if (naoHeight > 10 && item.nao > 0) {
-        targetPage.drawText(String(item.nao), {
-          x: barX + 4,
-          y: yCursor + naoHeight / 2 - 4,
-          size: 7,
-          font,
-          color: rgb(1, 1, 1),
-        });
-      }
+
       targetPage.drawText(item.label, {
-        x: barX,
-        y: originY - 12,
+        x: centerX - radius,
+        y: originY - 10,
         size: 8,
         font,
         color: rgb(0.25, 0.25, 0.25),
       });
-      targetPage.drawText(String(item.sim + item.parcial + item.nao), {
-        x: barX,
-        y: originY + totalHeight + 2,
+      targetPage.drawText(String(total), {
+        x: centerX - 6,
+        y: centerY - 3,
         size: 8,
-        font,
-        color: rgb(0.25, 0.25, 0.25),
+        font: boldFont,
+        color: total > 0 ? rgb(1, 1, 1) : rgb(0.3, 0.3, 0.3),
       });
     });
     targetPage.drawRectangle({
       x: 50,
-      y: originY - 34,
+      y: legendY,
       width: 10,
       height: 10,
-      color: rgb(0.2, 0.6, 0.3),
+      color: statusColors.sim,
     });
     targetPage.drawText("sim", {
       x: 64,
-      y: originY - 32,
+      y: legendY + 2,
       size: 8,
       font,
       color: rgb(0.25, 0.25, 0.25),
     });
     targetPage.drawRectangle({
       x: 100,
-      y: originY - 34,
+      y: legendY,
       width: 10,
       height: 10,
-      color: rgb(0.85, 0.6, 0.2),
+      color: statusColors.parcial,
     });
     targetPage.drawText("parcial", {
       x: 114,
-      y: originY - 32,
+      y: legendY + 2,
       size: 8,
       font,
       color: rgb(0.25, 0.25, 0.25),
     });
     targetPage.drawRectangle({
       x: 170,
-      y: originY - 34,
+      y: legendY,
       width: 10,
       height: 10,
-      color: rgb(0.75, 0.2, 0.2),
+      color: statusColors.nao,
     });
     targetPage.drawText("nao", {
       x: 184,
-      y: originY - 32,
+      y: legendY + 2,
       size: 8,
       font,
       color: rgb(0.25, 0.25, 0.25),
@@ -4388,7 +4381,7 @@ app.post("/reports/export", async (c) => {
     thickness: 1,
     color: PDF_PALETTE.line,
   });
-  drawStackedBarBlock(
+  drawPieBlock(
     breakdownPage,
     "Infraestrutura basica (por ponto)",
     infraItems,
