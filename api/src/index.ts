@@ -4459,122 +4459,264 @@ app.post("/reports/export", async (c) => {
     );
 
     const metrics = [
-      { key: "health", label: "Saude", color: rgb(0.18, 0.55, 0.35), avg: indicatorSummary.health_avg },
-      { key: "education", label: "Educacao", color: rgb(0.2, 0.36, 0.72), avg: indicatorSummary.education_avg },
-      { key: "income", label: "Renda", color: rgb(0.85, 0.5, 0.18), avg: indicatorSummary.income_avg },
-      { key: "housing", label: "Moradia", color: rgb(0.6, 0.4, 0.2), avg: indicatorSummary.housing_avg },
-      { key: "security", label: "Seguranca", color: rgb(0.75, 0.2, 0.2), avg: indicatorSummary.security_avg },
+      { key: "health", label: "Saude", avg: indicatorSummary.health_avg },
+      { key: "education", label: "Educacao", avg: indicatorSummary.education_avg },
+      { key: "income", label: "Renda", avg: indicatorSummary.income_avg },
+      { key: "housing", label: "Moradia", avg: indicatorSummary.housing_avg },
+      { key: "security", label: "Seguranca", avg: indicatorSummary.security_avg },
     ];
-
-    const chartAreaWidth = chartWidth - 100;
-    const chartAreaHeight = 70;
-    let chartY = chartHeight - 140;
-    const gap = 16;
-
-    const drawBarChart = (
-      label: string,
-      counts: number[],
-      color: ReturnType<typeof rgb>,
-      avg: number | null
-    ) => {
-      const maxCount = Math.max(...counts, 1);
-      const barGap = 4;
-      const barWidth = (chartAreaWidth - barGap * 9) / 10;
-      indicatorPage.drawText(
-        `${label} (media: ${avg ?? "-"} )`,
-        {
-          x: 50,
-          y: chartY + chartAreaHeight + 8,
-          size: 10,
-          font,
-          color: rgb(0.1, 0.1, 0.1),
-        }
-      );
-      counts.forEach((count, index) => {
-        const barHeight = (count / maxCount) * (chartAreaHeight - 12);
-        const barX = 50 + index * (barWidth + barGap);
-        indicatorPage.drawRectangle({
-          x: barX,
-          y: chartY,
-          width: barWidth,
-          height: barHeight,
-          color,
-          opacity: 0.85,
-        });
-        indicatorPage.drawText(String(index + 1), {
-          x: barX + 2,
-          y: chartY - 10,
-          size: 7,
-          font,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-      });
-      chartY -= chartAreaHeight + gap;
-    };
-
-    metrics.forEach((metric) => {
+    const scoreBands = [
+      {
+        label: "1 a 3",
+        color: rgb(0.82, 0.34, 0.32),
+        sideColor: rgb(0.66, 0.24, 0.22),
+        topColor: rgb(0.9, 0.46, 0.42),
+      },
+      {
+        label: "4 a 6",
+        color: rgb(0.88, 0.66, 0.22),
+        sideColor: rgb(0.73, 0.52, 0.16),
+        topColor: rgb(0.95, 0.76, 0.34),
+      },
+      {
+        label: "7 a 10",
+        color: rgb(0.5, 0.36, 0.74),
+        sideColor: rgb(0.39, 0.26, 0.58),
+        topColor: rgb(0.62, 0.48, 0.82),
+      },
+    ];
+    const indicatorColumns = metrics.map((metric) => {
       const counts = scoreBuckets[metric.key] ?? Array.from({ length: 10 }, () => 0);
-      if (chartY < 140) return;
-      drawBarChart(metric.label, counts, metric.color, metric.avg);
+      const low = counts.slice(0, 3).reduce((sum, value) => sum + value, 0);
+      const medium = counts.slice(3, 6).reduce((sum, value) => sum + value, 0);
+      const high = counts.slice(6, 10).reduce((sum, value) => sum + value, 0);
+      const total = low + medium + high;
+      const dominantBand =
+        total === 0
+          ? "Sem leitura"
+          : high >= medium && high >= low
+            ? "7 a 10"
+            : medium >= low
+              ? "4 a 6"
+              : "1 a 3";
+      return {
+        ...metric,
+        segments: [low, medium, high],
+        total,
+        dominantBand,
+      };
+    });
+    const maxColumnTotal = Math.max(
+      ...indicatorColumns.map((column) => column.total),
+      1
+    );
+    const chartLeft = 72;
+    const chartBottom = 290;
+    const chartAreaWidth = chartWidth - 150;
+    const chartAreaHeight = 290;
+    const chartTop = chartBottom + chartAreaHeight;
+    const chartRight = chartLeft + chartAreaWidth;
+    const columnWidth = 48;
+    const columnGap = (chartAreaWidth - columnWidth * indicatorColumns.length) /
+      Math.max(indicatorColumns.length - 1, 1);
+    const depthX = 12;
+    const depthY = 8;
+
+    indicatorPage.drawText("Faixas de pontuacao por indicador", {
+      x: chartLeft,
+      y: chartTop + 28,
+      size: 10,
+      font: boldFont,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+    indicatorPage.drawText(
+      "Cada coluna consolida a quantidade de pessoas nas faixas 1 a 3, 4 a 6 e 7 a 10.",
+      {
+        x: chartLeft,
+        y: chartTop + 14,
+        size: 8,
+        font,
+        color: PDF_PALETTE.muted,
+      }
+    );
+
+    indicatorPage.drawLine({
+      start: { x: chartLeft, y: chartBottom },
+      end: { x: chartRight + depthX + 4, y: chartBottom },
+      thickness: 1,
+      color: PDF_PALETTE.line,
+    });
+    indicatorPage.drawLine({
+      start: { x: chartLeft, y: chartBottom },
+      end: { x: chartLeft, y: chartTop },
+      thickness: 1,
+      color: PDF_PALETTE.line,
     });
 
-    const pieData = metrics
-      .map((metric) => ({
-        label: metric.label,
-        value: Number(metric.avg ?? 0),
-        color: metric.color,
-      }))
-      .filter((item) => item.value > 0);
-    const pieTotal = pieData.reduce((sum, item) => sum + item.value, 0);
-    if (pieTotal > 0) {
-      const centerX = chartWidth / 2;
-      const centerY = 90;
-      const radius = 60;
-      let startAngle = 0;
-      const polar = (angle: number) => ({
-        x: centerX + radius * Math.cos(angle),
-        y: centerY + radius * Math.sin(angle),
+    for (let step = 0; step <= 5; step += 1) {
+      const y = chartBottom + (chartAreaHeight / 5) * step;
+      const value = Math.round((maxColumnTotal / 5) * step);
+      indicatorPage.drawLine({
+        start: { x: chartLeft, y },
+        end: { x: chartRight + depthX + 4, y },
+        thickness: 0.8,
+        color: rgb(0.86, 0.84, 0.8),
+        opacity: 0.9,
       });
-      pieData.forEach((item) => {
-        const sliceAngle = (item.value / pieTotal) * Math.PI * 2;
-        const endAngle = startAngle + sliceAngle;
-        const start = polar(startAngle);
-        const end = polar(endAngle);
-        const largeArc = sliceAngle > Math.PI ? 1 : 0;
-        const path = `M ${centerX} ${centerY} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
-        indicatorPage.drawSvgPath(path, {
-          color: item.color,
-          opacity: 0.85,
-        });
-        startAngle = endAngle;
-      });
-      let legendX = 50;
-      let legendY = 30;
-      pieData.forEach((item) => {
-        indicatorPage.drawRectangle({
-          x: legendX,
-          y: legendY,
-          width: 10,
-          height: 10,
-          color: item.color,
-        });
-        indicatorPage.drawText(item.label, {
-          x: legendX + 14,
-          y: legendY + 2,
-          size: 8,
-          font,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-        legendX += 90;
-      });
-      indicatorPage.drawText("Distribuicao media por indicador", {
-        x: 50,
-        y: 120,
-        size: 9,
+      indicatorPage.drawText(String(value), {
+        x: 46,
+        y: y - 3,
+        size: 7,
         font,
-        color: rgb(0.2, 0.2, 0.2),
+        color: rgb(0.35, 0.35, 0.35),
       });
     }
+
+    const drawTopFace = (
+      x: number,
+      y: number,
+      width: number,
+      color: ReturnType<typeof rgb>
+    ) => {
+      const path = `M ${x} ${y} L ${x + depthX} ${y + depthY} L ${x + width + depthX} ${y + depthY} L ${x + width} ${y} Z`;
+      indicatorPage.drawSvgPath(path, { color, opacity: 0.98 });
+    };
+    const drawSideFace = (
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      color: ReturnType<typeof rgb>
+    ) => {
+      const path = `M ${x + width} ${y} L ${x + width + depthX} ${y + depthY} L ${x + width + depthX} ${y + height + depthY} L ${x + width} ${y + height} Z`;
+      indicatorPage.drawSvgPath(path, { color, opacity: 0.98 });
+    };
+
+    indicatorColumns.forEach((column, index) => {
+      const columnX = chartLeft + index * (columnWidth + columnGap);
+      let currentY = chartBottom;
+
+      column.segments.forEach((segmentValue, segmentIndex) => {
+        if (segmentValue <= 0) return;
+        const segmentHeight = (segmentValue / maxColumnTotal) * chartAreaHeight;
+        const band = scoreBands[segmentIndex];
+        indicatorPage.drawRectangle({
+          x: columnX,
+          y: currentY,
+          width: columnWidth,
+          height: segmentHeight,
+          color: band.color,
+          opacity: 0.98,
+        });
+        drawSideFace(columnX, currentY, columnWidth, segmentHeight, band.sideColor);
+        drawTopFace(columnX, currentY + segmentHeight, columnWidth, band.topColor);
+        if (segmentHeight >= 16) {
+          indicatorPage.drawText(String(segmentValue), {
+            x: columnX + 6,
+            y: currentY + segmentHeight / 2 - 3,
+            size: 8,
+            font: boldFont,
+            color: rgb(1, 1, 1),
+          });
+        }
+        currentY += segmentHeight;
+      });
+
+      indicatorPage.drawText(column.label, {
+        x: columnX - 2,
+        y: chartBottom - 20,
+        size: 8,
+        font: boldFont,
+        color: rgb(0.15, 0.15, 0.15),
+      });
+      indicatorPage.drawText(
+        `media ${formatPdfNumber(column.avg)}`,
+        {
+          x: columnX - 4,
+          y: chartBottom - 32,
+          size: 7,
+          font,
+          color: PDF_PALETTE.muted,
+        }
+      );
+      indicatorPage.drawText(String(column.total), {
+        x: columnX + 14,
+        y: currentY + depthY + 4,
+        size: 8,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+    });
+
+    let legendX = chartLeft;
+    const legendY = chartBottom - 62;
+    scoreBands.forEach((band) => {
+      indicatorPage.drawRectangle({
+        x: legendX,
+        y: legendY,
+        width: 12,
+        height: 12,
+        color: band.color,
+      });
+      indicatorPage.drawText(band.label, {
+        x: legendX + 16,
+        y: legendY + 2,
+        size: 8,
+        font,
+        color: rgb(0.22, 0.22, 0.22),
+      });
+      legendX += 78;
+    });
+
+    indicatorPage.drawText("Leitura executiva dos indicadores", {
+      x: chartLeft,
+      y: 180,
+      size: 10,
+      font: boldFont,
+      color: rgb(0.12, 0.12, 0.12),
+    });
+    const cardWidth = 94;
+    const cardGap = 12;
+    indicatorColumns.forEach((column, index) => {
+      const cardX = chartLeft + index * (cardWidth + cardGap);
+      indicatorPage.drawRectangle({
+        x: cardX,
+        y: 106,
+        width: cardWidth,
+        height: 56,
+        color: rgb(0.98, 0.96, 0.93),
+        borderColor: PDF_PALETTE.line,
+        borderWidth: 0.8,
+      });
+      indicatorPage.drawText(column.label, {
+        x: cardX + 8,
+        y: 146,
+        size: 8,
+        font: boldFont,
+        color: rgb(0.16, 0.16, 0.16),
+      });
+      indicatorPage.drawText(`Media ${formatPdfNumber(column.avg)}`, {
+        x: cardX + 8,
+        y: 130,
+        size: 8,
+        font,
+        color: rgb(0.26, 0.26, 0.26),
+      });
+      indicatorPage.drawText(`Faixa dominante`, {
+        x: cardX + 8,
+        y: 118,
+        size: 6,
+        font,
+        color: PDF_PALETTE.muted,
+      });
+      indicatorPage.drawText(column.dominantBand, {
+        x: cardX + 8,
+        y: 108,
+        size: 8,
+        font: boldFont,
+        color: PDF_PALETTE.brand,
+      });
+    });
   }
 
   if (pointsForMap.length > 0 && c.env.GOOGLE_MAPS_API_KEY) {
