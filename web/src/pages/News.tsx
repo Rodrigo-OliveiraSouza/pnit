@@ -117,15 +117,6 @@ export default function News() {
 
   return (
     <div className="page news-index-page">
-      <section className="module-section news-index-header">
-        <span className="eyebrow">NOTÍCIAS DA PLATAFORMA</span>
-        <h1>Acompanhe as publicações mais recentes</h1>
-        <p className="muted">
-          As notícias são exibidas em ordem cronológica da mais recente para a
-          mais antiga.
-        </p>
-      </section>
-
       <section className="news-filters">
         <div className="news-filter-dropdown">
           <button
