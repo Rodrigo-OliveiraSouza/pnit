@@ -11,9 +11,7 @@ export default function Home() {
               className="news-carousel-media home-hero-carousel"
               showDots={false}
               imageOnly
-              collageCount={3}
-              showCaption
-              captionLabel="Destaques"
+              collageCount={2}
               collection="news-posts"
               mediaLinkTo="/noticias"
               mediaLinkLabel="Abrir página de notícias"
