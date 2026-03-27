@@ -11,7 +11,6 @@ export default function Home() {
               className="news-carousel-media home-hero-carousel"
               showDots={false}
               imageOnly
-              matchImageAspect
               collection="news-posts"
               mediaLinkTo="/noticias"
               mediaLinkLabel="Abrir página de notícias"
