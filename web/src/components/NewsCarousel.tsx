@@ -19,6 +19,7 @@ type NewsCarouselProps = {
   collection?: "news" | "reports" | "news-posts";
   mediaLinkTo?: string;
   mediaLinkLabel?: string;
+  collageCount?: number;
   items?: Array<{
     id: string;
     src: string;
@@ -37,6 +38,7 @@ export default function NewsCarousel({
   collection = "news",
   mediaLinkTo,
   mediaLinkLabel,
+  collageCount = 1,
   items: itemsProp,
 }: NewsCarouselProps) {
   const [remoteItems, setRemoteItems] = useState<typeof fallbackItems>([]);
@@ -103,7 +105,16 @@ export default function NewsCarousel({
   const [activeIndex, setActiveIndex] = useState(0);
   const active = items[activeIndex] ?? items[0];
   const useSplitView = imageOnly && splitView;
+  const useCollage = imageOnly && collageCount > 1 && items.length > 1;
   const activeAspectRatio = active.src ? imageRatios[active.src] : undefined;
+  const collageItems = useMemo(() => {
+    if (!useCollage) {
+      return [active].filter(Boolean);
+    }
+
+    const total = Math.min(collageCount, items.length);
+    return Array.from({ length: total }, (_, offset) => items[(activeIndex + offset) % items.length]);
+  }, [active, activeIndex, collageCount, items, useCollage]);
 
   useEffect(() => {
     if (!matchImageAspect) {
@@ -167,19 +178,40 @@ export default function NewsCarousel({
     ? ({ ["--news-media-bg" as "--news-media-bg"]: `url(${active.src})` } as CSSProperties)
     : undefined;
   const articleStyle =
-    imageOnly && matchImageAspect && activeAspectRatio
+    imageOnly && matchImageAspect && activeAspectRatio && !useCollage
       ? ({ aspectRatio: activeAspectRatio } as CSSProperties)
       : undefined;
   const mediaNode = (
     <div
       className={`news-media theme-media${active.src ? "" : " is-placeholder"}${
         useSplitView ? " news-media-split" : ""
-      }`}
-      style={mediaStyle}
+      }${useCollage ? ` news-media-collage news-media-collage--${collageItems.length}` : ""}`}
+      style={
+        useCollage
+          ? ({ ["--news-collage-count" as "--news-collage-count"]: String(collageItems.length) } as CSSProperties)
+          : mediaStyle
+      }
       role={useSplitView ? "img" : undefined}
       aria-label={useSplitView ? active.title : undefined}
     >
-      {active.src ? (
+      {useCollage ? (
+        collageItems.map((item, index) => (
+          <div
+            key={`${item.id}-${index}`}
+            className={`news-collage-tile${index === 0 ? " is-primary" : ""}`}
+          >
+            {item.src ? (
+              <img
+                src={item.src}
+                alt={item.title}
+                className="theme-media-img"
+              />
+            ) : (
+              <div className="news-media-placeholder" aria-hidden="true" />
+            )}
+          </div>
+        ))
+      ) : active.src ? (
         useSplitView ? (
           <>
             <div
@@ -226,7 +258,7 @@ export default function NewsCarousel({
     <div className={`news-carousel${className ? ` ${className}` : ""}`}>
       <article
         key={active.id}
-        className={`news-card${imageOnly ? " news-card-media" : ""}`}
+        className={`news-card${imageOnly ? " news-card-media" : ""}${useCollage ? " news-card-media-collage" : ""}`}
         style={articleStyle}
       >
         {mediaLinkTo ? (
