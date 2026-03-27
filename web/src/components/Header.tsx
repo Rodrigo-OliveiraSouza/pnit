@@ -146,7 +146,7 @@ export default function Header() {
               <>
                 <Link
                   to={panelLink}
-                  className={`btn btn-primary header-auth-button${
+                  className={`btn btn-ghost header-auth-button header-auth-button--panel${
                     isPanelRoute ? " is-current" : ""
                   }`}
                   aria-current={isPanelRoute ? "page" : undefined}
@@ -154,7 +154,7 @@ export default function Header() {
                   {copy.header.panelLabel}
                 </Link>
                 <button
-                  className="btn btn-primary header-auth-button"
+                  className="btn btn-ghost header-auth-button header-auth-button--secondary"
                   type="button"
                   onClick={handleLogout}
                 >
@@ -162,7 +162,10 @@ export default function Header() {
                 </button>
               </>
             ) : (
-              <Link to="/login" className="btn btn-primary header-auth-button">
+              <Link
+                to="/login"
+                className="btn btn-primary header-auth-button header-auth-button--primary"
+              >
                 {copy.header.loginButton}
               </Link>
             )}

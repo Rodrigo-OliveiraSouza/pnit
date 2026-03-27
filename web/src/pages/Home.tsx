@@ -12,6 +12,8 @@ export default function Home() {
               showDots={false}
               imageOnly
               collageCount={3}
+              showCaption
+              captionLabel="Destaques"
               collection="news-posts"
               mediaLinkTo="/noticias"
               mediaLinkLabel="Abrir página de notícias"

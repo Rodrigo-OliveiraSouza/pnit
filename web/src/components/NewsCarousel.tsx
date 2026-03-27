@@ -20,6 +20,8 @@ type NewsCarouselProps = {
   mediaLinkTo?: string;
   mediaLinkLabel?: string;
   collageCount?: number;
+  showCaption?: boolean;
+  captionLabel?: string;
   items?: Array<{
     id: string;
     src: string;
@@ -39,6 +41,8 @@ export default function NewsCarousel({
   mediaLinkTo,
   mediaLinkLabel,
   collageCount = 1,
+  showCaption = false,
+  captionLabel = "Destaque",
   items: itemsProp,
 }: NewsCarouselProps) {
   const [remoteItems, setRemoteItems] = useState<typeof fallbackItems>([]);
@@ -174,6 +178,8 @@ export default function NewsCarousel({
   const handleNext = () => {
     setActiveIndex((previous) => (previous + 1) % items.length);
   };
+
+  const captionTitle = active?.title?.trim() || "Atualização institucional";
   const mediaStyle = active.src
     ? ({ ["--news-media-bg" as "--news-media-bg"]: `url(${active.src})` } as CSSProperties)
     : undefined;
@@ -271,6 +277,12 @@ export default function NewsCarousel({
           </Link>
         ) : (
           mediaNode
+        )}
+        {imageOnly && showCaption && (
+          <div className="news-caption news-caption-overlay">
+            <span className="news-caption-label">{captionLabel}</span>
+            <strong className="news-caption-title">{captionTitle}</strong>
+          </div>
         )}
         {!imageOnly && (
           <div className="news-body">
