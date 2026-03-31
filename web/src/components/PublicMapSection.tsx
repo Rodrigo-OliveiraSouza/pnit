@@ -467,15 +467,6 @@ export default function PublicMapSection({
     []
   );
 
-  const handleRefreshArea = useCallback(() => {
-    const bounds = mapRef.current?.getBounds();
-    if (!bounds) {
-      return;
-    }
-    void loadPointsForBounds(bounds, activeFiltersRef.current, true);
-  }, [loadPointsForBounds]);
-
-
   const handleStatusFilterChange = useCallback(
     (value: PointFilters["status"]) => {
       setFilterDraft((current) => ({ ...current, status: value }));
@@ -1008,16 +999,8 @@ export default function PublicMapSection({
                   : "Navegação pública com seleção de áreas"}
               </h2>
             </div>
-            <div className="map-actions">
-              <button
-                className="btn btn-outline"
-                type="button"
-                onClick={handleRefreshArea}
-                disabled={pointsLoading}
-              >
-                Atualizar área
-              </button>
-              {!isPublicMode && (
+            {!isPublicMode && (
+              <div className="map-actions">
                 <button
                   className="btn btn-primary"
                   type="button"
@@ -1026,8 +1009,8 @@ export default function PublicMapSection({
                 >
                   Exportar relatório
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
           <MapShell
             points={mapPoints}
