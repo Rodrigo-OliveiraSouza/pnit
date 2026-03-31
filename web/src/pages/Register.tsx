@@ -238,7 +238,7 @@ export default function Register() {
               </button>
             </form>
             <div className="auth-footer">
-              <Link to="/login">Entrar</Link>
+              <Link to="/login">Voltar</Link>
             </div>
           </>
         )}
