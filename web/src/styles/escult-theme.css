@@ -375,12 +375,14 @@ select {
 }
 
 .site-nav {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(max-content, 1fr);
+  align-items: center;
   flex: 1 1 auto;
   min-width: 0;
-  flex-wrap: nowrap;
   gap: 0.85rem;
-  justify-content: space-between;
+  justify-content: stretch;
   width: auto;
   padding: 0;
   margin: 0;
@@ -403,6 +405,7 @@ select {
   box-shadow: none;
   white-space: nowrap;
   text-align: center;
+  width: 100%;
 }
 
 .site-header .nav-link {
@@ -1680,6 +1683,7 @@ select {
   .site-nav,
   .header-auth-actions {
     width: 100%;
+    display: flex;
     flex-wrap: wrap;
   }
 
