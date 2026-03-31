@@ -27,6 +27,10 @@ export default function Header() {
         ? "/painel?tab=management"
         : "/painel?tab=register";
   const { copy } = useSiteCopy();
+  const registerLabel =
+    copy.login.createAccountLabel === "Criar conta"
+      ? "Cadastre-se"
+      : copy.login.createAccountLabel;
   const isLoggedIn = Boolean(authToken);
   const isPanelRoute =
     location.pathname.startsWith("/painel") || location.pathname.startsWith("/admin");
@@ -162,12 +166,20 @@ export default function Header() {
                 </button>
               </>
             ) : (
-              <Link
-                to="/login"
-                className="btn btn-primary header-auth-button header-auth-button--primary"
-              >
-                {copy.header.loginButton}
-              </Link>
+              <>
+                <Link
+                  to="/login"
+                  className="btn btn-ghost header-auth-button header-auth-button--panel"
+                >
+                  {copy.header.loginButton}
+                </Link>
+                <Link
+                  to="/cadastro"
+                  className="btn btn-primary header-auth-button header-auth-button--primary"
+                >
+                  {registerLabel}
+                </Link>
+              </>
             )}
           </div>
         </div>
