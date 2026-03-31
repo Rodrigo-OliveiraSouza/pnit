@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listNewsPosts, type NewsPost } from "../services/api";
 
-const ALL_TERRITORIES = "__all_territories__";
-
 const formatPublishedAt = (value?: string) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -25,9 +23,6 @@ export default function News() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedTerritory, setSelectedTerritory] =
-    useState<string>(ALL_TERRITORIES);
-  const [territoryFilterOpen, setTerritoryFilterOpen] = useState(false);
   const [scrollToArticle, setScrollToArticle] = useState(false);
   const articleRef = useRef<HTMLElement | null>(null);
 
@@ -60,43 +55,21 @@ export default function News() {
     };
   }, []);
 
-  const territoryOptions = useMemo(() => {
-    const unique = new Set<string>();
-    for (const post of posts) {
-      const value = post.territory?.trim();
-      if (!value) continue;
-      unique.add(value);
-    }
-    return Array.from(unique).sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [posts]);
-
-  const filteredPosts = useMemo(() => {
-    if (selectedTerritory === ALL_TERRITORIES) {
-      return posts;
-    }
-    return posts.filter(
-      (post) => (post.territory?.trim() ?? "") === selectedTerritory
-    );
-  }, [posts, selectedTerritory]);
-
   useEffect(() => {
-    if (filteredPosts.length === 0) {
+    if (posts.length === 0) {
       setSelectedId(null);
       return;
     }
-    const hasSelected =
-      selectedId !== null && filteredPosts.some((item) => item.id === selectedId);
+    const hasSelected = selectedId !== null && posts.some((item) => item.id === selectedId);
     if (!hasSelected) {
-      setSelectedId(filteredPosts[0].id);
+      setSelectedId(posts[0].id);
     }
-  }, [filteredPosts, selectedId]);
+  }, [posts, selectedId]);
 
   const selectedPost = useMemo(() => {
-    if (filteredPosts.length === 0) return null;
-    return (
-      filteredPosts.find((item) => item.id === selectedId) ?? filteredPosts[0]
-    );
-  }, [filteredPosts, selectedId]);
+    if (posts.length === 0) return null;
+    return posts.find((item) => item.id === selectedId) ?? posts[0];
+  }, [posts, selectedId]);
 
   useEffect(() => {
     if (!scrollToArticle || !selectedPost || !articleRef.current) return;
@@ -117,80 +90,16 @@ export default function News() {
 
   return (
     <div className="page news-index-page">
-      <section className="news-filters">
-        <div className="news-filter-dropdown">
-          <button
-            className="btn btn-outline btn-sm"
-            type="button"
-            onClick={() => setTerritoryFilterOpen((current) => !current)}
-            aria-expanded={territoryFilterOpen}
-            aria-controls="news-territory-filter-options"
-          >
-            Território
-          </button>
-          {territoryFilterOpen && (
-            <div id="news-territory-filter-options" className="news-filter-menu">
-              <button
-                type="button"
-                className={`news-filter-option${
-                  selectedTerritory === ALL_TERRITORIES ? " active" : ""
-                }`}
-                onClick={() => {
-                  setSelectedTerritory(ALL_TERRITORIES);
-                  setTerritoryFilterOpen(false);
-                }}
-              >
-                Todos os territórios
-              </button>
-              {territoryOptions.map((territory) => (
-                <button
-                  key={territory}
-                  type="button"
-                  className={`news-filter-option${
-                    selectedTerritory === territory ? " active" : ""
-                  }`}
-                  onClick={() => {
-                    setSelectedTerritory(territory);
-                    setTerritoryFilterOpen(false);
-                  }}
-                >
-                  {territory}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {selectedTerritory !== ALL_TERRITORIES && (
-          <button
-            type="button"
-            className="news-filter-chip"
-            onClick={() => setSelectedTerritory(ALL_TERRITORIES)}
-            aria-label={`Remover filtro de território ${selectedTerritory}`}
-          >
-            <span>{selectedTerritory}</span>
-            <span className="news-filter-chip-close" aria-hidden="true">
-              x
-            </span>
-          </button>
-        )}
-      </section>
-
       <section className="news-strip">
         {loading ? (
           <div className="empty-card">Carregando notícias...</div>
         ) : error ? (
           <div className="alert">{error}</div>
-        ) : filteredPosts.length === 0 ? (
-          selectedTerritory === ALL_TERRITORIES ? (
-            <div className="empty-card">Nenhuma notícia publicada ainda.</div>
-          ) : (
-            <div className="empty-card">
-              Nenhuma notícia encontrada para o território selecionado.
-            </div>
-          )
+        ) : posts.length === 0 ? (
+          <div className="empty-card">Nenhuma notícia publicada ainda.</div>
         ) : (
           <div className="news-strip-track">
-            {filteredPosts.map((post) => (
+            {posts.map((post) => (
               <button
                 key={post.id}
                 type="button"
