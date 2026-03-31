@@ -485,22 +485,32 @@ select {
   box-shadow: none;
 }
 
-.header-auth-button--primary {
+.site-header .header-auth-button--primary {
   --btn-bg: var(--color-sun);
   --btn-text: var(--color-white);
   --btn-border: rgba(var(--color-sun-rgb), 0.32);
+  background-image: none;
   box-shadow: 0 10px 18px rgba(255, 138, 0, 0.12);
 }
 
-.header-auth-button--panel,
-.header-auth-button--secondary {
+.site-header .header-auth-button--panel,
+.site-header .header-auth-button--secondary {
   --btn-bg: rgba(255, 255, 255, 0.72);
   --btn-text: var(--color-clay);
   --btn-border: rgba(var(--color-clay-rgb), 0.18);
+  background-image: none;
   box-shadow: none;
 }
 
-.header-auth-button--secondary {
+.site-header .header-auth-button--panel:hover:not(:disabled),
+.site-header .header-auth-button--panel:focus-visible,
+.site-header .header-auth-button--secondary:hover:not(:disabled),
+.site-header .header-auth-button--secondary:focus-visible {
+  --btn-bg: rgba(var(--color-sun-rgb), 0.08);
+  --btn-border: rgba(var(--color-sun-rgb), 0.24);
+}
+
+.site-header .header-auth-button--secondary {
   --btn-bg: rgba(255, 255, 255, 0.94);
 }
 
