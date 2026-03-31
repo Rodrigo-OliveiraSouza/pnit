@@ -1153,6 +1153,12 @@ img.theme-ignore,
     rgba(255, 255, 255, 0.9)
   );
   border: 1px solid rgba(var(--color-forest-rgb), 0.08);
+  width: calc(100% + 11vw);
+  margin-left: -5.5vw;
+  margin-right: -5.5vw;
+  padding-left: calc(5.5vw + 2rem);
+  padding-right: calc(5.5vw + 2rem);
+  border-radius: 0;
 }
 
 .team-list {
@@ -4196,6 +4202,14 @@ th {
   .team-card {
     grid-template-columns: 1fr;
     gap: 0.75rem;
+  }
+
+  .team-header {
+    width: calc(100% + 2rem);
+    margin-left: -1rem;
+    margin-right: -1rem;
+    padding-left: calc(1rem + 2rem);
+    padding-right: calc(1rem + 2rem);
   }
 
   .team-card-photo,
