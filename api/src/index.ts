@@ -1,7 +1,6 @@
 import { Hono, type Context } from "hono";
 import { neon } from "@neondatabase/serverless";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
-import JSZip from "jszip";
 
 type Env = {
   DATABASE_URL: string;
@@ -4760,16 +4759,11 @@ app.post("/reports/export", async (c) => {
     }
   }
   const bytes = await pdf.save();
-  const baseName = `relatorio-${Date.now()}`;
-  const zip = new JSZip();
-  zip.file(`${baseName}.pdf`, bytes);
-  zip.file(`${baseName}.csv`, csvContent);
-  const zipBytes = await zip.generateAsync({ type: "uint8array" });
-  const base64 = base64Encode(zipBytes);
+  const base64 = base64Encode(bytes);
   return c.json({
     content_base64: base64,
-    content_type: "application/zip",
-    filename: `${baseName}.zip`,
+    content_type: "application/pdf",
+    filename: `relatorio-${Date.now()}.pdf`,
   });
 } catch (error) {
   console.error("reports_export_pdf_failed", error);
@@ -4792,16 +4786,11 @@ app.post("/reports/export", async (c) => {
     color: rgb(0.1, 0.1, 0.1),
   });
   const bytes = await fallback.save();
-  const baseName = `relatorio-${Date.now()}`;
-  const zip = new JSZip();
-  zip.file(`${baseName}.pdf`, bytes);
-  zip.file(`${baseName}.csv`, csvContent);
-  const zipBytes = await zip.generateAsync({ type: "uint8array" });
-  const base64 = base64Encode(zipBytes);
+  const base64 = base64Encode(bytes);
   return c.json({
     content_base64: base64,
-    content_type: "application/zip",
-    filename: `${baseName}.zip`,
+    content_type: "application/pdf",
+    filename: `relatorio-${Date.now()}.pdf`,
   });
 }
 });

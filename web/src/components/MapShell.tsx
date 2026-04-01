@@ -21,6 +21,7 @@ function loadGoogleMaps(apiKey: string, libraries: Libraries) {
       apiKey,
       version: "weekly",
       libraries: normalizedLibraries,
+      authReferrerPolicy: "origin",
     }).load();
   }
   return sharedLoaderPromise;

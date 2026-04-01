@@ -21,6 +21,8 @@ import {
   generateReportPreview,
   type PublicPointDto,
 } from "../services/api";
+import { handleReportExport } from "../utils/reportExport";
+import { isNativeApp } from "../utils/runtime";
 
 const defaultCenter = { lat: -14.235, lng: -51.925 };
 const BAHIA_CENTER = { lat: -12.5797, lng: -41.7007 };
@@ -388,8 +390,8 @@ export default function PublicMapSection({
       format: reportFormat,
       include: reportInclude,
     })
-      .then((response) => {
-        if (response.download_url) {
+      .then(async (response) => {
+        if (!isNativeApp && response.download_url) {
           window.open(response.download_url, "_blank", "noopener,noreferrer");
           return;
         }
@@ -405,8 +407,16 @@ export default function PublicMapSection({
         const filename =
           response.filename ??
           `${safeName || fallbackName}.${reportFormat.toLowerCase()}`;
+        const feedback = await handleReportExport(response, filename, {
+          contentType,
+          dialogTitle: "Abrir ou compartilhar relatorio",
+        });
+        if (feedback) {
+          setReportFeedback(feedback);
+        }
+        return;
         if (response.content_base64) {
-          const binary = window.atob(response.content_base64);
+          const binary = window.atob(response.content_base64 ?? "");
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i += 1) {
             bytes[i] = binary.charCodeAt(i);
@@ -421,7 +431,7 @@ export default function PublicMapSection({
           return;
         }
         if (response.content) {
-          const blob = new Blob([response.content], { type: contentType });
+          const blob = new Blob([response.content ?? ""], { type: contentType });
           const url = URL.createObjectURL(blob);
           const link = document.createElement("a");
           link.href = url;

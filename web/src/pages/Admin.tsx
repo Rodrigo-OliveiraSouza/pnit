@@ -38,6 +38,7 @@ import {
   type LinkCode,
   type ProductivityResponse,
 } from "../services/api";
+import { handleReportExport } from "../utils/reportExport";
 import type {
   ThemeColors,
   ThemeImageStyles,
@@ -811,8 +812,13 @@ export function AdminPanel() {
       const fallback = `usuario-${userId}`;
       const baseName = safeFileName(label ?? "") || fallback;
       const filename = response.filename ?? `${baseName}-relatorio.pdf`;
+      await handleReportExport(response, filename, {
+        contentType,
+        dialogTitle: "Abrir ou compartilhar relatorio",
+      });
+      return;
       if (response.content_base64) {
-        const binary = window.atob(response.content_base64);
+        const binary = window.atob(response.content_base64 ?? "");
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i += 1) {
           bytes[i] = binary.charCodeAt(i);

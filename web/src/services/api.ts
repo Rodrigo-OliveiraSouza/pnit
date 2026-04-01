@@ -6,10 +6,12 @@ import type {
   ThemePalette,
   ThemeTypography,
 } from "../types/theme";
+import { isNativeApp } from "../utils/runtime";
 
 const REMOTE_API_BASE_URL = "https://api.pnit.infinity.dev.br";
 const ENV_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
 const isLocalHostname =
+  !isNativeApp &&
   typeof window !== "undefined" &&
   ["localhost", "127.0.0.1"].includes(window.location.hostname);
 const API_BASE_URL = ENV_API_BASE_URL || (isLocalHostname ? "/api" : REMOTE_API_BASE_URL);

@@ -2,8 +2,13 @@ node_modules/
 dist/
 .env
 .env.local
+.env.*
+!.env.example
 .env.*.local
 .DS_Store
 *.log
 coverage/
 tmp/
+web/.gradle-user-home/
+web/.mobile-tools/
+web/*.tsbuildinfo

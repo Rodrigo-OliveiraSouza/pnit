@@ -12,6 +12,7 @@ import {
   type UserRole,
   type UserSummaryResponse,
 } from "../services/api";
+import { handleReportExport } from "../utils/reportExport";
 
 type BrazilCity = { name: string; state: string };
 type ResidentRecord = NonNullable<UserSummaryResponse["residents"]>[number];
@@ -787,8 +788,17 @@ export default function Reports() {
         response.filename ??
         `${safeName || fallbackName}.${exportFormat.toLowerCase()}`;
 
+      const feedback = await handleReportExport(response, filename, {
+        contentType,
+        dialogTitle: "Abrir ou compartilhar relatorio",
+      });
+      if (feedback) {
+        setExportFeedback(feedback);
+      }
+      return;
+
       if (response.content_base64) {
-        const binary = window.atob(response.content_base64);
+        const binary = window.atob(response.content_base64 ?? "");
         const bytes = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i += 1) {
           bytes[i] = binary.charCodeAt(i);
@@ -804,7 +814,7 @@ export default function Reports() {
       }
 
       if (response.content) {
-        const blob = new Blob([response.content], { type: contentType });
+        const blob = new Blob([response.content ?? ""], { type: contentType });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
