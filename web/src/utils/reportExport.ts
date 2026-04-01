@@ -4,7 +4,8 @@ import { Share } from "@capacitor/share";
 import type { ReportExportResponse } from "../services/api";
 import { isNativeApp } from "./runtime";
 
-const REPORTS_DIR = "PNIT/relatorios";
+const REPORTS_DIR = "relatorios";
+const NATIVE_REPORTS_DIRECTORY = Directory.Cache;
 
 type HandleReportExportOptions = {
   contentType?: string;
@@ -81,8 +82,6 @@ async function saveRemoteFileToDevice(
   filename: string,
   dialogTitle?: string
 ) {
-  await Filesystem.requestPermissions().catch(() => null);
-
   try {
     const remoteResponse = await fetch(downloadUrl);
     if (!remoteResponse.ok) {
@@ -93,7 +92,7 @@ async function saveRemoteFileToDevice(
     await Filesystem.writeFile({
       path: targetPath,
       data: base64Content,
-      directory: Directory.Documents,
+      directory: NATIVE_REPORTS_DIRECTORY,
       recursive: true,
     });
   } catch (error) {
@@ -107,10 +106,10 @@ async function saveRemoteFileToDevice(
 
   const { uri } = await Filesystem.getUri({
     path: targetPath,
-    directory: Directory.Documents,
+    directory: NATIVE_REPORTS_DIRECTORY,
   });
   await shareSavedFile(uri, filename, dialogTitle);
-  return `Relatorio salvo em Documentos/PNIT/relatorios como ${filename}.`;
+  return `Relatorio preparado no celular como ${filename}.`;
 }
 
 async function saveGeneratedFileToDevice(
@@ -118,21 +117,19 @@ async function saveGeneratedFileToDevice(
   filename: string,
   dialogTitle?: string
 ) {
-  await Filesystem.requestPermissions().catch(() => null);
-
   const targetPath = `${REPORTS_DIR}/${filename}`;
   if (response.content_base64) {
     await Filesystem.writeFile({
       path: targetPath,
       data: response.content_base64,
-      directory: Directory.Documents,
+      directory: NATIVE_REPORTS_DIRECTORY,
       recursive: true,
     });
   } else if (response.content) {
     await Filesystem.writeFile({
       path: targetPath,
       data: response.content,
-      directory: Directory.Documents,
+      directory: NATIVE_REPORTS_DIRECTORY,
       encoding: Encoding.UTF8,
       recursive: true,
     });
@@ -149,10 +146,10 @@ async function saveGeneratedFileToDevice(
 
   const { uri } = await Filesystem.getUri({
     path: targetPath,
-    directory: Directory.Documents,
+    directory: NATIVE_REPORTS_DIRECTORY,
   });
   await shareSavedFile(uri, filename, dialogTitle);
-  return `Relatorio salvo em Documentos/PNIT/relatorios como ${filename}.`;
+  return `Relatorio preparado no celular como ${filename}.`;
 }
 
 export async function handleReportExport(
